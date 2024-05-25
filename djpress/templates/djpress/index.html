@@ -1,0 +1,90 @@
+{% load static %}
+{% load djpress_tags %}
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% get_blog_title %}</title>
+    <link rel="stylesheet" href="{% static 'djpress/css/style.min.css' %}">
+  </head>
+  <body>
+    <header>
+      <h1><a href="{% url "djpress:index" %}">{% get_blog_title %}</a></h1>
+    </header>
+
+    <main>
+
+      {% comment %}If we get a single post, then show the full content.{% endcomment %}
+      {% if post %}
+
+        <article>
+          <header>
+            <h1>{% post_title %}</h1>
+            <p>By {% post_author %}</p>
+            <p>{% post_date %}</p>
+          </header>
+          <section>
+            {% post_content %}
+          </section>
+          <footer>
+            <p>Categories:</p>
+            {% post_categories %}
+          </footer>
+        </article>
+
+      {% comment %}If we get multiple posts, then show the truncated content.{% endcomment %}
+      {% elif posts %}
+
+        {% comment %}If we get posts for a category, then we can show the category header.{% endcomment %}
+        {% if category %}
+
+          <h1>{% category_name %}</h1>
+
+        {% endif %}
+
+        {% for post in posts %}
+
+          <article>
+            <header>
+              <h1><a href="{% url 'djpress:post_detail' post.permalink %}">{% post_title %}</a></h1>
+              <p>By {% post_author %}</p>
+              <p>{% post_date %}</p>
+            </header>
+            <section>
+              {{ post.truncated_content_markdown|safe }}
+
+              {% if post.is_truncated %}
+                <p><a href="{% url 'djpress:post_detail' post.permalink %}">Read more</a></p>
+              {% endif %}
+            </section>
+            <footer>
+              <p>Categories:</p>
+              <ul>
+                {% for category in post.categories.all %}
+                  <li>{% post_category_link category "badge bg-primary" %}</li>
+                {% endfor %}
+              </ul>
+            </footer>
+          </article>
+
+        {% endfor %}
+
+      {% else %}
+
+        <p>No posts available.</p>
+
+      {% endif %}
+
+    </main>
+
+    <footer>
+      <p>Powered by
+        <a href="https://www.djangoproject.com/" title="The web framework for perfectionists with deadlines">Django</a>
+        and
+        <a href="#">DJPress</a>
+      </p>
+    </footer>
+  </body>
+</html>
