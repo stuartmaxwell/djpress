@@ -8,47 +8,10 @@ from django.utils.safestring import mark_safe
 
 from djpress.conf import settings
 from djpress.models import Category, Post
+from djpress.templatetags.helpers import categories_html, category_link
 from djpress.utils import get_author_display_name
 
 register = template.Library()
-
-
-def categories_html(categories: models.QuerySet, outer: str, link_class: str) -> str:
-    """Return the HTML for the categories.
-
-    Note this isn't a template tag, but a helper function for the other template tags
-
-    Args:
-        categories: The categories.
-        outer: The outer HTML tag for the categories.
-        link_class: The CSS class(es) for the link.
-
-    Returns:
-        str: The HTML for the categories.
-    """
-    output = ""
-
-    if outer == "ul":
-        output += "<ul>"
-        for category in categories:
-            output += f"<li>{category_link(category, link_class)}</li>"
-        output += "</ul>"
-
-    if outer == "div":
-        output += "<div>"
-        for category in categories:
-            output += f"{category_link(category, link_class)}, "
-        output = output[:-2]  # Remove the trailing comma and space
-        output += "</div>"
-
-    if outer == "span":
-        output += "<span>"
-        for category in categories:
-            output += f"{category_link(category, link_class)}, "
-        output = output[:-2]  # Remove the trailing comma and space
-        output += "</span>"
-
-    return output
 
 
 @register.simple_tag
@@ -92,11 +55,16 @@ def get_categories() -> models.QuerySet[Category] | None:
 
 
 @register.simple_tag
-def blog_categories(outer: str = "ul", link_class: str = "") -> str:
+def blog_categories(
+    outer: str = "ul",
+    outer_class: str = "",
+    link_class: str = "",
+) -> str:
     """Return the categories of the blog.
 
     Args:
         outer: The outer HTML tag for the categories.
+        outer_class: The CSS class(es) for the outer tag.
         link_class: The CSS class(es) for the link.
 
     Returns:
@@ -106,7 +74,7 @@ def blog_categories(outer: str = "ul", link_class: str = "") -> str:
     if not categories:
         return ""
 
-    return mark_safe(categories_html(categories, outer, link_class))
+    return mark_safe(categories_html(categories, outer, outer_class, link_class))
 
 
 @register.simple_tag(takes_context=True)
@@ -208,26 +176,6 @@ def post_author_link(context: Context, link_class: str = "") -> str:
     )
 
     return mark_safe(output)
-
-
-def category_link(category: Category, link_class: str = "") -> str:
-    """Return the category link for a post.
-
-    This is not intded to be used as a template tag. It is used by the other
-    template tags in this module to generate the category links.
-
-    Args:
-        category: The category of the post.
-        link_class: The CSS class(es) for the link.
-    """
-    category_url = reverse("djpress:category_posts", args=[category.slug])
-
-    link_class_html = f' class="{link_class}"' if link_class else ""
-
-    return (
-        f'<a href="{category_url}" title="View all posts in the {category.name} '
-        f'category"{link_class_html}>{ category.name }</a>'
-    )
 
 
 @register.simple_tag
@@ -355,12 +303,18 @@ def category_name(context: Context) -> str:
 
 
 @register.simple_tag(takes_context=True)
-def post_categories(context: Context, outer: str = "ul", link_class: str = "") -> str:
+def post_categories(
+    context: Context,
+    outer: str = "ul",
+    outer_class: str = "",
+    link_class: str = "",
+) -> str:
     """Return the categories of a post.
 
     Args:
         context: The context.
         outer: The outer HTML tag for the categories.
+        outer_class: The CSS class(es) for the outer tag.
         link_class: The CSS class(es) for the link.
 
     Returns:
@@ -374,4 +328,4 @@ def post_categories(context: Context, outer: str = "ul", link_class: str = "") -
     if not categories:
         return ""
 
-    return mark_safe(categories_html(categories, outer, link_class))
+    return mark_safe(categories_html(categories, outer, outer_class, link_class))

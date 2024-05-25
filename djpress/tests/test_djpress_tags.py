@@ -44,8 +44,8 @@ def create_test_post(user, category):
     return post
 
 
-def test_get_blog_title():
-    assert djpress_tags.get_blog_title() == settings.BLOG_TITLE
+def test_blog_title():
+    assert djpress_tags.blog_title() == settings.BLOG_TITLE
 
 
 @pytest.mark.django_db
