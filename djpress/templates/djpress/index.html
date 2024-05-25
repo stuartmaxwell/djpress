@@ -6,12 +6,13 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% get_blog_title %}</title>
-    <link rel="stylesheet" href="{% static 'djpress/css/style.min.css' %}">
+    <title>{% blog_title %}</title>
+    <link rel="stylesheet" href="{% static 'djpress/css/style.css' %}">
   </head>
   <body>
     <header>
-      <h1><a href="{% url "djpress:index" %}">{% get_blog_title %}</a></h1>
+      <h1>{% blog_title_link %}</h1>
+      {% blog_categories %}
     </header>
 
     <main>

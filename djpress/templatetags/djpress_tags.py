@@ -13,47 +13,90 @@ from djpress.utils import get_author_display_name
 register = template.Library()
 
 
-@register.simple_tag
-def get_categories() -> models.QuerySet[Category] | None:
-    """Return all categories.
+def categories_html(categories: models.QuerySet, outer: str, link_class: str) -> str:
+    """Return the HTML for the categories.
 
-    Returns:
-        models.QuerySet[Category]: All categories.
-    """
-    return Category.objects.get_categories()
-
-
-@register.simple_tag
-def get_recent_published_posts() -> models.QuerySet[Category] | None:
-    """Return recent published posts from the cache.
-
-    Returns:
-        models.QuerySet[Category]: Recent published posts.
-    """
-    return Post.post_objects.get_recent_published_posts()
-
-
-@register.simple_tag
-def get_single_published_post(slug: str) -> Post | None:
-    """Return a single published post by slug.
+    Note this isn't a template tag, but a helper function for the other template tags
 
     Args:
-        slug: The slug of the post.
+        categories: The categories.
+        outer: The outer HTML tag for the categories.
+        link_class: The CSS class(es) for the link.
 
     Returns:
-        Post: A single published post.
+        str: The HTML for the categories.
     """
-    return Post.post_objects.get_published_post_by_slug(slug)
+    output = ""
+
+    if outer == "ul":
+        output += "<ul>"
+        for category in categories:
+            output += f"<li>{category_link(category, link_class)}</li>"
+        output += "</ul>"
+
+    if outer == "div":
+        output += "<div>"
+        for category in categories:
+            output += f"{category_link(category, link_class)}, "
+        output = output[:-2]  # Remove the trailing comma and space
+        output += "</div>"
+
+    if outer == "span":
+        output += "<span>"
+        for category in categories:
+            output += f"{category_link(category, link_class)}, "
+        output = output[:-2]  # Remove the trailing comma and space
+        output += "</span>"
+
+    return output
 
 
 @register.simple_tag
-def get_blog_title() -> str:
+def blog_title() -> str:
     """Return the blog title.
 
     Returns:
         str: The blog title.
     """
     return settings.BLOG_TITLE
+
+
+@register.simple_tag
+def blog_title_link(link_class: str = "") -> str:
+    """Return the blog title.
+
+    Args:
+        link_class: The CSS class(es) for the link.
+
+    Returns:
+        str: The blog title.
+    """
+    link_class_html = f' class="{link_class}"' if link_class else ""
+
+    ouptut = (
+        f'<a href="{reverse("djpress:index")}"{link_class_html}>'
+        f'{settings.BLOG_TITLE}</a>'
+    )
+
+    return mark_safe(ouptut)
+
+
+@register.simple_tag
+def blog_categories(outer: str = "ul", link_class: str = "") -> str:
+    """Return the categories of the blog.
+
+    Args:
+        outer: The outer HTML tag for the categories.
+        link_class: The CSS class(es) for the link.
+
+    Returns:
+        str: The categories of the blog.
+    """
+    categories = Category.objects.all()
+    if not categories:
+        return ""
+
+    return mark_safe(categories_html(categories, outer, link_class))
 
 
 @register.simple_tag(takes_context=True)
@@ -294,26 +337,4 @@ def post_categories(context: Context, outer: str = "ul", link_class: str = "") -
     if not categories:
         return ""
 
-    output = ""
-
-    if outer == "ul":
-        output += "<ul>"
-        for category in categories:
-            output += f"<li>{category_link(category, link_class)}</li>"
-        output += "</ul>"
-
-    if outer == "div":
-        output += "<div>"
-        for category in categories:
-            output += f"{category_link(category, link_class)}, "
-        output = output[:-2]  # Remove the trailing comma and space
-        output += "</div>"
-
-    if outer == "span":
-        output += "<span>"
-        for category in categories:
-            output += f"{category_link(category, link_class)}, "
-        output = output[:-2]  # Remove the trailing comma and space
-        output += "</span>"
-
-    return mark_safe(output)
+    return mark_safe(categories_html(categories, outer, link_class))
