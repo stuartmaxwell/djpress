@@ -23,15 +23,13 @@
         <article>
           <header>
             <h1>{% post_title %}</h1>
-            <p>By {% post_author %}</p>
-            <p>{% post_date %}</p>
+            <p>By {% post_author %}. {% post_date %}</p>
           </header>
           <section>
             {% post_content %}
           </section>
           <footer>
-            <p>Categories:</p>
-            {% post_categories %}
+            <p>Categories: {% post_categories "span" "badge" %}</p>
           </footer>
         </article>
 
@@ -50,8 +48,7 @@
           <article>
             <header>
               <h1><a href="{% url 'djpress:post_detail' post.permalink %}">{% post_title %}</a></h1>
-              <p>By {% post_author %}</p>
-              <p>{% post_date %}</p>
+              <p>By {% post_author %}. {% post_date %}</p>
             </header>
             <section>
               {{ post.truncated_content_markdown|safe }}
@@ -61,12 +58,7 @@
               {% endif %}
             </section>
             <footer>
-              <p>Categories:</p>
-              <ul>
-                {% for category in post.categories.all %}
-                  <li>{% post_category_link category "badge bg-primary" %}</li>
-                {% endfor %}
-              </ul>
+              <p>Categories: {% post_categories "span" "badge" %}</p>
             </footer>
           </article>
 
