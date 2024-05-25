@@ -1,9 +1,10 @@
 import pytest
-from django.urls import reverse
 from django.contrib.auth.models import User
-from djpress.models import Category, Post
-from django.conf import settings
+from django.urls import reverse
 from django.utils import timezone
+
+from djpress.conf import settings
+from djpress.models import Category, Post
 
 
 @pytest.fixture

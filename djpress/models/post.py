@@ -3,13 +3,13 @@
 import logging
 from typing import ClassVar
 
-from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.db import models
 from django.utils import timezone
 from django.utils.text import slugify
 
+from djpress.conf import settings
 from djpress.models import Category
 from djpress.utils import render_markdown
 

@@ -1,9 +1,10 @@
 import pytest
-from django.urls import reverse
 from django.contrib.auth.models import User
-from djpress.models import Post
+from django.urls import reverse
+
+from djpress.conf import settings
 from djpress.feeds import PostFeed
-from django.conf import settings
+from djpress.models import Post
 
 
 @pytest.mark.django_db

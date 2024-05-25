@@ -1,8 +1,9 @@
 """Utility functions that are used in the project."""
 
 import markdown
-from django.conf import settings
 from django.contrib.auth.models import User
+
+from djpress.conf import settings
 
 md = markdown.Markdown(extensions=settings.MARKDOWN_EXTENSIONS, output_format="html")
 

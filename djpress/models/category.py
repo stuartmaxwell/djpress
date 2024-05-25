@@ -1,9 +1,10 @@
 """Category model."""
 
-from django.conf import settings
 from django.core.cache import cache
 from django.db import IntegrityError, models, transaction
 from django.utils.text import slugify
+
+from djpress.conf import settings
 
 CATEGORY_CACHE_KEY = "categories"
 

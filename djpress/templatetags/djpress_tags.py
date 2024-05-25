@@ -1,12 +1,12 @@
 """Template tags for djpress."""
 
 from django import template
-from django.conf import settings
 from django.db import models
 from django.template import Context
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
+from djpress.conf import settings
 from djpress.models import Category, Post
 from djpress.utils import get_author_display_name
 

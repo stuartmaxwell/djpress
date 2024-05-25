@@ -1,11 +1,11 @@
 import pytest
-from django.utils.text import slugify
 from django.contrib.auth.models import User
-from djpress.models import Category, Post
-from django.utils import timezone
 from django.http import Http404
+from django.utils import timezone
+from django.utils.text import slugify
 
-from django.conf import settings
+from djpress.conf import settings
+from djpress.models import Category, Post
 
 
 @pytest.mark.django_db
