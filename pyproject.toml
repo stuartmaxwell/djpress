@@ -5,4 +5,32 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "djpress"
 version = "0.1"
+authors = [{ name = "Stuart Maxwell", email = "stuart@amanzi.nz" }]
+description = "A blog application for Django sites, inspired by classic WordPress."
+readme = "README.md"
+requires-python = ">=3.11"
 dependencies = ["django", "markdown"]
+license = { file = "LICENSE" }
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Environment :: Web Environment",
+  "Framework :: Django",
+  "Framework :: Django :: 5.0",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Internet :: WWW/HTTP",
+  "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+]
+keywords = ["django", "blog", "cms", "markdown", "wordpress"]
+
+[project.urls]
+Homepage = "https://github.com/stuartmaxwell/djpress"
+Repository = "https://github.com/stuartmaxwell/djpress"
+Issues = "https://github.com/stuartmaxwell/djpress/issues"
