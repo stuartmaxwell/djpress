@@ -1,28 +1,86 @@
+/* Stylesheet for the DJ Press default template. */
+
+:root {
+  --dark0: #2e3440;
+  --dark1-bright: #3b4252;
+  --dark3-bright: #4c566a;
+  --light5: #e5e9f0;
+  --light6-bright: #eceff4;
+  --primary8: #88c0d0;
+  --secondary7: #8fbcbb;
+  --danger: #bf616a;
+  --error: #d08770;
+  --warning: #ebcb8b;
+  --success: #a3be8c;
+  --info: #b48ead;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Ubuntu,
     sans-serif;
+  color: var(--dark0);
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  background-color: #f4f4f4;
+  background-color: var(--light6-bright);
 }
 
-header {
-  background-color: #333;
-  color: #fff;
-  padding: 1em 0;
-  text-align: center;
+/* Top header */
+
+body > header {
+  background-color: var(--dark1-bright);
+  padding: 1rem;
+  padding-left: calc((100% - 992px) / 2);
+  padding-right: calc((100% - 992px) / 2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
-header h1 a {
-  color: #fff;
+body > header h1 {
+  margin: 0;
+  font-size: 1.5rem;
 }
+
+body > header h1 a {
+  color: var(--light6-bright);
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+}
+
+body > header ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+}
+
+body > header ul li {
+  margin-left: 1rem;
+}
+
+body > header ul li a {
+  color: var(--light6-bright);
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  transition: background-color 0.2s;
+}
+
+body > header ul li a:hover {
+  background-color: var(--dark3-bright);
+  color: var(--primary8);
+}
+
+/* Main section */
 
 main {
   padding: 2em;
   max-width: 992px;
   margin: 0 auto;
 }
+
+/* Articles */
 
 article {
   background-color: #fff;
@@ -45,6 +103,8 @@ article footer {
   position: static;
   width: auto;
 }
+
+/* Footer section */
 
 footer {
   background-color: #333;
