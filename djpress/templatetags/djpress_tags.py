@@ -82,6 +82,16 @@ def blog_title_link(link_class: str = "") -> str:
 
 
 @register.simple_tag
+def get_categories() -> models.QuerySet[Category] | None:
+    """Return all categories as a queryset.
+
+    Returns:
+        models.QuerySet[Category]: All categories.
+    """
+    return Category.objects.get_categories()
+
+
+@register.simple_tag
 def blog_categories(outer: str = "ul", link_class: str = "") -> str:
     """Return the categories of the blog.
 
@@ -114,6 +124,33 @@ def post_title(context: Context) -> str:
         return ""
 
     return post.title
+
+
+@register.simple_tag(takes_context=True)
+def post_title_link(context: Context, link_class: str = "") -> str:
+    """Return the title link for a post.
+
+    Args:
+        context: The context.
+        link_class: The CSS class(es) for the link.
+
+    Returns:
+        str: The title link for the post.
+    """
+    post: Post | None = context.get("post")
+    if not post:
+        return ""
+
+    post_url = reverse("djpress:post_detail", args=[post.permalink])
+
+    link_class_html = f' class="{link_class}"' if link_class else ""
+
+    output = (
+        f'<a href="{post_url}" title="{post.title}"{link_class_html}>'
+        f"{post.title}</a>"
+    )
+
+    return mark_safe(output)
 
 
 @register.simple_tag(takes_context=True)
