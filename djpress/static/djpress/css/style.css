@@ -2,17 +2,18 @@
 
 :root {
   --dark0: #2e3440;
-  --dark1-bright: #3b4252;
-  --dark3-bright: #4c566a;
+  --dark1: #3b4252;
+  --dark2: #434c5e;
+  --dark3: #4c566a;
   --light4: #d8dee9;
   --light5: #e5e9f0;
-  --light6-bright: #eceff4;
+  --light6: #eceff4;
   --primary7: #8fbcbb;
   --primary8: #88c0d0;
   --secondary9: #81a1c1;
-  --secondary10: #5e81ac;
-  --danger11: #bf616a;
-  --error12: #d08770;
+  --tertiary10: #5e81ac;
+  --error11: #bf616a;
+  --danger12: #d08770;
   --warning13: #ebcb8b;
   --success14: #a3be8c;
   --info15: #b48ead;
@@ -31,7 +32,7 @@ body {
 /* Top header */
 
 body > header {
-  background-color: var(--dark1-bright);
+  background-color: var(--dark1);
   padding: 1rem;
   padding-left: calc((100% - 992px) / 2);
   padding-right: calc((100% - 992px) / 2);
@@ -46,7 +47,7 @@ body > header h1 {
 }
 
 body > header h1 a {
-  color: var(--light6-bright);
+  color: var(--light6);
   text-decoration: none;
   padding: 0.5rem 1rem;
 }
@@ -63,7 +64,7 @@ body > header ul li {
 }
 
 body > header ul li a {
-  color: var(--light6-bright);
+  color: var(--light6);
   text-decoration: none;
   padding: 0.5rem 1rem;
   border-radius: 0.25rem;
@@ -71,7 +72,7 @@ body > header ul li a {
 }
 
 body > header ul li a:hover {
-  background-color: var(--dark3-bright);
+  background-color: var(--dark3);
   color: var(--primary8);
 }
 
@@ -86,7 +87,7 @@ main {
 main > h1 {
   font-size: 2rem;
   margin: 0 0.5em 1em;
-  color: var(--dark3-bright);
+  color: var(--dark3);
 }
 /* Articles */
 
@@ -97,7 +98,7 @@ article {
   padding: 2em;
   border: 1px solid var(--light4);
   border-radius: 0.5em;
-  background-color: var(--light6-bright);
+  background-color: var(--light6);
   box-shadow: 0 2px 4px hsl(0deg 0% 0% / 0.1);
 }
 
@@ -115,7 +116,7 @@ article > header h1 {
 
 article > header h1 a {
   text-decoration: none;
-  color: var(--secondary10);
+  color: var(--tertiary10);
   transition: color 0.2s;
 }
 
@@ -126,7 +127,7 @@ article > header h1 a:hover {
 article > header p {
   margin: 0.5em 0;
   font-size: 0.875rem;
-  color: var(--dark3-bright);
+  color: var(--dark3);
 }
 
 /* Article section styles */
@@ -158,14 +159,14 @@ article > footer p {
 }
 
 .badge:hover {
-  background-color: var(--secondary10);
+  background-color: var(--tertiary10);
   color: var(--light4);
 }
 
 /* Footer section */
 
 body > footer {
-  background-color: var(--dark1-bright);
+  background-color: var(--dark1);
   padding: 1rem;
   padding-left: calc((100% - 992px) / 2);
   padding-right: calc((100% - 992px) / 2);
@@ -175,7 +176,7 @@ body > footer {
   position: fixed;
   bottom: 0;
   width: 100%;
-  color: var(--light6-bright);
+  color: var(--light6);
 }
 
 body > footer p {
@@ -184,7 +185,7 @@ body > footer p {
 }
 
 body > footer a {
-  color: var(--light6-bright);
+  color: var(--light6);
 }
 body > footer a:hover {
   color: var(--primary8);
