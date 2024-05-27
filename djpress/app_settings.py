@@ -1,3 +1,5 @@
+"""Settings file for DJ Press."""
+
 # DJPress settings
 TRUNCATE_TAG = "<!--more-->"
 CACHE_CATEGORIES: bool = True
