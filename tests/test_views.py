@@ -34,7 +34,7 @@ def create_test_post(user, category):
         author=user,
         status="published",
         post_type="post",
-        date=timezone.datetime(2024, 1, 1),
+        date=timezone.make_aware(timezone.datetime(2024, 1, 1)),
     )
     post.categories.set([category])
     return post
