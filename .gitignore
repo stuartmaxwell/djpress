@@ -94,5 +94,5 @@ GitHub.sublime-settings
 !.vscode/extensions.json
 .history
 
-# Macos yuck
+# Macos
 .DS_Store
