@@ -58,3 +58,8 @@ ignore = [
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.pytest.ini_options]
+pythonpath = ". example"
+DJANGO_SETTINGS_MODULE = "config.settings_testing"
+python_files = "tests.py test_*.py *_tests.py"
