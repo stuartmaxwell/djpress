@@ -9,7 +9,7 @@ authors = [{ name = "Stuart Maxwell", email = "stuart@amanzi.nz" }]
 description = "A blog application for Django sites, inspired by classic WordPress."
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = ["django", "markdown"]
+dependencies = ["django", "markdown", "pygments"]
 license = { file = "LICENSE" }
 classifiers = [
   "Development Status :: 3 - Alpha",
