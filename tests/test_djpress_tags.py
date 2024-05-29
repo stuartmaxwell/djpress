@@ -105,6 +105,14 @@ def test_post_title_link(create_test_post):
 
 
 @pytest.mark.django_db
+def test_post_title_link_no_context(create_test_post):
+    context = Context()
+
+    expected_output = ""
+    assert djpress_tags.post_title_link(context) == expected_output
+
+
+@pytest.mark.django_db
 def test_post_title_link_with_prefix(create_test_post):
     settings.POST_PREFIX = "post"
     context = Context({"post": create_test_post})
