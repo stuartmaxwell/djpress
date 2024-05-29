@@ -22,16 +22,34 @@ def user():
 
 
 @pytest.fixture
-def category():
+def category1():
     category = Category.objects.create(
-        name="Test Category",
-        slug="test-category",
+        name="General",
+        slug="general",
     )
     return category
 
 
 @pytest.fixture
-def create_test_post(user, category):
+def category2():
+    category = Category.objects.create(
+        name="News",
+        slug="news",
+    )
+    return category
+
+
+@pytest.fixture
+def category3():
+    category = Category.objects.create(
+        name="Development",
+        slug="dev",
+    )
+    return category
+
+
+@pytest.fixture
+def create_test_post(user, category1):
     post = Post.post_objects.create(
         title="Test Post",
         slug="test-post",
@@ -40,12 +58,28 @@ def create_test_post(user, category):
         status="published",
         post_type="post",
     )
-    post.categories.set([category])
+    post.categories.set([category1])
     return post
 
 
 def test_blog_title():
     assert djpress_tags.blog_title() == settings.BLOG_TITLE
+
+
+@pytest.mark.django_db
+def test_get_categories(category1, category2, category3):
+    categories = Category.objects.all()
+    djpress_categories = djpress_tags.get_categories()
+
+    if not categories:
+        assert djpress_categories is None
+        return None
+
+    if not djpress_categories:
+        assert categories is None
+        return None
+
+    assert list((djpress_categories)) == list(categories)
 
 
 @pytest.mark.django_db
@@ -58,6 +92,34 @@ def test_post_title_no_post():
     context = Context({"foo": "bar"})
     assert djpress_tags.post_title(context) == ""
     assert type(djpress_tags.post_title(context)) == str
+
+
+@pytest.mark.django_db
+def test_post_title_link(create_test_post):
+    settings.POST_PREFIX = ""
+    context = Context({"post": create_test_post})
+    post_url = reverse("djpress:post_detail", args=[create_test_post.slug])
+
+    expected_output = f'<a href="{post_url}" title="{create_test_post.title}">{create_test_post.title}</a>'
+    assert djpress_tags.post_title_link(context) == expected_output
+
+
+@pytest.mark.django_db
+def test_post_title_link_no_context(create_test_post):
+    context = Context()
+
+    expected_output = ""
+    assert djpress_tags.post_title_link(context) == expected_output
+
+
+@pytest.mark.django_db
+def test_post_title_link_with_prefix(create_test_post):
+    settings.POST_PREFIX = "post"
+    context = Context({"post": create_test_post})
+    post_url = reverse("djpress:post_detail", args=[create_test_post.slug])
+
+    expected_output = f'<a href="/post{post_url}" title="{create_test_post.title}">{create_test_post.title}</a>'
+    assert djpress_tags.post_title_link(context) == expected_output
 
 
 @pytest.mark.django_db
@@ -140,33 +202,35 @@ def test_post_author_link_with_author_path_with_two_link_class(create_test_post)
 
 
 @pytest.mark.django_db
-def test_post_category_link_without_category_path(category):
+def test_post_category_link_without_category_path(category1):
     settings.CATEGORY_PATH_ENABLED = False
-    assert djpress_tags.post_category_link(category) == category.name
+    assert djpress_tags.post_category_link(category1) == category1.name
 
 
 @pytest.mark.django_db
-def test_post_category_link_with_category_path(category):
+def test_post_category_link_with_category_path(category1):
     settings.CATEGORY_PATH_ENABLED = True
-    category_url = reverse("djpress:category_posts", args=[category.slug])
-    expected_output = f'<a href="{category_url}" title="View all posts in the Test Category category">{category.name}</a>'
-    assert djpress_tags.post_category_link(category) == expected_output
+    category_url = reverse("djpress:category_posts", args=[category1.slug])
+    expected_output = f'<a href="{category_url}" title="View all posts in the General category">{category1.name}</a>'
+    assert djpress_tags.post_category_link(category1) == expected_output
 
 
 @pytest.mark.django_db
-def test_post_category_link_with_category_path_with_one_link_class(category):
+def test_post_category_link_with_category_path_with_one_link_class(category1):
     settings.CATEGORY_PATH_ENABLED = True
-    category_url = reverse("djpress:category_posts", args=[category.slug])
-    expected_output = f'<a href="{category_url}" title="View all posts in the Test Category category" class="class1">{category.name}</a>'
-    assert djpress_tags.post_category_link(category, "class1") == expected_output
+    category_url = reverse("djpress:category_posts", args=[category1.slug])
+    expected_output = f'<a href="{category_url}" title="View all posts in the General category" class="class1">{category1.name}</a>'
+    assert djpress_tags.post_category_link(category1, "class1") == expected_output
 
 
 @pytest.mark.django_db
-def test_post_category_link_with_category_path_with_two_link_classes(category):
+def test_post_category_link_with_category_path_with_two_link_classes(category1):
     settings.CATEGORY_PATH_ENABLED = True
-    category_url = reverse("djpress:category_posts", args=[category.slug])
-    expected_output = f'<a href="{category_url}" title="View all posts in the Test Category category" class="class1 class2">{category.name}</a>'
-    assert djpress_tags.post_category_link(category, "class1 class2") == expected_output
+    category_url = reverse("djpress:category_posts", args=[category1.slug])
+    expected_output = f'<a href="{category_url}" title="View all posts in the General category" class="class1 class2">{category1.name}</a>'
+    assert (
+        djpress_tags.post_category_link(category1, "class1 class2") == expected_output
+    )
 
 
 def test_post_date_no_post():
@@ -296,9 +360,9 @@ def test_post_content(create_test_post):
 
 
 @pytest.mark.django_db
-def test_category_name(category):
-    context = Context({"category": category})
-    assert djpress_tags.category_name(context) == category.name
+def test_category_name(category1):
+    context = Context({"category": category1})
+    assert djpress_tags.category_name(context) == category1.name
 
 
 def test_category_name_no_category():
@@ -311,8 +375,31 @@ def test_category_name_no_category():
 def test_post_categories(create_test_post):
     context = Context({"post": create_test_post})
 
-    categories = create_test_post.categories.all()
-    output = '<ul><li><a href="/category/test-category/" title="View all posts in the Test Category category">Test Category</a></li></ul>'
+    output = '<ul><li><a href="/category/general/" title="View all posts in the General category">General</a></li></ul>'
+    assert djpress_tags.post_categories(context) == output
+
+
+def test_post_categories_none_post_context():
+    context = Context({"post": None})
+
+    output = ""
+    assert djpress_tags.post_categories(context) == output
+
+
+def test_post_categories_no_post_context():
+    context = Context({"foo": None})
+
+    output = ""
+    assert djpress_tags.post_categories(context) == output
+
+
+@pytest.mark.django_db
+def test_post_categories_no_categories_context(create_test_post):
+    create_test_post.categories.clear()
+    context = Context({"post": create_test_post})
+
+    print(create_test_post)
+    output = ""
     assert djpress_tags.post_categories(context) == output
 
 
@@ -320,7 +407,7 @@ def test_post_categories(create_test_post):
 def test_post_categories_ul(create_test_post):
     context = Context({"post": create_test_post})
 
-    output = '<ul><li><a href="/category/test-category/" title="View all posts in the Test Category category">Test Category</a></li></ul>'
+    output = '<ul><li><a href="/category/general/" title="View all posts in the General category">General</a></li></ul>'
     assert djpress_tags.post_categories(context, "ul") == output
 
 
@@ -328,7 +415,7 @@ def test_post_categories_ul(create_test_post):
 def test_post_categories_ul_class1(create_test_post):
     context = Context({"post": create_test_post})
 
-    output = '<ul><li><a href="/category/test-category/" title="View all posts in the Test Category category" class="class1">Test Category</a></li></ul>'
+    output = '<ul><li><a href="/category/general/" title="View all posts in the General category" class="class1">General</a></li></ul>'
     assert (
         djpress_tags.post_categories(context, outer="ul", link_class="class1") == output
     )
@@ -338,7 +425,7 @@ def test_post_categories_ul_class1(create_test_post):
 def test_post_categories_ul_class1_class2(create_test_post):
     context = Context({"post": create_test_post})
 
-    output = '<ul><li><a href="/category/test-category/" title="View all posts in the Test Category category" class="class1 class2">Test Category</a></li></ul>'
+    output = '<ul><li><a href="/category/general/" title="View all posts in the General category" class="class1 class2">General</a></li></ul>'
     assert (
         djpress_tags.post_categories(context, outer="ul", link_class="class1 class2")
         == output
@@ -349,7 +436,7 @@ def test_post_categories_ul_class1_class2(create_test_post):
 def test_post_categories_div(create_test_post):
     context = Context({"post": create_test_post})
 
-    output = '<div><a href="/category/test-category/" title="View all posts in the Test Category category">Test Category</a></div>'
+    output = '<div><a href="/category/general/" title="View all posts in the General category">General</a></div>'
     assert djpress_tags.post_categories(context, outer="div") == output
 
 
@@ -357,7 +444,7 @@ def test_post_categories_div(create_test_post):
 def test_post_categories_div_class1(create_test_post):
     context = Context({"post": create_test_post})
 
-    output = '<div><a href="/category/test-category/" title="View all posts in the Test Category category" class="class1">Test Category</a></div>'
+    output = '<div><a href="/category/general/" title="View all posts in the General category" class="class1">General</a></div>'
     assert (
         djpress_tags.post_categories(context, outer="div", link_class="class1")
         == output
@@ -368,7 +455,7 @@ def test_post_categories_div_class1(create_test_post):
 def test_post_categories_div_class1_class2(create_test_post):
     context = Context({"post": create_test_post})
 
-    output = '<div><a href="/category/test-category/" title="View all posts in the Test Category category" class="class1 class2">Test Category</a></div>'
+    output = '<div><a href="/category/general/" title="View all posts in the General category" class="class1 class2">General</a></div>'
     assert (
         djpress_tags.post_categories(context, outer="div", link_class="class1 class2")
         == output
@@ -379,7 +466,7 @@ def test_post_categories_div_class1_class2(create_test_post):
 def test_post_categories_span(create_test_post):
     context = Context({"post": create_test_post})
 
-    output = '<span><a href="/category/test-category/" title="View all posts in the Test Category category">Test Category</a></span>'
+    output = '<span><a href="/category/general/" title="View all posts in the General category">General</a></span>'
     assert djpress_tags.post_categories(context, outer="span") == output
 
 
@@ -387,7 +474,7 @@ def test_post_categories_span(create_test_post):
 def test_post_categories_span_class1(create_test_post):
     context = Context({"post": create_test_post})
 
-    output = '<span><a href="/category/test-category/" title="View all posts in the Test Category category" class="class1">Test Category</a></span>'
+    output = '<span><a href="/category/general/" title="View all posts in the General category" class="class1">General</a></span>'
     assert (
         djpress_tags.post_categories(context, outer="span", link_class="class1")
         == output
@@ -398,7 +485,7 @@ def test_post_categories_span_class1(create_test_post):
 def test_post_categories_span_class1_class2(create_test_post):
     context = Context({"post": create_test_post})
 
-    output = '<span><a href="/category/test-category/" title="View all posts in the Test Category category" class="class1 class2">Test Category</a></span>'
+    output = '<span><a href="/category/general/" title="View all posts in the General category" class="class1 class2">General</a></span>'
     assert (
         djpress_tags.post_categories(context, outer="span", link_class="class1 class2")
         == output
