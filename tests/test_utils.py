@@ -1,6 +1,8 @@
 import pytest
-from djpress.utils import get_author_display_name
+from djpress.utils import get_author_display_name, render_markdown
 from django.contrib.auth.models import User
+
+from djpress.conf import settings
 
 
 # create a parameterized fixture for a test user with first name, last name, and username
@@ -44,3 +46,79 @@ def test_get_author_display_name(test_user):
 
     if not first_name and not last_name:
         assert display_name == user_name
+
+
+def test_render_markdown_basic():
+    markdown_text = "# Heading\n\nThis is some **bold** text. And this is *italic*.\n\nAnd a paragraph."
+    html = render_markdown(markdown_text)
+
+    assert "<h1>Heading</h1>" in html
+    assert "<strong>bold</strong>" in html
+    assert "<em>italic</em>" in html
+    assert "<p>And a paragraph.</p>" in html
+
+
+def test_render_markdown_link():
+    markdown_text = "[DJ Press](https://github.com/stuartmaxwell/djpress/)"
+    html = render_markdown(markdown_text)
+
+    assert '<a href="https://github.com/stuartmaxwell/djpress/">DJ Press</a>' in html
+
+
+def test_render_markdown_link_with_title():
+    markdown_text = (
+        '[DJ Press](https://github.com/stuartmaxwell/djpress/ "DJ Press GitHub")'
+    )
+    html = render_markdown(markdown_text)
+
+    assert (
+        '<a href="https://github.com/stuartmaxwell/djpress/" title="DJ Press GitHub">DJ Press</a>'
+        in html
+    )
+
+
+def test_render_markdown_image():
+    markdown_text = (
+        "![DJ Press Logo](https://github.com/stuartmaxwell/djpress/logo.png)"
+    )
+    html = render_markdown(markdown_text)
+
+    assert (
+        '<img alt="DJ Press Logo" src="https://github.com/stuartmaxwell/djpress/logo.png">'
+        in html
+    )
+
+
+def test_render_markdown_image_with_title():
+    markdown_text = '![DJ Press Logo](https://github.com/stuartmaxwell/djpress/logo.png "DJ Press Logo")'
+    html = render_markdown(markdown_text)
+
+    assert (
+        '<img alt="DJ Press Logo" src="https://github.com/stuartmaxwell/djpress/logo.png" title="DJ Press Logo">'
+        in html
+    )
+
+
+def test_render_markdown_python_codehilite():
+    markdown_text = """
+```python
+print("Hello, DJ Press!")
+```"""
+    html = render_markdown(markdown_text)
+
+    output = (
+        '<div class="codehilite">'
+        "<pre>"
+        "<span></span>"
+        "<code>"
+        '<span class="nb">print</span>'
+        '<span class="p">(</span>'
+        '<span class="s2">&quot;Hello, DJ Press!&quot;</span>'
+        '<span class="p">)</span>'
+        "\n"
+        "</code>"
+        "</pre>"
+        "</div>"
+    )
+
+    assert output in html
