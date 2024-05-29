@@ -375,8 +375,31 @@ def test_category_name_no_category():
 def test_post_categories(create_test_post):
     context = Context({"post": create_test_post})
 
-    categories = create_test_post.categories.all()
     output = '<ul><li><a href="/category/general/" title="View all posts in the General category">General</a></li></ul>'
+    assert djpress_tags.post_categories(context) == output
+
+
+def test_post_categories_none_post_context():
+    context = Context({"post": None})
+
+    output = ""
+    assert djpress_tags.post_categories(context) == output
+
+
+def test_post_categories_no_post_context():
+    context = Context({"foo": None})
+
+    output = ""
+    assert djpress_tags.post_categories(context) == output
+
+
+@pytest.mark.django_db
+def test_post_categories_no_categories_context(create_test_post):
+    create_test_post.categories.clear()
+    context = Context({"post": create_test_post})
+
+    print(create_test_post)
+    output = ""
     assert djpress_tags.post_categories(context) == output
 
 
