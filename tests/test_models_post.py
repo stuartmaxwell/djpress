@@ -9,18 +9,10 @@ from djpress.models import Category, Post
 
 
 @pytest.mark.django_db
-def test_category_model():
-    category = Category.objects.create(name="Test Category", slug="test-category")
-    assert category.name == "Test Category"
-    assert category.slug == "test-category"
-    assert str(category) == "Test Category"
-
-
-@pytest.mark.django_db
-def test_content_model():
+def test_post_model():
     user = User.objects.create_user(username="testuser", password="testpass")
     category = Category.objects.create(name="Test Category", slug="test-category")
-    content = Post.post_objects.create(
+    post = Post.post_objects.create(
         title="Test Content",
         slug="test-content",
         content="This is a test content.",
@@ -28,18 +20,18 @@ def test_content_model():
         status="published",
         post_type="post",
     )
-    content.categories.add(category)
-    assert content.title == "Test Content"
-    assert content.slug == "test-content"
-    assert content.author == user
-    assert content.status == "published"
-    assert content.post_type == "post"
-    assert content.categories.count() == 1
-    assert str(content) == "Test Content"
+    post.categories.add(category)
+    assert post.title == "Test Content"
+    assert post.slug == "test-content"
+    assert post.author == user
+    assert post.status == "published"
+    assert post.post_type == "post"
+    assert post.categories.count() == 1
+    assert str(post) == "Test Content"
 
 
 @pytest.mark.django_db
-def test_content_methods():
+def test_post_methods():
     user = User.objects.create_user(username="testuser", password="testpass")
     category1 = Category.objects.create(name="Category 1", slug="category-1")
     category2 = Category.objects.create(name="Category 2", slug="category-2")
@@ -208,44 +200,7 @@ def test_post_slug_generation():
 
 
 @pytest.mark.django_db
-def test_category_save_slug_generation():
-    """Test that the slug is correctly generated when saving a Category."""
-    category = Category(name="Test Category")
-    category.save()
-
-    assert category.slug == slugify("Test Category")
-
-
-@pytest.mark.django_db
-def test_category_save_slug_uniqueness():
-    """Test that an error is raised when trying to save a Category with a duplicate slug."""
-    category1 = Category(name="Test Category")
-    category1.save()
-
-    category2 = Category(name="Test Category")
-
-    with pytest.raises(ValueError) as excinfo:
-        category2.save()
-
-    assert (
-        str(excinfo.value)
-        == f"A category with the slug {category2.slug} already exists."
-    )
-
-
-@pytest.mark.django_db
-def test_category_save_invalid_name():
-    """Test that an error is raised when trying to save a Category with an invalid name."""
-    category = Category(name="-")
-
-    with pytest.raises(ValueError) as excinfo:
-        category.save()
-
-    assert str(excinfo.value) == "Invalid name. Unable to generate a valid slug."
-
-
-@pytest.mark.django_db
-def test_markdown_rendering():
+def test_post_markdown_rendering():
     user = User.objects.create_user(username="testuser", password="testpass")
 
     # Test case 1: Render markdown with basic formatting
@@ -277,7 +232,7 @@ def test_markdown_rendering():
 
 
 @pytest.mark.django_db
-def test_truncated_content_markdown():
+def test_post_truncated_content_markdown():
     user = User.objects.create_user(username="testuser", password="testpass")
 
     # Test case 1: Content with "read more" tag
@@ -300,7 +255,7 @@ def test_truncated_content_markdown():
 
 
 @pytest.mark.django_db
-def test_is_truncated_property():
+def test_post_is_truncated_property():
     user = User.objects.create_user(username="testuser", password="testpass")
 
     # Test case 1: Content with truncate tag
@@ -337,34 +292,6 @@ def test_is_truncated_property():
 
 
 @pytest.mark.django_db
-def test_category_slug_auto_generation():
-    # Test case 1: Slug auto-generated when not provided
-    category1 = Category.objects.create(name="Test Category")
-    assert category1.slug == slugify(category1.name)
-
-    # Test case 2: Slug not overridden when provided
-    category2 = Category.objects.create(name="Another Category", slug="custom-slug")
-    assert category2.slug == "custom-slug"
-
-    # Test case 3: Slug auto-generated with special characters
-    category3 = Category.objects.create(name="Special !@#$%^&*() Category")
-    assert category3.slug == "special-category"
-
-    # Test case 4: Slug auto-generated with non-ASCII characters
-    category4 = Category.objects.create(name="Non-ASCII áéíóú Category")
-    assert category4.slug == "non-ascii-aeiou-category"
-
-    # Test case 5: Slug auto-generated with leading/trailing hyphens
-    category5 = Category.objects.create(name="--Leading/Trailing Hyphens--")
-    assert category5.slug == "leadingtrailing-hyphens"
-
-    # Test case 6: Raise ValueError for invalid name
-    with pytest.raises(ValueError) as exc_info:
-        Category.objects.create(name="!@#$%^&*()")
-    assert str(exc_info.value) == "Invalid name. Unable to generate a valid slug."
-
-
-@pytest.mark.django_db
 def test_post_permalink():
     post = Post(
         title="Test Post",
@@ -394,6 +321,36 @@ def test_post_permalink():
     assert post.permalink == "posts/2024/01/test-post"
     settings.POST_PERMALINK = settings.YEAR_SLUG
     assert post.permalink == "posts/2024/test-post"
+
+
+@pytest.mark.django_db
+def test_get_published_posts_by_author():
+    # Create a test user
+    user = User.objects.create_user(username="testuser", password="testpass")
+
+    # Create some published posts by the test user
+    post1 = Post.post_objects.create(
+        title="Post 1", content="Content of post 1.", author=user, status="published"
+    )
+    post2 = Post.post_objects.create(
+        title="Post 2", content="Content of post 2.", author=user, status="published"
+    )
+
+    # Create a draft post by the test user
+    draft_post = Post.post_objects.create(
+        title="Draft Post",
+        content="Content of draft post.",
+        author=user,
+        status="draft",
+    )
+
+    # Call the method being tested
+    published_posts = Post.post_objects.get_published_posts_by_author(user)
+
+    # Assert that only the published posts by the test user are returned
+    assert post1 in published_posts
+    assert post2 in published_posts
+    assert draft_post not in published_posts
 
 
 @pytest.mark.django_db
