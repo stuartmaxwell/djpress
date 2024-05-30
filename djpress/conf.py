@@ -2,7 +2,7 @@
 
 from django.conf import settings as django_settings
 
-from . import app_settings as default_settings
+from djpress import app_settings as default_settings
 
 
 class Settings:
@@ -18,7 +18,17 @@ class Settings:
         self._user_settings = user_settings_module
 
     def __getattr__(self: "Settings", name: str) -> object:
-        """Get the value of a setting."""
+        """Get the value of a setting.
+
+        Args:
+            name (str): The name of the setting to get.
+
+        Returns:
+            object: The value of the setting.
+
+        Raises:
+            AttributeError: If the setting is not found.
+        """
         # If the setting is found in the user settings, return it
         if hasattr(self._user_settings, name):
             return getattr(self._user_settings, name)
