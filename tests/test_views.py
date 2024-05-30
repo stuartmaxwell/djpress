@@ -49,15 +49,15 @@ def test_index_view(client):
 
 
 @pytest.mark.django_db
-def test_content_detail_view(client, create_test_post):
-    url = reverse("djpress:post_detail", args=[create_test_post.slug])
+def test_post_detail_view(client, create_test_post):
+    url = reverse("djpress:post_detail", args=[create_test_post.permalink])
     response = client.get(url)
     assert response.status_code == 200
     assert "post" in response.context
 
 
 @pytest.mark.django_db
-def test_content_detail_not_exist(client):
+def test_post_detail_not_exist(client):
     url = reverse("djpress:post_detail", args=["foobar-does-not-exist"])
     response = client.get(url)
     assert response.status_code == 404
