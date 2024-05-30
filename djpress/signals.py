@@ -17,12 +17,18 @@ from djpress.models.post import (
 @receiver(post_save, sender=Category)
 @receiver(post_delete, sender=Category)
 def invalidate_category_cache(**kwargs) -> None:  # noqa: ARG001, ANN003
-    """Invalidate the category cache."""
+    """Invalidate the category cache.
+
+    We invalidate the cache when a category is saved or deleted.
+    """
     cache.delete(CATEGORY_CACHE_KEY)
 
 
 @receiver(post_save, sender=Post)
 @receiver(post_delete, sender=Post)
 def invalidate_published_content_cache(**kwargs) -> None:  # noqa: ARG001, ANN003
-    """Invalidate the published posts cache."""
+    """Invalidate the published posts cache.
+
+    We invalidate the cache when a post is saved or deleted.
+    """
     cache.delete(PUBLISHED_POSTS_CACHE_KEY)

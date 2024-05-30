@@ -75,3 +75,55 @@ def test_category_slug_auto_generation():
     with pytest.raises(ValueError) as exc_info:
         Category.objects.create(name="!@#$%^&*()")
     assert str(exc_info.value) == "Invalid name. Unable to generate a valid slug."
+
+
+@pytest.mark.django_db
+def test_get_categories(settings):
+    """Test that the get_categories method returns the correct categories."""
+    category1 = Category.objects.create(name="Category 1")
+    category2 = Category.objects.create(name="Category 2")
+    category3 = Category.objects.create(name="Category 3")
+
+    settings.CACHE_CATEGORIES = False
+    categories = Category.objects.get_categories()
+
+    assert list(categories) == [category1, category2, category3]
+
+
+@pytest.mark.django_db
+def test_get_category_by_slug(settings):
+    """Test that the get_category_by_slug method returns the correct category."""
+    settings.CACHE_CATEGORIES = False
+    category1 = Category.objects.create(name="Category 1", slug="category-1")
+    category2 = Category.objects.create(name="Category 2", slug="category-2")
+
+    category = Category.objects.get_category_by_slug("category-1")
+
+    assert category == category1
+    assert not category == category2
+
+
+@pytest.mark.django_db
+def test_get_category_by_slug_not_exists(settings):
+    """Test that the get_category_by_slug method returns None when the category does not exist."""
+    settings.CACHE_CATEGORIES = False
+
+    with pytest.raises(ValueError) as excinfo:
+        _ = Category.objects.get_category_by_slug("non-existent-category")
+    assert "Category not found" in str(excinfo.value)
+
+
+@pytest.mark.django_db
+def test_category_permalink(settings):
+    """Test that the permalink property returns the correct URL."""
+    settings.CATEGORY_PATH_ENABLED = True
+    settings.CATEGORY_PATH = "categories"
+
+    category = Category.objects.create(name="Test Category", slug="test-category")
+
+    assert category.permalink == "categories/test-category"
+
+    settings.CATEGORY_PATH_ENABLED = False
+    settings.CATEGORY_PATH = ""
+
+    assert category.permalink == "test-category"
