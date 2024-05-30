@@ -4,8 +4,10 @@ from django.http import Http404
 from django.utils import timezone
 from django.utils.text import slugify
 
-from djpress.conf import settings
+# from djpress.conf import settings
 from djpress.models import Category, Post
+
+from example.config import settings as example_settings
 
 
 @pytest.mark.django_db
@@ -232,13 +234,13 @@ def test_post_markdown_rendering():
 
 
 @pytest.mark.django_db
-def test_post_truncated_content_markdown():
+def test_post_truncated_content_markdown(settings):
     user = User.objects.create_user(username="testuser", password="testpass")
 
     # Test case 1: Content with "read more" tag
     post1 = Post.post_objects.create(
         title="Post with Read More",
-        content="This is the intro.\n\n<!--more-->\n\nThis is the rest of the content.",
+        content=f"This is the intro.\n\n{settings.TRUNCATE_TAG}\n\nThis is the rest of the content.",
         author=user,
     )
     expected_truncated_content = "<p>This is the intro.</p>"
@@ -255,7 +257,7 @@ def test_post_truncated_content_markdown():
 
 
 @pytest.mark.django_db
-def test_post_is_truncated_property():
+def test_post_is_truncated_property(settings):
     user = User.objects.create_user(username="testuser", password="testpass")
 
     # Test case 1: Content with truncate tag
@@ -292,7 +294,7 @@ def test_post_is_truncated_property():
 
 
 @pytest.mark.django_db
-def test_post_permalink():
+def test_post_permalink(settings):
     post = Post(
         title="Test Post",
         slug="test-post",

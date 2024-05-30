@@ -3,7 +3,6 @@ from django.contrib.auth.models import User
 from django.urls import reverse
 from django.utils import timezone
 
-from djpress.conf import settings
 from djpress.models import Category, Post
 
 
@@ -51,7 +50,6 @@ def test_index_view(client):
 
 @pytest.mark.django_db
 def test_content_detail_view(client, create_test_post):
-    settings.POST_PREFIX = ""
     url = reverse("djpress:post_detail", args=[create_test_post.slug])
     response = client.get(url)
     assert response.status_code == 200
@@ -89,7 +87,6 @@ def test_category_with_posts_view(client, create_test_post, category):
 @pytest.mark.django_db
 def test_date_archives_year(client, create_test_post):
     url = reverse("djpress:archives_posts", kwargs={"year": "2024"})
-    settings.POST_PREFIX = ""
     response = client.get(url)
     assert response.status_code == 200
     assert "posts" in response.context
@@ -99,7 +96,6 @@ def test_date_archives_year(client, create_test_post):
 @pytest.mark.django_db
 def test_date_archives_year_no_posts(client, create_test_post):
     url = reverse("djpress:archives_posts", kwargs={"year": "2023"})
-    settings.POST_PREFIX = ""
     response = client.get(url)
     assert response.status_code == 200
     assert "posts" in response.context

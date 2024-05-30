@@ -4,7 +4,6 @@ from django.template import Context
 from django.urls import reverse
 from django.utils import timezone
 
-from djpress.conf import settings
 from djpress.models import Category, Post
 from djpress.templatetags import djpress_tags
 from djpress.utils import get_author_display_name
@@ -62,7 +61,7 @@ def create_test_post(user, category1):
     return post
 
 
-def test_blog_title():
+def test_blog_title(settings):
     assert djpress_tags.blog_title() == settings.BLOG_TITLE
 
 
@@ -95,7 +94,7 @@ def test_post_title_no_post():
 
 
 @pytest.mark.django_db
-def test_post_title_link(create_test_post):
+def test_post_title_link(create_test_post, settings):
     settings.POST_PREFIX = ""
     context = Context({"post": create_test_post})
     post_url = reverse("djpress:post_detail", args=[create_test_post.slug])
@@ -113,12 +112,12 @@ def test_post_title_link_no_context(create_test_post):
 
 
 @pytest.mark.django_db
-def test_post_title_link_with_prefix(create_test_post):
-    settings.POST_PREFIX = "post"
+def test_post_title_link_with_prefix(create_test_post, settings):
+    settings.POST_PREFIX = "foobar"
     context = Context({"post": create_test_post})
     post_url = reverse("djpress:post_detail", args=[create_test_post.slug])
 
-    expected_output = f'<a href="/post{post_url}" title="{create_test_post.title}">{create_test_post.title}</a>'
+    expected_output = f'<a href="/foobar{post_url}" title="{create_test_post.title}">{create_test_post.title}</a>'
     assert djpress_tags.post_title_link(context) == expected_output
 
 
@@ -144,7 +143,7 @@ def test_post_author_link_no_post():
 
 
 @pytest.mark.django_db
-def test_post_author_link_without_author_path(create_test_post):
+def test_post_author_link_without_author_path(create_test_post, settings):
     context = Context({"post": create_test_post})
     settings.AUTHOR_PATH_ENABLED = False
 
@@ -154,7 +153,7 @@ def test_post_author_link_without_author_path(create_test_post):
 
 
 @pytest.mark.django_db
-def test_post_author_link_with_author_path(create_test_post):
+def test_post_author_link_with_author_path(create_test_post, settings):
     context = Context({"post": create_test_post})
     settings.AUTHOR_PATH_ENABLED = True
 
@@ -170,7 +169,9 @@ def test_post_author_link_with_author_path(create_test_post):
 
 
 @pytest.mark.django_db
-def test_post_author_link_with_author_path_with_one_link_class(create_test_post):
+def test_post_author_link_with_author_path_with_one_link_class(
+    create_test_post, settings
+):
     context = Context({"post": create_test_post})
     settings.AUTHOR_PATH_ENABLED = True
 
@@ -186,7 +187,9 @@ def test_post_author_link_with_author_path_with_one_link_class(create_test_post)
 
 
 @pytest.mark.django_db
-def test_post_author_link_with_author_path_with_two_link_class(create_test_post):
+def test_post_author_link_with_author_path_with_two_link_class(
+    create_test_post, settings
+):
     context = Context({"post": create_test_post})
     settings.AUTHOR_PATH_ENABLED = True
 
@@ -202,13 +205,13 @@ def test_post_author_link_with_author_path_with_two_link_class(create_test_post)
 
 
 @pytest.mark.django_db
-def test_post_category_link_without_category_path(category1):
+def test_post_category_link_without_category_path(category1, settings):
     settings.CATEGORY_PATH_ENABLED = False
     assert djpress_tags.post_category_link(category1) == category1.name
 
 
 @pytest.mark.django_db
-def test_post_category_link_with_category_path(category1):
+def test_post_category_link_with_category_path(category1, settings):
     settings.CATEGORY_PATH_ENABLED = True
     category_url = reverse("djpress:category_posts", args=[category1.slug])
     expected_output = f'<a href="{category_url}" title="View all posts in the General category">{category1.name}</a>'
@@ -216,7 +219,7 @@ def test_post_category_link_with_category_path(category1):
 
 
 @pytest.mark.django_db
-def test_post_category_link_with_category_path_with_one_link_class(category1):
+def test_post_category_link_with_category_path_with_one_link_class(category1, settings):
     settings.CATEGORY_PATH_ENABLED = True
     category_url = reverse("djpress:category_posts", args=[category1.slug])
     expected_output = f'<a href="{category_url}" title="View all posts in the General category" class="class1">{category1.name}</a>'
@@ -224,7 +227,9 @@ def test_post_category_link_with_category_path_with_one_link_class(category1):
 
 
 @pytest.mark.django_db
-def test_post_category_link_with_category_path_with_two_link_classes(category1):
+def test_post_category_link_with_category_path_with_two_link_classes(
+    category1, settings
+):
     settings.CATEGORY_PATH_ENABLED = True
     category_url = reverse("djpress:category_posts", args=[category1.slug])
     expected_output = f'<a href="{category_url}" title="View all posts in the General category" class="class1 class2">{category1.name}</a>'
@@ -240,7 +245,7 @@ def test_post_date_no_post():
 
 
 @pytest.mark.django_db
-def test_post_date_without_date_archives_enabled(create_test_post):
+def test_post_date_without_date_archives_enabled(create_test_post, settings):
     context = Context({"post": create_test_post})
     settings.DATE_ARCHIVES_ENABLED = False
 
@@ -249,7 +254,7 @@ def test_post_date_without_date_archives_enabled(create_test_post):
 
 
 @pytest.mark.django_db
-def test_post_date_with_date_archives_enabled(create_test_post):
+def test_post_date_with_date_archives_enabled(create_test_post, settings):
     context = Context({"post": create_test_post})
     settings.DATE_ARCHIVES_ENABLED = True
 
@@ -264,7 +269,7 @@ def test_post_date_link_no_post():
 
 
 @pytest.mark.django_db
-def test_post_date_link_without_date_archives_enabled(create_test_post):
+def test_post_date_link_without_date_archives_enabled(create_test_post, settings):
     context = Context({"post": create_test_post})
     settings.DATE_ARCHIVES_ENABLED = False
 
@@ -273,7 +278,7 @@ def test_post_date_link_without_date_archives_enabled(create_test_post):
 
 
 @pytest.mark.django_db
-def test_post_date_link_with_date_archives_enabled(create_test_post):
+def test_post_date_link_with_date_archives_enabled(create_test_post, settings):
     context = Context({"post": create_test_post})
     settings.DATE_ARCHIVES_ENABLED = True
 
@@ -298,6 +303,7 @@ def test_post_date_link_with_date_archives_enabled(create_test_post):
 @pytest.mark.django_db
 def test_post_date_link_with_date_archives_enabled_with_one_link_class(
     create_test_post,
+    settings,
 ):
     context = Context({"post": create_test_post})
     settings.DATE_ARCHIVES_ENABLED = True
@@ -323,6 +329,7 @@ def test_post_date_link_with_date_archives_enabled_with_one_link_class(
 @pytest.mark.django_db
 def test_post_date_link_with_date_archives_enabled_with_two_link_classes(
     create_test_post,
+    settings,
 ):
     context = Context({"post": create_test_post})
     settings.DATE_ARCHIVES_ENABLED = True

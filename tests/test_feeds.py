@@ -44,10 +44,6 @@ def test_truncated_posts_feed(client):
         status="published",
     )
 
-    # Disable any permalinks
-    settings.POST_PERMALINK = ""
-    settings.POST_PREFIX = ""
-
     url = reverse("djpress:rss_feed")
     response = client.get(url)
 
@@ -62,4 +58,4 @@ def test_truncated_posts_feed(client):
     assert "<title>Post 1</title>" in feed
     assert "Truncated content" not in feed
     print(feed)
-    assert '&lt;a href="/post-1/"&gt;Read more&lt;/a&gt;&lt;/p&gt;' in feed
+    assert f'&lt;a href="/post/post-1/"&gt;Read more&lt;/a&gt;&lt;/p&gt;' in feed
