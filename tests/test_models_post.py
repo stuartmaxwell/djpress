@@ -10,6 +10,11 @@ from djpress.models import Category, Post
 from example.config import settings as example_settings
 
 
+@pytest.fixture
+def user():
+    return User.objects.create_user(username="testuser", password="testpass")
+
+
 @pytest.mark.django_db
 def test_post_model():
     user = User.objects.create_user(username="testuser", password="testpass")
@@ -368,3 +373,28 @@ def test_page_permalink():
     )
 
     assert page.permalink == "test-page"
+
+
+@pytest.mark.django_db
+def test_get_recent_published_posts(settings, user):
+    """Test that the get_recent_published_posts method returns the correct posts."""
+    settings.CACHE_RECENT_PUBLISHED_POSTS = False
+    # Create some published posts
+    post1 = Post.objects.create(title="Post 1", status="published", author=user)
+    post2 = Post.objects.create(title="Post 2", status="published", author=user)
+    post3 = Post.objects.create(title="Post 3", status="published", author=user)
+
+    # Call the method being tested
+    recent_posts = Post.post_objects.get_recent_published_posts()
+
+    # Assert that the correct posts are returned
+    assert list(recent_posts) == [post3, post2, post1]
+
+    # Test case 2: Limit the number of posts returned
+    settings.RECENT_PUBLISHED_POSTS_COUNT = 2
+    # Call the method being tested again
+    recent_posts = Post.post_objects.get_recent_published_posts()
+
+    # Assert that the correct posts are returned
+    assert list(recent_posts) == [post3, post2]
+    assert not post1 in recent_posts

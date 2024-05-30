@@ -1,16 +1,35 @@
 import pytest
 
+from django.conf import settings as django_settings
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.utils import timezone
 
+from djpress import app_settings as default_settings
+from djpress.conf import Settings
 from djpress.models import Post
 from djpress.models.post import PUBLISHED_POSTS_CACHE_KEY
+
+
+# A sample module for user settings
+class CustomUserSettings:
+    pass
 
 
 @pytest.fixture(autouse=True)
 def clear_cache():
     cache.clear()
+
+
+@pytest.fixture
+def custom_settings():
+    """Fixture to provide an instance of the Settings class with user and default settings."""
+    return Settings(default_settings, CustomUserSettings)
+
+
+@pytest.fixture
+def user():
+    return User.objects.create_user(username="testuser", password="testpass")
 
 
 @pytest.mark.django_db
@@ -122,3 +141,34 @@ def test_cache_invalidation_on_delete():
     cached_queryset2 = cache.get(PUBLISHED_POSTS_CACHE_KEY)
     assert cached_queryset2 is not None
     assert len(queryset2) == 0
+
+
+@pytest.mark.django_db
+def test_cache_get_recent_published_posts(custom_settings, user, settings):
+    """Test that the get_recent_published_posts method returns the correct posts."""
+
+    custom_settings.set("CACHE_RECENT_PUBLISHED_POSTS", True)
+    # Create some published posts
+    post1 = Post.objects.create(title="Post 1", status="published", author=user)
+    post2 = Post.objects.create(title="Post 2", status="published", author=user)
+    post3 = Post.objects.create(title="Post 3", status="published", author=user)
+
+    # Call the method being tested
+    recent_posts = Post.post_objects.get_recent_published_posts()
+
+    # Assert that the correct posts are returned
+    assert list(recent_posts) == [post3, post2, post1]
+
+    # Test case 2: Limit the number of posts returned
+    # This feels a bit messy but we need to set the settings in the Django settings module
+    # as well as the pytest fixture settings. The Django model settings will clear the cache
+    # when the settings are changed, but the pytest fixture settings are used by the test.
+    custom_settings.set("RECENT_PUBLISHED_POSTS_COUNT", 2)
+    settings.RECENT_PUBLISHED_POSTS_COUNT = 2
+
+    # Call the method being tested again
+    recent_posts = Post.post_objects.get_recent_published_posts()
+
+    # Assert that the correct posts are returned
+    assert list(recent_posts) == [post3, post2]
+    assert not post1 in recent_posts

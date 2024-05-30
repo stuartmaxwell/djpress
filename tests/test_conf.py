@@ -1,6 +1,7 @@
 import pytest
 
 from django.conf import settings as django_settings
+from django.core.cache import cache
 
 from djpress.conf import Settings
 from djpress import app_settings as default_settings
@@ -10,6 +11,8 @@ from djpress import app_settings as default_settings
 class CustomUserSettings:
     POST_PREFIX = "custom-prefix"
     POST_PERMALINK = "custom-permalink"
+    CACHE_CATEGORIES = True
+    CACHE_RECENT_PUBLISHED_POSTS = False
 
 
 @pytest.fixture
@@ -52,3 +55,22 @@ def test_override_settings(custom_settings, settings):
     settings.POST_PERMALINK = "overridden-permalink"
     assert django_settings.POST_PERMALINK == "overridden-permalink"
     assert custom_settings.POST_PERMALINK == "custom-permalink"
+
+
+def test_cache_invalidation(custom_settings):
+    """Test that changing a setting invalidates the cache if caching is enabled."""
+    cache.set("test_key", "test_value")
+    assert cache.get("test_key") == "test_value"
+
+    custom_settings.set("NEW_SETTING", "new_value")
+    assert cache.get("test_key") is None  # Cache should be invalidated
+
+    # Temporarily override settings
+    custom_settings.set("CACHE_CATEGORIES", False)
+    custom_settings.set("CACHE_RECENT_PUBLISHED_POSTS", False)
+
+    cache.set("test_key", "test_value")
+    assert cache.get("test_key") == "test_value"
+
+    custom_settings.set("ANOTHER_SETTING", "another_value")
+    assert cache.get("test_key") == "test_value"  # Cache should not be invalidated
