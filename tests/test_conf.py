@@ -74,3 +74,47 @@ def test_cache_invalidation(custom_settings):
 
     custom_settings.set("ANOTHER_SETTING", "another_value")
     assert cache.get("test_key") == "test_value"  # Cache should not be invalidated
+
+
+def test_change_settings_on_the_fly(custom_settings):
+    """Test that changing a setting on the fly invalidates the cache if caching is enabled."""
+
+    # First make sure the settings are configured in a way that the cache should be invalidated
+    custom_settings.set("CACHE_CATEGORIES", True)
+    custom_settings.set("CACHE_RECENT_PUBLISHED_POSTS", False)
+
+    # Confirm that the settings are set correctly
+    assert custom_settings.CACHE_CATEGORIES is True
+    assert custom_settings.cache_categories is True
+    assert custom_settings.CACHE_RECENT_PUBLISHED_POSTS is False
+    assert custom_settings.cache_recent_published_posts is False
+    assert custom_settings._should_invalidate_cache() is True
+
+    cache.set("test_key", "test_value")
+    assert cache.get("test_key") == "test_value"
+
+    # Now we change a setting and this should invalidate the cache
+    custom_settings.set("CACHE_CATEGORIES", False)
+
+    assert custom_settings.CACHE_CATEGORIES is False
+    assert custom_settings.cache_categories is False
+    assert custom_settings._should_invalidate_cache() is False
+
+    # The cache should be invalidated
+    assert cache.get("test_key") is None
+
+    # Set the cache again
+    cache.set("test_key", "test_value")
+    assert cache.get("test_key") == "test_value"
+
+    # Now we change another setting and this should NOT invalidate the cache - this is
+    # because there should be nothing in the cache to worry about. This is confirmed by
+    # checking that _should_invalidate_cache is False
+    assert custom_settings._should_invalidate_cache() is False
+    custom_settings.set("CACHE_CATEGORIES", True)
+
+    assert cache.get("test_key") == "test_value"
+
+    # And now the cache should be invalidated because _should_invalidate_cache should be
+    # True.
+    assert custom_settings._should_invalidate_cache() is True

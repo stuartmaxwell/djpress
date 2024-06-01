@@ -43,14 +43,10 @@ class Settings:
         raise AttributeError(msg)
 
     def set(self: "Settings", name: str, value: object) -> None:
-        """Set the value of a setting and invalidate the cache if necessary.
-
-        Right now this is only used by pytest, but in the future, this will be the
-        correct way to set a setting value.
-        """
-        setattr(self._user_settings, name, value)
+        """Set the value of a setting and invalidate the cache if necessary."""
         if self._should_invalidate_cache():
             cache.clear()
+        setattr(self._user_settings, name, value)
 
     def _should_invalidate_cache(self: "Settings") -> bool:
         """Check if cache should be invalidated based on cache settings."""
