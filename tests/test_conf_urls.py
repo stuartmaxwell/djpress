@@ -1,7 +1,6 @@
 import pytest
-from importlib import reload
 
-from django.urls import reverse, NoReverseMatch
+from django.urls import reverse
 
 from djpress.conf import settings
 
