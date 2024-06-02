@@ -2,8 +2,6 @@ import pytest
 from djpress.utils import get_author_display_name, render_markdown
 from django.contrib.auth.models import User
 
-from djpress.conf import settings
-
 
 # create a parameterized fixture for a test user with first name, last name, and username
 @pytest.fixture(

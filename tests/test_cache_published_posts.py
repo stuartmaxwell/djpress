@@ -1,30 +1,12 @@
 import pytest
 
-from django.conf import settings as django_settings
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.utils import timezone
 
-from djpress import app_settings as default_settings
-from djpress.conf import Settings
+from djpress.conf import settings
 from djpress.models import Post
 from djpress.models.post import PUBLISHED_POSTS_CACHE_KEY
-
-
-# A sample module for user settings
-class CustomUserSettings:
-    pass
-
-
-@pytest.fixture(autouse=True)
-def clear_cache():
-    cache.clear()
-
-
-@pytest.fixture
-def custom_settings():
-    """Fixture to provide an instance of the Settings class with user and default settings."""
-    return Settings(default_settings, CustomUserSettings)
 
 
 @pytest.fixture
@@ -33,8 +15,10 @@ def user():
 
 
 @pytest.mark.django_db
-def test_get_cached_content():
-    user = User.objects.create_user(username="testuser", password="testpass")
+def test_get_cached_content(user):
+    # Confirm the settings in settings_testing.py
+    assert settings.CACHE_RECENT_PUBLISHED_POSTS is False
+
     # Create some test content
     Post.post_objects.create(
         title="Content 1",
@@ -53,7 +37,7 @@ def test_get_cached_content():
         date=timezone.now(),
     )
 
-    # Call the _get_cached_recent_published_content method
+    # Call the _get_cached_recent_published_content method - this forces the cache to be set, regardless of settings
     queryset = Post.post_objects._get_cached_recent_published_posts()
 
     # Assert that the queryset is cached
@@ -68,8 +52,10 @@ def test_get_cached_content():
 
 
 @pytest.mark.django_db
-def test_cache_invalidation_on_save():
-    user = User.objects.create_user(username="testuser", password="testpass")
+def test_cache_invalidation_on_save(user):
+    # Confirm the settings in settings_testing.py
+    assert settings.CACHE_RECENT_PUBLISHED_POSTS is False
+
     # Create some test content
     content = Post.post_objects.create(
         title="Content 1",
@@ -80,7 +66,7 @@ def test_cache_invalidation_on_save():
         date=timezone.now(),
     )
 
-    # Call the get_cached_published_content method
+    # Call the _get_cached_recent_published_content method - this forces the cache to be set, regardless of settings
     queryset = Post.post_objects._get_cached_recent_published_posts()
 
     # Assert that the queryset is cached
@@ -107,8 +93,10 @@ def test_cache_invalidation_on_save():
 
 
 @pytest.mark.django_db
-def test_cache_invalidation_on_delete():
-    user = User.objects.create_user(username="testuser", password="testpass")
+def test_cache_invalidation_on_delete(user):
+    # Confirm the settings in settings_testing.py
+    assert settings.CACHE_RECENT_PUBLISHED_POSTS is False
+
     # Create some test content
     content = Post.post_objects.create(
         title="Content 1",
@@ -119,7 +107,7 @@ def test_cache_invalidation_on_delete():
         date=timezone.now(),
     )
 
-    # Call the get_cached_published_content method
+    # Call the _get_cached_recent_published_content method - this forces the cache to be set, regardless of settings
     queryset = Post.post_objects._get_cached_recent_published_posts()
 
     # Assert that the queryset is cached
@@ -144,10 +132,17 @@ def test_cache_invalidation_on_delete():
 
 
 @pytest.mark.django_db
-def test_cache_get_recent_published_posts(custom_settings, user, settings):
+def test_cache_get_recent_published_posts(user):
     """Test that the get_recent_published_posts method returns the correct posts."""
 
-    custom_settings.set("CACHE_RECENT_PUBLISHED_POSTS", True)
+    # Confirm settings are set according to settings_testing.py
+    assert settings.CACHE_RECENT_PUBLISHED_POSTS is False
+    assert settings.RECENT_PUBLISHED_POSTS_COUNT == 3
+
+    # Enable the posts cache
+    settings.set("CACHE_RECENT_PUBLISHED_POSTS", True)
+    assert settings.CACHE_RECENT_PUBLISHED_POSTS is True
+
     # Create some published posts
     post1 = Post.objects.create(title="Post 1", status="published", author=user)
     post2 = Post.objects.create(title="Post 2", status="published", author=user)
@@ -159,33 +154,60 @@ def test_cache_get_recent_published_posts(custom_settings, user, settings):
     # Assert that the correct posts are returned
     assert list(recent_posts) == [post3, post2, post1]
 
+    # Check that all posts are cached
+    cached_queryset = cache.get(PUBLISHED_POSTS_CACHE_KEY)
+    assert cached_queryset is not None
+    assert list(cached_queryset) == [post3, post2, post1]
+
     # Test case 2: Limit the number of posts returned
-    # This feels a bit messy but we need to set the settings in the Django settings module
-    # as well as the pytest fixture settings. The Django model settings will clear the cache
-    # when the settings are changed, but the pytest fixture settings are used by the test.
-    custom_settings.set("RECENT_PUBLISHED_POSTS_COUNT", 2)
-    settings.RECENT_PUBLISHED_POSTS_COUNT = 2
+    settings.set("RECENT_PUBLISHED_POSTS_COUNT", 2)
+    assert settings.RECENT_PUBLISHED_POSTS_COUNT == 2
 
     # Call the method being tested again
     recent_posts = Post.post_objects.get_recent_published_posts()
 
-    # Assert that the correct posts are returned
+    # # Assert that the correct posts are returned
     assert list(recent_posts) == [post3, post2]
     assert not post1 in recent_posts
 
+    # Check that all posts are cached
+    cached_queryset = cache.get(PUBLISHED_POSTS_CACHE_KEY)
+    assert cached_queryset is not None
+    assert list(cached_queryset) == [post3, post2]
+
+    # Set back to defaults
+    settings.set("CACHE_RECENT_PUBLISHED_POSTS", False)
+    settings.set("RECENT_PUBLISHED_POSTS_COUNT", 3)
+
 
 @pytest.mark.django_db
-def test_cache_get_recent_published_posts_cache_true(custom_settings, user, settings):
-    """Test that the get_recent_published_posts method returns the correct posts."""
+def test_cache_get_recent_published_posts_future_post(user):
+    """Test that the get_recent_published_posts method returns the correct posts when there are future posts."""
 
-    settings.CACHE_RECENT_PUBLISHED_POSTS = True
+    # Confirm settings are set according to settings_testing.py
+    assert settings.CACHE_RECENT_PUBLISHED_POSTS is False
+    assert settings.RECENT_PUBLISHED_POSTS_COUNT == 3
+
+    # Enable the posts cache
+    settings.set("CACHE_RECENT_PUBLISHED_POSTS", True)
+    assert settings.CACHE_RECENT_PUBLISHED_POSTS is True
+
     # Create some published posts
     post1 = Post.objects.create(title="Post 1", status="published", author=user)
     post2 = Post.objects.create(title="Post 2", status="published", author=user)
-    post3 = Post.objects.create(title="Post 3", status="published", author=user)
+    post3 = Post.objects.create(
+        title="Post 3",
+        status="published",
+        author=user,
+        date=timezone.now() + timezone.timedelta(days=1),
+    )
 
     # Call the method being tested
     recent_posts = Post.post_objects.get_recent_published_posts()
 
     # Assert that the correct posts are returned
-    assert list(recent_posts) == [post3, post2, post1]
+    assert list(recent_posts) == [post2, post1]
+
+    # Set back to defaults
+    settings.set("CACHE_RECENT_PUBLISHED_POSTS", False)
+    settings.set("RECENT_PUBLISHED_POSTS_COUNT", 3)

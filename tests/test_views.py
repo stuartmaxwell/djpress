@@ -43,7 +43,6 @@ def create_test_post(user, category):
 def test_index_view(client):
     url = reverse("djpress:index")
     response = client.get(url)
-    print(response.content)
     assert response.status_code == 200
     assert b"No posts available" in response.content
 
@@ -75,7 +74,6 @@ def test_category_with_no_posts_view(client, category):
 
 @pytest.mark.django_db
 def test_category_with_posts_view(client, create_test_post, category):
-    print(create_test_post.title)
     url = reverse("djpress:category_posts", args=[category.slug])
     response = client.get(url)
     assert response.status_code == 200

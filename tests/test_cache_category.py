@@ -1,18 +1,19 @@
 # test_category_cache.py
 
 import pytest
+
 from django.core.cache import cache
+
+from djpress.conf import settings
 from djpress.models import Category
 from djpress.models.category import CATEGORY_CACHE_KEY
 
 
-@pytest.fixture(autouse=True)
-def clear_cache():
-    cache.clear()
-
-
 @pytest.mark.django_db
 def test_get_cached_categories():
+    # Confirm the settings in settings_testing.py
+    assert settings.CACHE_CATEGORIES is True
+
     # Create some test categories
     Category.objects.create(name="Category 1")
     Category.objects.create(name="Category 2")
@@ -33,6 +34,9 @@ def test_get_cached_categories():
 
 @pytest.mark.django_db
 def test_cache_invalidation_on_save():
+    # Confirm the settings in settings_testing.py
+    assert settings.CACHE_CATEGORIES is True
+
     # Create a test category
     category = Category.objects.create(name="Category 1")
 
@@ -64,6 +68,9 @@ def test_cache_invalidation_on_save():
 
 @pytest.mark.django_db
 def test_cache_invalidation_on_delete():
+    # Confirm the settings in settings_testing.py
+    assert settings.CACHE_CATEGORIES is True
+
     # Create a test category
     category = Category.objects.create(name="Category 1")
 
@@ -92,9 +99,11 @@ def test_cache_invalidation_on_delete():
 
 
 @pytest.mark.django_db
-def test_cache_get_category_by_slug(settings):
+def test_cache_get_category_by_slug():
     """Test that the get_category_by_slug method returns the correct category."""
-    settings.CACHE_CATEGORIES = True
+    # Confirm the settings in settings_testing.py
+    assert settings.CACHE_CATEGORIES is True
+
     category1 = Category.objects.create(name="Category 1", slug="category-1")
     category2 = Category.objects.create(name="Category 2", slug="category-2")
 
@@ -105,9 +114,11 @@ def test_cache_get_category_by_slug(settings):
 
 
 @pytest.mark.django_db
-def test_cache_get_category_by_slug_not_in_cache(settings):
+def test_cache_get_category_by_slug_not_in_cache():
     """Test that the get_category_by_slug method returns the correct category."""
-    settings.CACHE_CATEGORIES = True
+    # Confirm the settings in settings_testing.py
+    assert settings.CACHE_CATEGORIES is True
+
     category1 = Category.objects.create(name="Category 1", slug="category-1")
     category2 = Category.objects.create(name="Category 2", slug="category-2")
 
@@ -132,9 +143,10 @@ def test_cache_get_category_by_slug_not_in_cache(settings):
 
 
 @pytest.mark.django_db
-def test_cache_get_category_by_slug_not_exists(settings):
+def test_cache_get_category_by_slug_not_exists():
     """Test that the get_category_by_slug method returns None when the category does not exist."""
-    settings.CACHE_CATEGORIES = True
+    # Confirm the settings in settings_testing.py
+    assert settings.CACHE_CATEGORIES is True
 
     with pytest.raises(ValueError) as excinfo:
         _ = Category.objects.get_category_by_slug("non-existent-category")

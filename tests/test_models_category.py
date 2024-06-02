@@ -3,6 +3,8 @@ import pytest
 from djpress.models import Category
 from django.utils.text import slugify
 
+from djpress.conf import settings
+
 
 @pytest.mark.django_db
 def test_category_model():
@@ -78,22 +80,46 @@ def test_category_slug_auto_generation():
 
 
 @pytest.mark.django_db
-def test_get_categories(settings):
+def test_get_categories_cache_enabled():
     """Test that the get_categories method returns the correct categories."""
     category1 = Category.objects.create(name="Category 1")
     category2 = Category.objects.create(name="Category 2")
     category3 = Category.objects.create(name="Category 3")
 
-    settings.CACHE_CATEGORIES = False
+    # Confirm the settings in settings_testing.py
+    assert settings.CACHE_CATEGORIES is True
+
     categories = Category.objects.get_categories()
 
     assert list(categories) == [category1, category2, category3]
 
 
 @pytest.mark.django_db
-def test_get_category_by_slug(settings):
+def test_get_categories_cache_disabled():
+    """Test that the get_categories method returns the correct categories."""
+    category1 = Category.objects.create(name="Category 1")
+    category2 = Category.objects.create(name="Category 2")
+    category3 = Category.objects.create(name="Category 3")
+
+    # Confirm the settings in settings_testing.py
+    assert settings.CACHE_CATEGORIES is True
+
+    settings.set("CACHE_CATEGORIES", False)
+    assert settings.CACHE_CATEGORIES is False
+    categories = Category.objects.get_categories()
+
+    assert list(categories) == [category1, category2, category3]
+
+    # Set back to default
+    settings.set("CACHE_CATEGORIES", True)
+
+
+@pytest.mark.django_db
+def test_get_category_by_slug_cache_enabled():
     """Test that the get_category_by_slug method returns the correct category."""
-    settings.CACHE_CATEGORIES = False
+    # Confirm the settings in settings_testing.py
+    assert settings.CACHE_CATEGORIES is True
+
     category1 = Category.objects.create(name="Category 1", slug="category-1")
     category2 = Category.objects.create(name="Category 2", slug="category-2")
 
@@ -104,26 +130,60 @@ def test_get_category_by_slug(settings):
 
 
 @pytest.mark.django_db
-def test_get_category_by_slug_not_exists(settings):
+def test_get_category_by_slug_cache_disabled():
+    """Test that the get_category_by_slug method returns the correct category."""
+    # Confirm the settings in settings_testing.py
+    assert settings.CACHE_CATEGORIES is True
+
+    settings.set("CACHE_CATEGORIES", False)
+    assert settings.CACHE_CATEGORIES is False
+
+    category1 = Category.objects.create(name="Category 1", slug="category-1")
+    category2 = Category.objects.create(name="Category 2", slug="category-2")
+
+    category = Category.objects.get_category_by_slug("category-1")
+
+    assert category == category1
+    assert not category == category2
+
+    # Set back to default
+    settings.set("CACHE_CATEGORIES", True)
+
+
+@pytest.mark.django_db
+def test_get_category_by_slug_not_exists():
     """Test that the get_category_by_slug method returns None when the category does not exist."""
-    settings.CACHE_CATEGORIES = False
+    # Confirm the settings in settings_testing.py
+    assert settings.CACHE_CATEGORIES is True
+
+    settings.set("CACHE_CATEGORIES", False)
+    assert settings.CACHE_CATEGORIES is False
 
     with pytest.raises(ValueError) as excinfo:
         _ = Category.objects.get_category_by_slug("non-existent-category")
     assert "Category not found" in str(excinfo.value)
 
+    # Set back to default
+    settings.set("CACHE_CATEGORIES", True)
+
 
 @pytest.mark.django_db
-def test_category_permalink(settings):
+def test_category_permalink():
     """Test that the permalink property returns the correct URL."""
-    settings.CATEGORY_PATH_ENABLED = True
-    settings.CATEGORY_PATH = "categories"
+    # Confirm the settings in settings_testing.py
+    assert settings.CACHE_CATEGORIES is True
+    assert settings.CATEGORY_PATH_ENABLED is True
+    assert settings.CATEGORY_PATH == "test-url-category"
 
     category = Category.objects.create(name="Test Category", slug="test-category")
 
-    assert category.permalink == "categories/test-category"
+    assert category.permalink == "test-url-category/test-category"
 
-    settings.CATEGORY_PATH_ENABLED = False
-    settings.CATEGORY_PATH = ""
+    settings.set("CATEGORY_PATH_ENABLED", False)
+    settings.set("CATEGORY_PATH", "")
 
     assert category.permalink == "test-category"
+
+    # Set back to default
+    settings.set("CATEGORY_PATH_ENABLED", True)
+    settings.set("CATEGORY_PATH", "test-url-category")
