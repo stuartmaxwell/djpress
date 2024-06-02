@@ -3,7 +3,6 @@ from django.contrib.auth.models import User
 from django.urls import reverse
 from django.utils import timezone
 
-from djpress.conf import settings
 from djpress.models import Category, Post
 
 
@@ -44,22 +43,20 @@ def create_test_post(user, category):
 def test_index_view(client):
     url = reverse("djpress:index")
     response = client.get(url)
-    print(response.content)
     assert response.status_code == 200
     assert b"No posts available" in response.content
 
 
 @pytest.mark.django_db
-def test_content_detail_view(client, create_test_post):
-    settings.POST_PREFIX = ""
-    url = reverse("djpress:post_detail", args=[create_test_post.slug])
+def test_post_detail_view(client, create_test_post):
+    url = reverse("djpress:post_detail", args=[create_test_post.permalink])
     response = client.get(url)
     assert response.status_code == 200
     assert "post" in response.context
 
 
 @pytest.mark.django_db
-def test_content_detail_not_exist(client):
+def test_post_detail_not_exist(client):
     url = reverse("djpress:post_detail", args=["foobar-does-not-exist"])
     response = client.get(url)
     assert response.status_code == 404
@@ -77,7 +74,6 @@ def test_category_with_no_posts_view(client, category):
 
 @pytest.mark.django_db
 def test_category_with_posts_view(client, create_test_post, category):
-    print(create_test_post.title)
     url = reverse("djpress:category_posts", args=[category.slug])
     response = client.get(url)
     assert response.status_code == 200
@@ -89,7 +85,6 @@ def test_category_with_posts_view(client, create_test_post, category):
 @pytest.mark.django_db
 def test_date_archives_year(client, create_test_post):
     url = reverse("djpress:archives_posts", kwargs={"year": "2024"})
-    settings.POST_PREFIX = ""
     response = client.get(url)
     assert response.status_code == 200
     assert "posts" in response.context
@@ -99,7 +94,6 @@ def test_date_archives_year(client, create_test_post):
 @pytest.mark.django_db
 def test_date_archives_year_no_posts(client, create_test_post):
     url = reverse("djpress:archives_posts", kwargs={"year": "2023"})
-    settings.POST_PREFIX = ""
     response = client.get(url)
     assert response.status_code == 200
     assert "posts" in response.context

@@ -32,7 +32,7 @@ if settings.CATEGORY_PATH_ENABLED and settings.CATEGORY_PATH:
         ),
     ]
 
-if settings.AUTHOR_PATH_ENABLED and settings.AUTHOR_PATH:
+if settings.AUTHOR_PATH_ENABLED:
     urlpatterns += [
         path(
             f"{settings.AUTHOR_PATH}/<str:author>/",

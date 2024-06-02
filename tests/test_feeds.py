@@ -7,9 +7,13 @@ from djpress.feeds import PostFeed
 from djpress.models import Post
 
 
+@pytest.fixture
+def user():
+    return User.objects.create_user(username="testuser", password="testpass")
+
+
 @pytest.mark.django_db
-def test_latest_posts_feed(client):
-    user = User.objects.create_user(username="testuser", password="testpass")
+def test_latest_posts_feed(client, user):
     Post.post_objects.create(
         title="Post 1", content="Content of post 1.", author=user, status="published"
     )
@@ -35,18 +39,19 @@ def test_latest_posts_feed(client):
 
 
 @pytest.mark.django_db
-def test_truncated_posts_feed(client):
-    user = User.objects.create_user(username="testuser", password="testpass")
+def test_truncated_posts_feed(client, user):
+    # Confirm the truncate tag is set according to settings_testing.py
+    truncate_tag = "<!--test-more-->"
+    assert settings.TRUNCATE_TAG == truncate_tag
+    post_prefix = "test-posts"
+    assert settings.POST_PREFIX == post_prefix
+
     Post.post_objects.create(
         title="Post 1",
-        content="Content of post 1.<!--more-->Truncated content",
+        content=f"Content of post 1.{truncate_tag}Truncated content",
         author=user,
         status="published",
     )
-
-    # Disable any permalinks
-    settings.POST_PERMALINK = ""
-    settings.POST_PREFIX = ""
 
     url = reverse("djpress:rss_feed")
     response = client.get(url)
@@ -61,5 +66,6 @@ def test_truncated_posts_feed(client):
     assert "<item>" in feed
     assert "<title>Post 1</title>" in feed
     assert "Truncated content" not in feed
-    print(feed)
-    assert '&lt;a href="/post-1/"&gt;Read more&lt;/a&gt;&lt;/p&gt;' in feed
+    assert (
+        f'&lt;a href="/{post_prefix}/post-1/"&gt;Read more&lt;/a&gt;&lt;/p&gt;' in feed
+    )

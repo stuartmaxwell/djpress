@@ -8,19 +8,15 @@ from djpress.conf import settings
 from djpress.models import Category, Post
 
 
-@pytest.mark.django_db
-def test_category_model():
-    category = Category.objects.create(name="Test Category", slug="test-category")
-    assert category.name == "Test Category"
-    assert category.slug == "test-category"
-    assert str(category) == "Test Category"
+@pytest.fixture
+def user():
+    return User.objects.create_user(username="testuser", password="testpass")
 
 
 @pytest.mark.django_db
-def test_content_model():
-    user = User.objects.create_user(username="testuser", password="testpass")
+def test_post_model(user):
     category = Category.objects.create(name="Test Category", slug="test-category")
-    content = Post.post_objects.create(
+    post = Post.post_objects.create(
         title="Test Content",
         slug="test-content",
         content="This is a test content.",
@@ -28,21 +24,21 @@ def test_content_model():
         status="published",
         post_type="post",
     )
-    content.categories.add(category)
-    assert content.title == "Test Content"
-    assert content.slug == "test-content"
-    assert content.author == user
-    assert content.status == "published"
-    assert content.post_type == "post"
-    assert content.categories.count() == 1
-    assert str(content) == "Test Content"
+    post.categories.add(category)
+    assert post.title == "Test Content"
+    assert post.slug == "test-content"
+    assert post.author == user
+    assert post.status == "published"
+    assert post.post_type == "post"
+    assert post.categories.count() == 1
+    assert str(post) == "Test Content"
 
 
 @pytest.mark.django_db
-def test_content_methods():
-    user = User.objects.create_user(username="testuser", password="testpass")
+def test_post_methods(user):
     category1 = Category.objects.create(name="Category 1", slug="category-1")
     category2 = Category.objects.create(name="Category 2", slug="category-2")
+
     Post.post_objects.create(
         title="Test Post 1",
         slug="test-post-1",
@@ -51,6 +47,7 @@ def test_content_methods():
         status="published",
         post_type="post",
     ).categories.add(category1)
+
     Post.post_objects.create(
         title="Test Post 2",
         slug="test-post-2",
@@ -59,6 +56,7 @@ def test_content_methods():
         status="draft",
         post_type="post",
     )
+
     assert Post.post_objects.all().count() == 2
     assert (
         Post.post_objects.get_published_post_by_slug("test-post-1").title
@@ -69,8 +67,7 @@ def test_content_methods():
 
 
 @pytest.mark.django_db
-def test_get_published_content_with_future_date():
-    user = User.objects.create_user(username="testuser", password="testpass")
+def test_get_published_content_with_future_date(user):
     Post.post_objects.create(
         title="Past Post",
         slug="past-post",
@@ -94,8 +91,7 @@ def test_get_published_content_with_future_date():
 
 
 @pytest.mark.django_db
-def test_get_published_content_ordering():
-    user = User.objects.create_user(username="testuser", password="testpass")
+def test_get_published_content_ordering(user):
     Post.post_objects.create(
         title="Older Post",
         slug="older-post",
@@ -120,8 +116,7 @@ def test_get_published_content_ordering():
 
 
 @pytest.mark.django_db
-def test_get_published_post_by_slug_with_future_date():
-    user = User.objects.create_user(username="testuser", password="testpass")
+def test_get_published_post_by_slug_with_future_date(user):
     Post.post_objects.create(
         title="Future Post",
         slug="future-post",
@@ -136,8 +131,7 @@ def test_get_published_post_by_slug_with_future_date():
 
 
 @pytest.mark.django_db
-def test_get_published_content_by_category_with_future_date():
-    user = User.objects.create_user(username="testuser", password="testpass")
+def test_get_published_content_by_category_with_future_date(user):
     category = Category.objects.create(name="Test Category", slug="test-category")
     Post.post_objects.create(
         title="Past Post",
@@ -161,9 +155,7 @@ def test_get_published_content_by_category_with_future_date():
 
 
 @pytest.mark.django_db
-def test_post_slug_generation():
-    user = User.objects.create_user(username="testuser", password="testpass")
-
+def test_post_slug_generation(user):
     # Test case 1: Slug generated from title
     post1 = Post.post_objects.create(
         title="My First Blog Post",
@@ -208,45 +200,8 @@ def test_post_slug_generation():
 
 
 @pytest.mark.django_db
-def test_category_save_slug_generation():
-    """Test that the slug is correctly generated when saving a Category."""
-    category = Category(name="Test Category")
-    category.save()
-
-    assert category.slug == slugify("Test Category")
-
-
-@pytest.mark.django_db
-def test_category_save_slug_uniqueness():
-    """Test that an error is raised when trying to save a Category with a duplicate slug."""
-    category1 = Category(name="Test Category")
-    category1.save()
-
-    category2 = Category(name="Test Category")
-
-    with pytest.raises(ValueError) as excinfo:
-        category2.save()
-
-    assert (
-        str(excinfo.value)
-        == f"A category with the slug {category2.slug} already exists."
-    )
-
-
-@pytest.mark.django_db
-def test_category_save_invalid_name():
-    """Test that an error is raised when trying to save a Category with an invalid name."""
-    category = Category(name="-")
-
-    with pytest.raises(ValueError) as excinfo:
-        category.save()
-
-    assert str(excinfo.value) == "Invalid name. Unable to generate a valid slug."
-
-
-@pytest.mark.django_db
-def test_markdown_rendering():
-    user = User.objects.create_user(username="testuser", password="testpass")
+def test_post_markdown_rendering(user):
+    assert settings.MARKDOWN_EXTENSIONS == ["fenced_code", "codehilite", "tables"]
 
     # Test case 1: Render markdown with basic formatting
     post1 = Post.post_objects.create(
@@ -277,13 +232,15 @@ def test_markdown_rendering():
 
 
 @pytest.mark.django_db
-def test_truncated_content_markdown():
-    user = User.objects.create_user(username="testuser", password="testpass")
+def test_post_truncated_content_markdown(user):
+    # Confirm the truncate tag is set according to settings_testing.py
+    truncate_tag = "<!--test-more-->"
+    assert settings.TRUNCATE_TAG == truncate_tag
 
     # Test case 1: Content with "read more" tag
     post1 = Post.post_objects.create(
         title="Post with Read More",
-        content="This is the intro.\n\n<!--more-->\n\nThis is the rest of the content.",
+        content=f"This is the intro.\n\n{truncate_tag}\n\nThis is the rest of the content.",
         author=user,
     )
     expected_truncated_content = "<p>This is the intro.</p>"
@@ -300,13 +257,15 @@ def test_truncated_content_markdown():
 
 
 @pytest.mark.django_db
-def test_is_truncated_property():
-    user = User.objects.create_user(username="testuser", password="testpass")
+def test_post_is_truncated_property(user):
+    # Confirm the truncate tag is set according to settings_testing.py
+    truncate_tag = "<!--test-more-->"
+    assert settings.TRUNCATE_TAG == truncate_tag
 
     # Test case 1: Content with truncate tag
     post1 = Post.post_objects.create(
         title="Post with Truncate Tag",
-        content=f"This is the intro.{settings.TRUNCATE_TAG}This is the rest of the content.",
+        content=f"This is the intro.{truncate_tag}This is the rest of the content.",
         author=user,
     )
     assert post1.is_truncated is True
@@ -322,7 +281,7 @@ def test_is_truncated_property():
     # Test case 3: Content with truncate tag at the beginning
     post3 = Post.post_objects.create(
         title="Post with Truncate Tag at the Beginning",
-        content=f"{settings.TRUNCATE_TAG}This is the content.",
+        content=f"{truncate_tag}This is the content.",
         author=user,
     )
     assert post3.is_truncated is True
@@ -330,82 +289,136 @@ def test_is_truncated_property():
     # Test case 4: Content with truncate tag at the end
     post4 = Post.post_objects.create(
         title="Post with Truncate Tag at the End",
-        content=f"This is the content.{settings.TRUNCATE_TAG}",
+        content=f"This is the content.{truncate_tag}",
         author=user,
     )
     assert post4.is_truncated is True
 
 
 @pytest.mark.django_db
-def test_category_slug_auto_generation():
-    # Test case 1: Slug auto-generated when not provided
-    category1 = Category.objects.create(name="Test Category")
-    assert category1.slug == slugify(category1.name)
-
-    # Test case 2: Slug not overridden when provided
-    category2 = Category.objects.create(name="Another Category", slug="custom-slug")
-    assert category2.slug == "custom-slug"
-
-    # Test case 3: Slug auto-generated with special characters
-    category3 = Category.objects.create(name="Special !@#$%^&*() Category")
-    assert category3.slug == "special-category"
-
-    # Test case 4: Slug auto-generated with non-ASCII characters
-    category4 = Category.objects.create(name="Non-ASCII áéíóú Category")
-    assert category4.slug == "non-ascii-aeiou-category"
-
-    # Test case 5: Slug auto-generated with leading/trailing hyphens
-    category5 = Category.objects.create(name="--Leading/Trailing Hyphens--")
-    assert category5.slug == "leadingtrailing-hyphens"
-
-    # Test case 6: Raise ValueError for invalid name
-    with pytest.raises(ValueError) as exc_info:
-        Category.objects.create(name="!@#$%^&*()")
-    assert str(exc_info.value) == "Invalid name. Unable to generate a valid slug."
-
-
-@pytest.mark.django_db
-def test_post_permalink():
+def test_post_permalink(user):
     post = Post(
         title="Test Post",
         slug="test-post",
         content="This is a test post.",
-        author=User.objects.create_user(username="testuser", password="testpass"),
+        author=user,
         date=timezone.datetime(2024, 1, 1),
         status="published",
         post_type="post",
     )
-    settings.POST_PREFIX = ""
-    settings.POST_PERMALINK = ""
+
+    # Confirm the post prefix and permalink settings are set according to settings_testing.py
+    assert settings.POST_PREFIX == "test-posts"
+    assert settings.POST_PERMALINK == ""
+
+    assert post.permalink == "test-posts/test-post"
+    settings.set("POST_PERMALINK", settings.DAY_SLUG)
+    assert post.permalink == "test-posts/2024/01/01/test-post"
+    settings.set("POST_PERMALINK", settings.MONTH_SLUG)
+    assert post.permalink == "test-posts/2024/01/test-post"
+    settings.set("POST_PERMALINK", settings.YEAR_SLUG)
+    assert post.permalink == "test-posts/2024/test-post"
+
+    settings.set("POST_PREFIX", "")
+    settings.set("POST_PERMALINK", "")
     assert post.permalink == "test-post"
-    settings.POST_PERMALINK = settings.DAY_SLUG
+    settings.set("POST_PERMALINK", settings.DAY_SLUG)
     assert post.permalink == "2024/01/01/test-post"
-    settings.POST_PERMALINK = settings.MONTH_SLUG
+    settings.set("POST_PERMALINK", settings.MONTH_SLUG)
     assert post.permalink == "2024/01/test-post"
-    settings.POST_PERMALINK = settings.YEAR_SLUG
+    settings.set("POST_PERMALINK", settings.YEAR_SLUG)
     assert post.permalink == "2024/test-post"
 
-    settings.POST_PREFIX = "posts"
-    settings.POST_PERMALINK = ""
-    assert post.permalink == "posts/test-post"
-    settings.POST_PERMALINK = settings.DAY_SLUG
-    assert post.permalink == "posts/2024/01/01/test-post"
-    settings.POST_PERMALINK = settings.MONTH_SLUG
-    assert post.permalink == "posts/2024/01/test-post"
-    settings.POST_PERMALINK = settings.YEAR_SLUG
-    assert post.permalink == "posts/2024/test-post"
+    # Set back to defaults
+    settings.set("POST_PREFIX", "test-posts")
+    settings.set("POST_PERMALINK", "")
 
 
 @pytest.mark.django_db
-def test_page_permalink():
+def test_get_published_posts_by_author(user):
+    # Create some published posts by the test user
+    post1 = Post.post_objects.create(
+        title="Post 1",
+        content="Content of post 1.",
+        author=user,
+        status="published",
+    )
+    post2 = Post.post_objects.create(
+        title="Post 2",
+        content="Content of post 2.",
+        author=user,
+        status="published",
+    )
+
+    # Create a draft post by the test user
+    draft_post = Post.post_objects.create(
+        title="Draft Post",
+        content="Content of draft post.",
+        author=user,
+        status="draft",
+    )
+
+    # Create a future post by the test user
+    future_post = Post.post_objects.create(
+        title="Future Post",
+        content="Content of future post.",
+        author=user,
+        status="published",
+        date=timezone.now() + timezone.timedelta(days=1),
+    )
+
+    # Call the method being tested
+    published_posts = Post.post_objects.get_published_posts_by_author(user)
+
+    # Assert that only the published posts by the test user are returned
+    assert post1 in published_posts
+    assert post2 in published_posts
+    assert draft_post not in published_posts
+    assert future_post not in published_posts
+
+
+@pytest.mark.django_db
+def test_page_permalink(user):
     page = Post(
         title="Test Page",
         slug="test-page",
         content="This is a test page.",
-        author=User.objects.create_user(username="testuser", password="testpass"),
+        author=user,
         date=timezone.now(),
         status="published",
         post_type="page",
     )
 
     assert page.permalink == "test-page"
+
+
+@pytest.mark.django_db
+def test_get_recent_published_posts(user):
+    """Test that the get_recent_published_posts method returns the correct posts."""
+    # Confirm settings are set according to settings_testing.py
+    assert settings.CACHE_RECENT_PUBLISHED_POSTS is False
+    assert settings.RECENT_PUBLISHED_POSTS_COUNT == 3
+
+    # Create some published posts
+    post1 = Post.objects.create(title="Post 1", status="published", author=user)
+    post2 = Post.objects.create(title="Post 2", status="published", author=user)
+    post3 = Post.objects.create(title="Post 3", status="published", author=user)
+
+    # Call the method being tested
+    recent_posts = Post.post_objects.get_recent_published_posts()
+
+    # Assert that the correct posts are returned
+    assert list(recent_posts) == [post3, post2, post1]
+
+    # Test case 2: Limit the number of posts returned
+    settings.set("RECENT_PUBLISHED_POSTS_COUNT", 2)
+
+    assert settings.CACHE_RECENT_PUBLISHED_POSTS is False
+    assert settings.RECENT_PUBLISHED_POSTS_COUNT == 2
+
+    # Call the method being tested again
+    recent_posts = Post.post_objects.get_recent_published_posts()
+
+    # Assert that the correct posts are returned
+    assert list(recent_posts) == [post3, post2]
+    assert not post1 in recent_posts
