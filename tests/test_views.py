@@ -4,6 +4,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from djpress.models import Category, Post
+from djpress.views import validate_date
 
 
 @pytest.fixture
@@ -82,6 +83,29 @@ def test_category_with_posts_view(client, create_test_post, category):
     assert not b"No posts available" in response.content
 
 
+def test_validate_date():
+    # Test 1 - invalid year
+    year = "0000"
+    with pytest.raises(ValueError):
+        validate_date(year, "", "")
+
+    # Test 2 - invalid months
+    month = "00"
+    with pytest.raises(ValueError):
+        validate_date("2024", month, "")
+    month = "13"
+    with pytest.raises(ValueError):
+        validate_date("2024", month, "")
+
+    # Test 3 - invalid days
+    day = "00"
+    with pytest.raises(ValueError):
+        validate_date("2024", "1", day)
+    day = "32"
+    with pytest.raises(ValueError):
+        validate_date("2024", "1", day)
+
+
 @pytest.mark.django_db
 def test_date_archives_year(client, create_test_post):
     url = reverse("djpress:archives_posts", kwargs={"year": "2024"})
@@ -89,6 +113,12 @@ def test_date_archives_year(client, create_test_post):
     assert response.status_code == 200
     assert "posts" in response.context
     assert create_test_post.title.encode() in response.content
+
+
+@pytest.mark.django_db
+def test_date_archives_year_invalid_year(client):
+    response = client.get("/archives/0000/")
+    assert response.status_code == 400
 
 
 @pytest.mark.django_db
@@ -111,6 +141,14 @@ def test_date_archives_month(client, create_test_post):
 
 
 @pytest.mark.django_db
+def test_date_archives_month_invalid_month(client):
+    response1 = client.get("/archives/2024/00/")
+    assert response1.status_code == 400
+    response2 = client.get("/archives/2024/13/")
+    assert response2.status_code == 400
+
+
+@pytest.mark.django_db
 def test_date_archives_month_no_posts(client, create_test_post):
     url = reverse("djpress:archives_posts", kwargs={"year": "2024", "month": "02"})
     response = client.get(url)
@@ -129,6 +167,14 @@ def test_date_archives_day(client, create_test_post):
     assert response.status_code == 200
     assert "posts" in response.context
     assert create_test_post.title.encode() in response.content
+
+
+@pytest.mark.django_db
+def test_date_archives_day_invalid_day(client):
+    response1 = client.get("/archives/2024/01/00/")
+    assert response1.status_code == 400
+    response2 = client.get("/archives/2024/01/32/")
+    assert response2.status_code == 400
 
 
 @pytest.mark.django_db
