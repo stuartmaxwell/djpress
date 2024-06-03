@@ -8,7 +8,7 @@ from django.urls import reverse
 from djpress.conf import settings
 from djpress.models import Post
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from django.db import models
 
 
