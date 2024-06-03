@@ -5,18 +5,19 @@ from typing import TYPE_CHECKING
 from django.contrib.syndication.views import Feed
 from django.urls import reverse
 
+from djpress.conf import settings
 from djpress.models import Post
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from django.db import models
 
 
 class PostFeed(Feed):
     """RSS feed for blog posts."""
 
-    title = "stuartm.nz"
-    link = "/rss"
-    description = "stuartm.nz updates"
+    title = settings.BLOG_TITLE
+    link = f"/{settings.RSS_PATH}/"
+    description = settings.BLOG_DESCRIPTION
 
     def items(self: "PostFeed") -> "models.QuerySet":
         """Return the most recent posts."""

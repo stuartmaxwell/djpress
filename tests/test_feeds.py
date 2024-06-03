@@ -28,9 +28,9 @@ def test_latest_posts_feed(client, user):
     assert response["Content-Type"] == "application/rss+xml; charset=utf-8"
 
     feed = response.content.decode("utf-8")
-    assert "<title>stuartm.nz</title>" in feed
-    assert "<link>http://testserver/rss</link>" in feed
-    assert "<description>stuartm.nz updates</description>" in feed
+    assert f"<title>{settings.BLOG_TITLE}</title>" in feed
+    assert f"<link>http://testserver/{settings.RSS_PATH}/</link>" in feed
+    assert f"<description>{settings.BLOG_DESCRIPTION}</description>" in feed
     assert "<item>" in feed
     assert "<title>Post 1</title>" in feed
     assert "<description>&lt;p&gt;Content of post 1.&lt;/p&gt;</description>" in feed
@@ -60,9 +60,9 @@ def test_truncated_posts_feed(client, user):
     assert response["Content-Type"] == "application/rss+xml; charset=utf-8"
 
     feed = response.content.decode("utf-8")
-    assert "<title>stuartm.nz</title>" in feed
-    assert "<link>http://testserver/rss</link>" in feed
-    assert "<description>stuartm.nz updates</description>" in feed
+    assert f"<title>{settings.BLOG_TITLE}</title>" in feed
+    assert f"<link>http://testserver/{settings.RSS_PATH}/</link>" in feed
+    assert f"<description>{settings.BLOG_DESCRIPTION}</description>" in feed
     assert "<item>" in feed
     assert "<title>Post 1</title>" in feed
     assert "Truncated content" not in feed

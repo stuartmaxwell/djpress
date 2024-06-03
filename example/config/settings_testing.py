@@ -12,6 +12,7 @@ DATABASES = {
 
 # Changing these settings will affect lots of tests!
 BLOG_TITLE = "My Test DJ Press Blog"
+BLOG_DESCRIPTION = "This is a test blog."
 AUTHOR_PATH_ENABLED = True
 AUTHOR_PATH = "test-url-author"
 CATEGORY_PATH_ENABLED = True

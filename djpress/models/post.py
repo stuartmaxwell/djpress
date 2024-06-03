@@ -67,12 +67,7 @@ class PostsManager(models.Manager):
                 .prefetch_related("categories", "author")
             )
 
-            future_posts = queryset.filter(date__gt=timezone.now())
-            if future_posts.exists():
-                future_post = future_posts[0]
-                timeout = (future_post.date - timezone.now()).total_seconds()
-            else:
-                timeout = None
+            timeout = self._get_cache_timeout(queryset)
 
             queryset = queryset.filter(date__lte=timezone.now())[
                 : settings.RECENT_PUBLISHED_POSTS_COUNT
@@ -84,6 +79,28 @@ class PostsManager(models.Manager):
             )
 
         return queryset
+
+    def _get_cache_timeout(
+        self: "PostsManager",
+        queryset: models.QuerySet,
+    ) -> int | None:
+        """Return the timeout for the cache.
+
+        If there are any future posts, we calculate the seconds until that post.
+
+        Args:
+            queryset: The queryset of published posts.
+
+        Returns:
+            int | None: The number of seconds until the next future post, or None if
+            there are no future posts.
+        """
+        future_posts = queryset.filter(date__gt=timezone.now())
+        if future_posts.exists():
+            future_post = future_posts[0]
+            return (future_post.date - timezone.now()).total_seconds()
+
+        return None
 
     def get_published_post_by_slug(
         self: "PostsManager",

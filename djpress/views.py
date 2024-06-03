@@ -3,7 +3,7 @@
 import logging
 
 from django.contrib.auth.models import User
-from django.http import Http404, HttpRequest, HttpResponse
+from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import render
 from django.utils.timezone import datetime
 
@@ -40,11 +40,11 @@ def archives_posts(
         day (str): The day.
     """
     try:
-        test_dates(year, month, day)
+        validate_date(year, month, day)
 
-    except ValueError as exc:
+    except ValueError:
         msg = "Invalid date"
-        raise Http404(msg) from exc
+        return HttpResponseBadRequest(msg)
 
     posts = Post.post_objects._get_published_posts()  # noqa: SLF001
 
@@ -72,21 +72,36 @@ def archives_posts(
     )
 
 
-def test_dates(year: str, month: str | None, day: str | None) -> None:
+def validate_date(year: str, month: str, day: str) -> None:
     """Test the date values.
 
     Convert the date values to integers and test if they are valid dates.
+
+    The regex that gets the date values checks for the following:
+    - year: four digits
+    - month: two digits
+    - day: two digits
 
     Args:
         year (str): The year.
         month (str | None): The month.
         day (str | None): The day.
-    """
-    try:
-        int_year = int(year)
-        int_month = int(month) if month else None
-        int_day = int(day) if day else None
 
+    Raises:
+        ValueError: If the date is invalid.
+
+    Returns:
+        None
+    """
+    int_year: int = int(year)
+    int_month: int | None = int(month) if month else None
+    int_day: int | None = int(day) if day else None
+
+    if int_month == 0 or int_day == 0:
+        msg = "Invalid date"
+        raise ValueError(msg)
+
+    try:
         if int_month and int_day:
             datetime(int_year, int_month, int_day)
 

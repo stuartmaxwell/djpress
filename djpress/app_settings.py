@@ -7,6 +7,7 @@ CACHE_RECENT_PUBLISHED_POSTS: bool = False
 RECENT_PUBLISHED_POSTS_COUNT: int = 20
 MARKDOWN_EXTENSIONS: list = ["fenced_code", "codehilite", "tables"]
 BLOG_TITLE: str = "My DJ Press Blog"
+BLOG_DESCRIPTION: str = ""
 
 # DJPress URL settings
 CATEGORY_PATH_ENABLED: bool = True

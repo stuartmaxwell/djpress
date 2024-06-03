@@ -93,11 +93,7 @@ def test_get_categories(category1, category2, category3):
     assert category2 in djpress_categories
     assert category3 in djpress_categories
 
-    # The following is only here to avoid type errors
-    if not categories or not djpress_categories:
-        return None
-
-    assert list(djpress_categories) == list(categories)
+    assert list(djpress_categories) == list(categories)  # type: ignore
 
 
 @pytest.mark.django_db
@@ -190,6 +186,25 @@ def test_post_author_link(create_test_post):
         f"{ get_author_display_name(author) }</span></a>"
     )
     assert djpress_tags.post_author_link(context) == expected_output
+
+
+@pytest.mark.django_db
+def test_post_author_link_author_path_disabled(create_test_post):
+    context = Context({"post": create_test_post})
+
+    # Confirm settings are set according to settings_testing.py
+    assert settings.AUTHOR_PATH_ENABLED is True
+    assert settings.AUTHOR_PATH == "test-url-author"
+
+    settings.set("AUTHOR_PATH_ENABLED", False)
+
+    author = create_test_post.author
+
+    expected_output = f'<span rel="author">{get_author_display_name(author)}</span>'
+    assert djpress_tags.post_author_link(context) == expected_output
+
+    # Set back to defaults
+    settings.set("AUTHOR_PATH_ENABLED", True)
 
 
 @pytest.mark.django_db

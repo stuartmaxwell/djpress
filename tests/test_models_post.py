@@ -422,3 +422,34 @@ def test_get_recent_published_posts(user):
     # Assert that the correct posts are returned
     assert list(recent_posts) == [post3, post2]
     assert not post1 in recent_posts
+
+
+@pytest.mark.django_db
+def test_get_published_post_by_path(user):
+    """Test that the get_published_post_by_path method returns the correct post."""
+
+    # Confirm settings are set according to settings_testing.py
+    assert settings.POST_PREFIX == "test-posts"
+
+    # Create a post
+    post = Post.objects.create(title="Test Post", status="published", author=user)
+
+    # Test case 1: POST_PREFIX is set and path starts with POST_PREFIX
+    post_path = f"test-posts/{post.slug}"
+    assert post == Post.post_objects.get_published_post_by_path(post_path)
+
+    # Test case 2: POST_PREFIX is set but path does not start with POST_PREFIX
+    post_path = f"/incorrect-path/{post.slug}"
+    # Should raise a ValueError
+    with pytest.raises(ValueError):
+        Post.post_objects.get_published_post_by_path(post_path)
+
+    # Test case 3: POST_PREFIX is not set but path starts with POST_PREFIX
+    settings.set("POST_PREFIX", "")
+    post_path = f"test-posts/non-existent-slug"
+    # Should raise a ValueError
+    with pytest.raises(ValueError):
+        Post.post_objects.get_published_post_by_path(post_path)
+
+    # Set back to default
+    settings.set("POST_PREFIX", "test-posts")
