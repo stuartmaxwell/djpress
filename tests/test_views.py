@@ -64,6 +64,33 @@ def test_post_detail_not_exist(client):
 
 
 @pytest.mark.django_db
+def test_author_with_no_posts_view(client, user):
+    url = reverse("djpress:author_posts", args=[user.username])
+    response = client.get(url)
+    assert response.status_code == 200
+    assert "author" in response.context
+    assert "posts" in response.context
+    assert b"No posts available" in response.content
+
+
+@pytest.mark.django_db
+def test_author_with_posts_view(client, create_test_post):
+    url = reverse("djpress:author_posts", args=[create_test_post.author.username])
+    response = client.get(url)
+    assert response.status_code == 200
+    assert "author" in response.context
+    assert "posts" in response.context
+    assert not b"No posts available" in response.content
+
+
+@pytest.mark.django_db
+def test_author_with_invalid_author(client):
+    url = reverse("djpress:author_posts", args=["non-existent-author"])
+    response = client.get(url)
+    assert response.status_code == 404
+
+
+@pytest.mark.django_db
 def test_category_with_no_posts_view(client, category):
     url = reverse("djpress:category_posts", args=[category.slug])
     response = client.get(url)
@@ -81,6 +108,13 @@ def test_category_with_posts_view(client, create_test_post, category):
     assert "category" in response.context
     assert "posts" in response.context
     assert not b"No posts available" in response.content
+
+
+@pytest.mark.django_db
+def test_category_with_invalid_category(client):
+    url = reverse("djpress:category_posts", args=["non-existent-category"])
+    response = client.get(url)
+    assert response.status_code == 404
 
 
 def test_validate_date():
