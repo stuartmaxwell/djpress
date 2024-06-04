@@ -8,7 +8,11 @@ from django.utils.safestring import mark_safe
 
 from djpress.conf import settings
 from djpress.models import Category, Post
-from djpress.templatetags.helpers import categories_html, category_link
+from djpress.templatetags.helpers import (
+    categories_html,
+    category_link,
+    post_read_more_link,
+)
 from djpress.utils import get_author_display_name
 
 register = template.Library()
@@ -269,19 +273,43 @@ def post_date_link(context: Context, link_class: str = "") -> str:
 
 
 @register.simple_tag(takes_context=True)
-def post_content(context: Context) -> str:
+def post_content(
+    context: Context,
+    read_more_link_class: str = "",
+    read_more_text: str = "",
+) -> str:
     """Return the content of a post.
+
+    If there's no post in the context, then we return an empty string. If there are
+    multiple posts in the context, then we return the truncated content of the post with
+    the read more link. Otherwise, we return the full content of the post.
 
     Args:
         context: The context.
+        read_more_link_class: The CSS class(es) for the read more link.
+        read_more_text: The text for the read more link.
 
     Returns:
         str: The content of the post.
     """
-    post: Post | None = context.get("post")
-    if not post:
-        return ""
+    content: str = ""
 
+    # Check if there's a post or posts in the context.
+    post: Post | None = context.get("post")
+    posts: models.QuerySet[Post] | None = context.get("posts")
+
+    # If there's no post, then we return an empty string.
+    if not post:
+        return content
+
+    # If there are posts, then we return the truncated content of the post.
+    if posts:
+        content = mark_safe(post.truncated_content_markdown)
+        if post.is_truncated:
+            content += post_read_more_link(post, read_more_link_class, read_more_text)
+        return mark_safe(content)
+
+    # If there
     return mark_safe(post.content_markdown)
 
 

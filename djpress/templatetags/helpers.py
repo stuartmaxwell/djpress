@@ -3,7 +3,8 @@
 from django.db import models
 from django.urls import reverse
 
-from djpress.models import Category
+from djpress.conf import settings
+from djpress.models import Category, Post
 
 
 def categories_html(
@@ -69,4 +70,28 @@ def category_link(category: Category, link_class: str = "") -> str:
     return (
         f'<a href="{category_url}" title="View all posts in the {category.name} '
         f'category"{link_class_html}>{ category.name }</a>'
+    )
+
+
+def post_read_more_link(
+    post: Post,
+    link_class: str = "",
+    read_more_text: str = "",
+) -> str:
+    """Return the read more link for a post.
+
+    Args:
+        post: The post.
+        link_class: The CSS class(es) for the link.
+        read_more_text: The text for the read more link.
+
+    Returns:
+        str: The read more link.
+    """
+    read_more_text = read_more_text if read_more_text else settings.POST_READ_MORE_TEXT
+    link_class_html = f' class="{link_class}"' if link_class else ""
+
+    return (
+        f'<p><a href="{reverse("djpress:post_detail", args=[post.permalink])}"'
+        f'{link_class_html}>{read_more_text}</a></p>'
     )
