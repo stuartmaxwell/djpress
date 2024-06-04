@@ -8,6 +8,7 @@ RECENT_PUBLISHED_POSTS_COUNT: int = 20
 MARKDOWN_EXTENSIONS: list = ["fenced_code", "codehilite", "tables"]
 BLOG_TITLE: str = "My DJ Press Blog"
 BLOG_DESCRIPTION: str = ""
+POST_READ_MORE_TEXT: str = "Read more..."
 
 # DJPress URL settings
 CATEGORY_PATH_ENABLED: bool = True

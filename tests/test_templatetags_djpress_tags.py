@@ -7,6 +7,7 @@ from django.utils import timezone
 from djpress.conf import settings
 from djpress.models import Category, Post
 from djpress.templatetags import djpress_tags
+from djpress.templatetags.helpers import post_read_more_link
 from djpress.utils import get_author_display_name
 
 
@@ -49,11 +50,25 @@ def category3():
 
 
 @pytest.fixture
-def create_test_post(user, category1):
+def test_post1(user, category1):
     post = Post.post_objects.create(
-        title="Test Post",
-        slug="test-post",
+        title="Test Post1",
+        slug="test-post1",
         content="This is a test post.",
+        author=user,
+        status="published",
+        post_type="post",
+    )
+    post.categories.set([category1])
+    return post
+
+
+@pytest.fixture
+def test_long_post1(user, category1):
+    post = Post.post_objects.create(
+        title="Test Long Post1",
+        slug="test-long-post1",
+        content=f"This is the truncated content.\n\n{settings.TRUNCATE_TAG}\n\nThis is the rest of the post.",
         author=user,
         status="published",
         post_type="post",
@@ -97,9 +112,9 @@ def test_get_categories(category1, category2, category3):
 
 
 @pytest.mark.django_db
-def test_post_title(create_test_post):
-    context = Context({"post": create_test_post})
-    assert djpress_tags.post_title(context) == create_test_post.title
+def test_post_title(test_post1):
+    context = Context({"post": test_post1})
+    assert djpress_tags.post_title(context) == test_post1.title
 
 
 def test_post_title_no_post():
@@ -109,21 +124,21 @@ def test_post_title_no_post():
 
 
 @pytest.mark.django_db
-def test_post_title_link(create_test_post):
+def test_post_title_link(test_post1):
     """Test the post_title_link template tag.
 
     This uses the post.permalink property to generate the link."""
-    context = Context({"post": create_test_post})
+    context = Context({"post": test_post1})
 
     # Confirm settings in settings_testing.py
     assert settings.POST_PREFIX == "test-posts"
 
     # this generates a URL based on the slug only - this is prefixed with the POST_PREFIX setting
-    post_url = reverse("djpress:post_detail", args=[create_test_post.slug])
+    post_url = reverse("djpress:post_detail", args=[test_post1.slug])
 
     # Confirm settings in settings_testing.py
     assert settings.POST_PREFIX == "test-posts"
-    expected_output = f'<a href="/test-posts{post_url}" title="{create_test_post.title}">{create_test_post.title}</a>'
+    expected_output = f'<a href="/test-posts{post_url}" title="{test_post1.title}">{test_post1.title}</a>'
     assert djpress_tags.post_title_link(context) == expected_output
 
 
@@ -136,22 +151,22 @@ def test_post_title_link_no_context():
 
 
 @pytest.mark.django_db
-def test_post_title_link_with_prefix(create_test_post):
+def test_post_title_link_with_prefix(test_post1):
     # Confirm settings in settings_testing.py
     assert settings.POST_PREFIX == "test-posts"
 
-    context = Context({"post": create_test_post})
-    post_url = reverse("djpress:post_detail", args=[create_test_post.slug])
+    context = Context({"post": test_post1})
+    post_url = reverse("djpress:post_detail", args=[test_post1.slug])
 
-    expected_output = f'<a href="/test-posts{post_url}" title="{create_test_post.title}">{create_test_post.title}</a>'
+    expected_output = f'<a href="/test-posts{post_url}" title="{test_post1.title}">{test_post1.title}</a>'
     assert djpress_tags.post_title_link(context) == expected_output
 
 
 @pytest.mark.django_db
-def test_post_author(create_test_post):
-    context = Context({"post": create_test_post})
+def test_post_author(test_post1):
+    context = Context({"post": test_post1})
 
-    author = create_test_post.author
+    author = test_post1.author
     output = f'<span rel="author">{ get_author_display_name(author) }</span>'
     assert djpress_tags.post_author(context) == output
 
@@ -171,14 +186,14 @@ def test_post_author_link_no_post():
 
 
 @pytest.mark.django_db
-def test_post_author_link(create_test_post):
-    context = Context({"post": create_test_post})
+def test_post_author_link(test_post1):
+    context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
     assert settings.AUTHOR_PATH_ENABLED is True
     assert settings.AUTHOR_PATH == "test-url-author"
 
-    author = create_test_post.author
+    author = test_post1.author
 
     expected_output = (
         f'<a href="/{settings.AUTHOR_PATH}/testuser/" title="View all posts by '
@@ -189,8 +204,8 @@ def test_post_author_link(create_test_post):
 
 
 @pytest.mark.django_db
-def test_post_author_link_author_path_disabled(create_test_post):
-    context = Context({"post": create_test_post})
+def test_post_author_link_author_path_disabled(test_post1):
+    context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
     assert settings.AUTHOR_PATH_ENABLED is True
@@ -198,7 +213,7 @@ def test_post_author_link_author_path_disabled(create_test_post):
 
     settings.set("AUTHOR_PATH_ENABLED", False)
 
-    author = create_test_post.author
+    author = test_post1.author
 
     expected_output = f'<span rel="author">{get_author_display_name(author)}</span>'
     assert djpress_tags.post_author_link(context) == expected_output
@@ -208,14 +223,14 @@ def test_post_author_link_author_path_disabled(create_test_post):
 
 
 @pytest.mark.django_db
-def test_post_author_link_with_author_path_with_one_link_class(create_test_post):
-    context = Context({"post": create_test_post})
+def test_post_author_link_with_author_path_with_one_link_class(test_post1):
+    context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
     assert settings.AUTHOR_PATH_ENABLED is True
     assert settings.AUTHOR_PATH == "test-url-author"
 
-    author = create_test_post.author
+    author = test_post1.author
 
     expected_output = (
         f'<a href="/{settings.AUTHOR_PATH}/testuser/" title="View all posts by '
@@ -226,14 +241,14 @@ def test_post_author_link_with_author_path_with_one_link_class(create_test_post)
 
 
 @pytest.mark.django_db
-def test_post_author_link_with_author_path_with_two_link_class(create_test_post):
-    context = Context({"post": create_test_post})
+def test_post_author_link_with_author_path_with_two_link_class(test_post1):
+    context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
     assert settings.AUTHOR_PATH_ENABLED is True
     assert settings.AUTHOR_PATH == "test-url-author"
 
-    author = create_test_post.author
+    author = test_post1.author
 
     expected_output = (
         f'<a href="/{settings.AUTHOR_PATH}/testuser/" title="View all posts by '
@@ -322,9 +337,9 @@ def test_post_date_no_post():
 
 
 @pytest.mark.django_db
-def test_post_date_with_date_archives_disabled(create_test_post):
+def test_post_date_with_date_archives_disabled(test_post1):
     """djpress_tags.post_date is not impacted by the DATE_ARCHIVES_ENABLED setting."""
-    context = Context({"post": create_test_post})
+    context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
     assert settings.DATE_ARCHIVES_ENABLED is True
@@ -332,7 +347,7 @@ def test_post_date_with_date_archives_disabled(create_test_post):
     settings.set("DATE_ARCHIVES_ENABLED", False)
     assert settings.DATE_ARCHIVES_ENABLED is False
 
-    expected_output = create_test_post.date.strftime("%b %-d, %Y")
+    expected_output = test_post1.date.strftime("%b %-d, %Y")
 
     assert djpress_tags.post_date(context) == expected_output
 
@@ -341,14 +356,14 @@ def test_post_date_with_date_archives_disabled(create_test_post):
 
 
 @pytest.mark.django_db
-def test_post_date_with_date_archives_enabled(create_test_post):
+def test_post_date_with_date_archives_enabled(test_post1):
     """djpress_tags.post_date is not impacted by the DATE_ARCHIVES_ENABLED setting."""
-    context = Context({"post": create_test_post})
+    context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
     assert settings.DATE_ARCHIVES_ENABLED is True
 
-    expected_output = create_test_post.date.strftime("%b %-d, %Y")
+    expected_output = test_post1.date.strftime("%b %-d, %Y")
 
     assert djpress_tags.post_date(context) == expected_output
 
@@ -361,9 +376,9 @@ def test_post_date_link_no_post():
 
 
 @pytest.mark.django_db
-def test_post_date_link_with_date_archives_disabled(create_test_post):
+def test_post_date_link_with_date_archives_disabled(test_post1):
     """Should return just the date."""
-    context = Context({"post": create_test_post})
+    context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
     assert settings.DATE_ARCHIVES_ENABLED is True
@@ -371,7 +386,7 @@ def test_post_date_link_with_date_archives_disabled(create_test_post):
     settings.set("DATE_ARCHIVES_ENABLED", False)
     assert settings.DATE_ARCHIVES_ENABLED is False
 
-    expected_output = create_test_post.date.strftime("%b %-d, %Y")
+    expected_output = test_post1.date.strftime("%b %-d, %Y")
 
     assert djpress_tags.post_date_link(context) == expected_output
 
@@ -380,13 +395,13 @@ def test_post_date_link_with_date_archives_disabled(create_test_post):
 
 
 @pytest.mark.django_db
-def test_post_date_link_with_date_archives_enabled(create_test_post):
-    context = Context({"post": create_test_post})
+def test_post_date_link_with_date_archives_enabled(test_post1):
+    context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
     assert settings.DATE_ARCHIVES_ENABLED is True
 
-    post_date = create_test_post.date
+    post_date = test_post1.date
     post_year = post_date.strftime("%Y")
     post_month = post_date.strftime("%m")
     post_month_name = post_date.strftime("%b")
@@ -406,14 +421,14 @@ def test_post_date_link_with_date_archives_enabled(create_test_post):
 
 @pytest.mark.django_db
 def test_post_date_link_with_date_archives_enabled_with_one_link_class(
-    create_test_post,
+    test_post1,
 ):
-    context = Context({"post": create_test_post})
+    context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
     assert settings.DATE_ARCHIVES_ENABLED is True
 
-    post_date = create_test_post.date
+    post_date = test_post1.date
     post_year = post_date.strftime("%Y")
     post_month = post_date.strftime("%m")
     post_month_name = post_date.strftime("%b")
@@ -433,14 +448,14 @@ def test_post_date_link_with_date_archives_enabled_with_one_link_class(
 
 @pytest.mark.django_db
 def test_post_date_link_with_date_archives_enabled_with_two_link_classes(
-    create_test_post,
+    test_post1,
 ):
-    context = Context({"post": create_test_post})
+    context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
     assert settings.DATE_ARCHIVES_ENABLED is True
 
-    post_date = create_test_post.date
+    post_date = test_post1.date
     post_year = post_date.strftime("%Y")
     post_month = post_date.strftime("%m")
     post_month_name = post_date.strftime("%b")
@@ -459,6 +474,7 @@ def test_post_date_link_with_date_archives_enabled_with_two_link_classes(
 
 
 def test_post_content_no_post():
+    """If there's no post in the context, return an empty string."""
     context = Context({"foo": "bar"})
 
     assert djpress_tags.post_content(context) == ""
@@ -466,10 +482,26 @@ def test_post_content_no_post():
 
 
 @pytest.mark.django_db
-def test_post_content(create_test_post):
-    context = Context({"post": create_test_post})
+def test_post_content_with_post(test_post1):
+    """If there's a post in the context, return the post content."""
+    context = Context({"post": test_post1})
 
-    expected_output = f"<p>{create_test_post.content}</p>"
+    expected_output = f"{test_post1.content_markdown}"
+
+    assert djpress_tags.post_content(context) == expected_output
+
+
+@pytest.mark.django_db
+def test_post_content_with_posts(test_long_post1):
+    """If there's a posts in the context, return the truncated post content."""
+    context = Context(
+        {"post": test_long_post1, "posts": [test_long_post1]},
+    )
+
+    expected_output = (
+        f"{test_long_post1.truncated_content_markdown}"
+        f"{post_read_more_link(test_long_post1)}"
+    )
 
     assert djpress_tags.post_content(context) == expected_output
 
@@ -489,8 +521,8 @@ def test_category_name_no_category():
 
 
 @pytest.mark.django_db
-def test_post_categories(create_test_post):
-    context = Context({"post": create_test_post})
+def test_post_categories(test_post1):
+    context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
     assert settings.CATEGORY_PATH == "test-url-category"
@@ -515,17 +547,17 @@ def test_post_categories_no_post_context():
 
 
 @pytest.mark.django_db
-def test_post_categories_no_categories_context(create_test_post):
-    create_test_post.categories.clear()
-    context = Context({"post": create_test_post})
+def test_post_categories_no_categories_context(test_post1):
+    test_post1.categories.clear()
+    context = Context({"post": test_post1})
 
     expected_output = ""
     assert djpress_tags.post_categories(context) == expected_output
 
 
 @pytest.mark.django_db
-def test_post_categories_ul(create_test_post):
-    context = Context({"post": create_test_post})
+def test_post_categories_ul(test_post1):
+    context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
     assert settings.CATEGORY_PATH == "test-url-category"
@@ -536,8 +568,8 @@ def test_post_categories_ul(create_test_post):
 
 
 @pytest.mark.django_db
-def test_post_categories_ul_class1(create_test_post):
-    context = Context({"post": create_test_post})
+def test_post_categories_ul_class1(test_post1):
+    context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
     assert settings.CATEGORY_PATH == "test-url-category"
@@ -551,8 +583,8 @@ def test_post_categories_ul_class1(create_test_post):
 
 
 @pytest.mark.django_db
-def test_post_categories_ul_class1_class2(create_test_post):
-    context = Context({"post": create_test_post})
+def test_post_categories_ul_class1_class2(test_post1):
+    context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
     assert settings.CATEGORY_PATH == "test-url-category"
@@ -566,8 +598,8 @@ def test_post_categories_ul_class1_class2(create_test_post):
 
 
 @pytest.mark.django_db
-def test_post_categories_div(create_test_post):
-    context = Context({"post": create_test_post})
+def test_post_categories_div(test_post1):
+    context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
     assert settings.CATEGORY_PATH == "test-url-category"
@@ -578,8 +610,8 @@ def test_post_categories_div(create_test_post):
 
 
 @pytest.mark.django_db
-def test_post_categories_div_class1(create_test_post):
-    context = Context({"post": create_test_post})
+def test_post_categories_div_class1(test_post1):
+    context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
     assert settings.CATEGORY_PATH == "test-url-category"
@@ -593,8 +625,8 @@ def test_post_categories_div_class1(create_test_post):
 
 
 @pytest.mark.django_db
-def test_post_categories_div_class1_class2(create_test_post):
-    context = Context({"post": create_test_post})
+def test_post_categories_div_class1_class2(test_post1):
+    context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
     assert settings.CATEGORY_PATH == "test-url-category"
@@ -608,8 +640,8 @@ def test_post_categories_div_class1_class2(create_test_post):
 
 
 @pytest.mark.django_db
-def test_post_categories_span(create_test_post):
-    context = Context({"post": create_test_post})
+def test_post_categories_span(test_post1):
+    context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
     assert settings.CATEGORY_PATH == "test-url-category"
@@ -620,8 +652,8 @@ def test_post_categories_span(create_test_post):
 
 
 @pytest.mark.django_db
-def test_post_categories_span_class1(create_test_post):
-    context = Context({"post": create_test_post})
+def test_post_categories_span_class1(test_post1):
+    context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
     assert settings.CATEGORY_PATH == "test-url-category"
@@ -635,8 +667,8 @@ def test_post_categories_span_class1(create_test_post):
 
 
 @pytest.mark.django_db
-def test_post_categories_span_class1_class2(create_test_post):
-    context = Context({"post": create_test_post})
+def test_post_categories_span_class1_class2(test_post1):
+    context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
     assert settings.CATEGORY_PATH == "test-url-category"

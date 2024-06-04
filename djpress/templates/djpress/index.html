@@ -51,11 +51,7 @@
               <p>By {% post_author %}. {% post_date %}</p>
             </header>
             <section>
-              {{ post.truncated_content_markdown|safe }}
-
-              {% if post.is_truncated %}
-                <p><a href="{% url 'djpress:post_detail' post.permalink %}">Read more</a></p>
-              {% endif %}
+              {% post_content %}
             </section>
             <footer>
               <p>Categories: {% post_categories "span" link_class="badge" %}</p>
