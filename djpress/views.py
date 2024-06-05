@@ -21,7 +21,7 @@ def index(
     return render(
         request,
         "djpress/index.html",
-        {"posts": posts},
+        {"_posts": posts},
     )
 
 
@@ -68,7 +68,7 @@ def archives_posts(
     return render(
         request,
         "djpress/index.html",
-        {"posts": posts},
+        {"_posts": posts},
     )
 
 
@@ -132,7 +132,7 @@ def post_detail(request: HttpRequest, path: str) -> HttpResponse:
     return render(
         request,
         "djpress/index.html",
-        {"post": post},
+        {"_post": post},
     )
 
 
@@ -149,7 +149,7 @@ def category_posts(request: HttpRequest, slug: str) -> HttpResponse:
     return render(
         request,
         "djpress/index.html",
-        {"posts": posts, "category": category},
+        {"_posts": posts, "category": category},
     )
 
 
@@ -166,5 +166,5 @@ def author_posts(request: HttpRequest, author: str) -> HttpResponse:
     return render(
         request,
         "djpress/index.html",
-        {"posts": posts, "author": user},
+        {"_posts": posts, "author": user},
     )

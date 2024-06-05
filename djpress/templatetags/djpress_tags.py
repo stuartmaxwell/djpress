@@ -1,6 +1,7 @@
 """Template tags for djpress."""
 
 from django import template
+from django.contrib.auth.models import User
 from django.db import models
 from django.template import Context
 from django.urls import reverse
@@ -82,6 +83,27 @@ def blog_categories(
 
 
 @register.simple_tag(takes_context=True)
+def have_posts(context: Context) -> list[Post | None]:
+    """Return the posts in the context.
+
+    Args:
+        context: The context.
+
+    Returns:
+        list[Post]: The posts in the context.
+    """
+    post: Post | None = context.get("_post")
+    posts: models.QuerySet[Post] | None = context.get("_posts")
+
+    if post:
+        return [post]
+    if posts:
+        return list(posts)
+
+    return []
+
+
+@register.simple_tag(takes_context=True)
 def post_title(context: Context) -> str:
     """Return the title of a post.
 
@@ -112,6 +134,10 @@ def post_title_link(context: Context, link_class: str = "") -> str:
     post: Post | None = context.get("post")
     if not post:
         return ""
+
+    _post: Post | None = context.get("_post")
+    if _post:
+        return post_title(context)
 
     post_url = reverse("djpress:post_detail", args=[post.permalink])
 
@@ -294,16 +320,16 @@ def post_content(
     """
     content: str = ""
 
-    # Check if there's a post or posts in the context.
+    # Check if there's a post or _posts in the context.
     post: Post | None = context.get("post")
-    posts: models.QuerySet[Post] | None = context.get("posts")
+    _posts: models.QuerySet[Post] | None = context.get("_posts")
 
     # If there's no post, then we return an empty string.
     if not post:
         return content
 
-    # If there are posts, then we return the truncated content of the post.
-    if posts:
+    # If there are _posts, then we return the truncated content of the post.
+    if _posts:
         content = mark_safe(post.truncated_content_markdown)
         if post.is_truncated:
             content += post_read_more_link(post, read_more_link_class, read_more_text)
@@ -314,30 +340,109 @@ def post_content(
 
 
 @register.simple_tag(takes_context=True)
-def category_name(context: Context) -> str:
+def category_name(
+    context: Context,
+    outer: str = "",
+    outer_class: str = "",
+    pre_text: str = "",
+    post_text: str = "",
+) -> str:
     """Return the name of a category.
+
+    Expects there to be an `category` in the context set to a Category object. If
+    there's no category in the context or category is not a Category object, then retun
+    an empty string.
+
 
     Args:
         context: The context.
+        outer: The outer HTML tag for the category.
+        outer_class: The CSS class(es) for the outer tag.
+        pre_text: The text to prepend to the category name.
+        post_text: The text to append to the category name.
 
     Returns:
-        str: The name of the category.
+        str: The name of the category formatted with the outer tag and class if
+        provided.
     """
     category: Category | None = context.get("category")
-    if not category:
+
+    if not category or not isinstance(category, Category):
         return ""
 
-    return category.name
+    allowed_outer_tags = ["h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "span"]
+    outer_class = f' class="{outer_class}"' if outer_class else ""
+
+    output = category.name
+
+    if pre_text:
+        output = f"{pre_text}{output}"
+
+    if post_text:
+        output = f"{output}{post_text}"
+
+    if outer in allowed_outer_tags:
+        return mark_safe(f"<{outer}{outer_class}>{output}</{outer}>")
+
+    return output
 
 
 @register.simple_tag(takes_context=True)
-def post_categories(
+def author_name(
+    context: Context,
+    outer: str = "",
+    outer_class: str = "",
+    pre_text: str = "",
+    post_text: str = "",
+) -> str:
+    """Return the name of a author.
+
+    Expects there to be an `author` in the context set to a user object. If there's no
+    author in the context or author is not a User object, then retun an empty string.
+
+    Args:
+        context: The context.
+        outer: The outer HTML tag for the author.
+        outer_class: The CSS class(es) for the outer tag.
+        pre_text: The text to prepend to the author name.
+        post_text: The text to append to the author name.
+
+    Returns:
+        str: The name of the author formatted with the outer tag and class if
+        provided.
+    """
+    author: User | None = context.get("author")
+
+    if not author or not isinstance(author, User):
+        return ""
+
+    allowed_outer_tags = ["h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "span"]
+    outer_class = f' class="{outer_class}"' if outer_class else ""
+
+    output = get_author_display_name(author)
+
+    if pre_text:
+        output = f"{pre_text}{output}"
+
+    if post_text:
+        output = f"{output}{post_text}"
+
+    if outer in allowed_outer_tags:
+        return mark_safe(f"<{outer}{outer_class}>{output}</{outer}>")
+
+    return output
+
+
+@register.simple_tag(takes_context=True)
+def post_categories_link(
     context: Context,
     outer: str = "ul",
     outer_class: str = "",
     link_class: str = "",
 ) -> str:
     """Return the categories of a post.
+
+    Each category is a link to the category page.
 
     Args:
         context: The context.
