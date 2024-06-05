@@ -1,2 +1,3 @@
 django
 -e ../djpress
+django-debug-toolbar

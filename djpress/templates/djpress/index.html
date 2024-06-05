@@ -17,54 +17,30 @@
 
     <main>
 
-      {% comment %}If we get a single post, then show the full content.{% endcomment %}
-      {% if post %}
+      {% have_posts as posts %}
+      {% for post in posts %}
+
+        {% category_name "h1" pre_text="View Posts in the " post_text=" Category" %}
+        {% author_name "h1" pre_text="View Posts by " %}
 
         <article>
           <header>
-            <h1>{% post_title %}</h1>
-            <p>By {% post_author %}. {% post_date %}</p>
+            <h1>{% post_title_link %}</h1>
+            <p>By {% post_author_link %}. {% post_date_link %}</p>
           </header>
           <section>
             {% post_content %}
           </section>
           <footer>
-            <p>Categories: {% post_categories "span" "badge" %}</p>
+            <p>Categories: {% post_categories_link "span" "badge" %}</p>
           </footer>
         </article>
 
-      {% comment %}If we get multiple posts, then show the truncated content.{% endcomment %}
-      {% elif posts %}
-
-        {% comment %}If we get posts for a category, then we can show the category header.{% endcomment %}
-        {% if category %}
-
-          <h1>{% category_name %}</h1>
-
-        {% endif %}
-
-        {% for post in posts %}
-
-          <article>
-            <header>
-              <h1>{% post_title_link %}</h1>
-              <p>By {% post_author %}. {% post_date %}</p>
-            </header>
-            <section>
-              {% post_content %}
-            </section>
-            <footer>
-              <p>Categories: {% post_categories "span" link_class="badge" %}</p>
-            </footer>
-          </article>
-
-        {% endfor %}
-
-      {% else %}
+      {% empty %}
 
         <p>No posts available.</p>
 
-      {% endif %}
+      {% endfor %}
 
     </main>
 

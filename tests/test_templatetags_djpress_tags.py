@@ -77,6 +77,30 @@ def test_long_post1(user, category1):
     return post
 
 
+@pytest.mark.django_db
+def test_have_posts_single_post(test_post1):
+    """Return a list of posts in the context."""
+    context = Context({"_post": test_post1})
+
+    assert djpress_tags.have_posts(context) == [test_post1]
+
+
+@pytest.mark.django_db
+def test_have_posts_no_posts():
+    """Return an empty list if there are no posts in the context."""
+    context = Context({"foo": "bar"})
+
+    assert djpress_tags.have_posts(context) == []
+
+
+@pytest.mark.django_db
+def test_have_posts_multiple_posts(test_post1, test_long_post1):
+    """Return a list of posts in the context."""
+    context = Context({"_posts": [test_post1, test_long_post1]})
+
+    assert djpress_tags.have_posts(context) == [test_post1, test_long_post1]
+
+
 def test_blog_title():
     """Test the blog_title template tag.
 
@@ -495,7 +519,7 @@ def test_post_content_with_post(test_post1):
 def test_post_content_with_posts(test_long_post1):
     """If there's a posts in the context, return the truncated post content."""
     context = Context(
-        {"post": test_long_post1, "posts": [test_long_post1]},
+        {"post": test_long_post1, "_posts": [test_long_post1]},
     )
 
     expected_output = (
@@ -507,13 +531,63 @@ def test_post_content_with_posts(test_long_post1):
 
 
 @pytest.mark.django_db
+def test_author_name(user):
+    """author_name only works if there's a author in the context."""
+    context = Context({"author": user})
+
+    # Test case 1 - no options
+    expected_output = get_author_display_name(user)
+    assert djpress_tags.author_name(context) == expected_output
+
+    # Test case 2 - with options
+    expected_output = f'<h1 class="title">View posts in the {get_author_display_name(user)} author</h1>'
+    assert (
+        djpress_tags.author_name(
+            context,
+            outer="h1",
+            outer_class="title",
+            pre_text="View posts in the ",
+            post_text=" author",
+        )
+        == expected_output
+    )
+
+
+def test_author_name_no_author():
+    """If there's no author in the context, return an empty string."""
+    context = Context({"foo": "bar"})
+
+    assert djpress_tags.author_name(context) == ""
+    assert type(djpress_tags.author_name(context)) == str
+
+
+@pytest.mark.django_db
 def test_category_name(category1):
+    """category_name only works if there's a category in the context."""
     context = Context({"category": category1})
 
-    assert djpress_tags.category_name(context) == category1.name
+    # Test case 1 - no options
+    expected_output = category1.name
+    assert djpress_tags.category_name(context) == expected_output
+
+    # Test case 2 - with options
+    expected_output = (
+        f'<h1 class="title">View posts in the {category1.name} category</h1>'
+    )
+    assert (
+        djpress_tags.category_name(
+            context,
+            outer="h1",
+            outer_class="title",
+            pre_text="View posts in the ",
+            post_text=" category",
+        )
+        == expected_output
+    )
 
 
 def test_category_name_no_category():
+    """If there's no category in the context, return an empty string."""
     context = Context({"foo": "bar"})
 
     assert djpress_tags.category_name(context) == ""
@@ -529,21 +603,21 @@ def test_post_categories(test_post1):
 
     expected_output = f'<ul><li><a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category">General</a></li></ul>'
 
-    assert djpress_tags.post_categories(context) == expected_output
+    assert djpress_tags.post_categories_link(context) == expected_output
 
 
 def test_post_categories_none_post_context():
     context = Context({"post": None})
 
     expected_output = ""
-    assert djpress_tags.post_categories(context) == expected_output
+    assert djpress_tags.post_categories_link(context) == expected_output
 
 
 def test_post_categories_no_post_context():
     context = Context({"foo": None})
 
     expected_output = ""
-    assert djpress_tags.post_categories(context) == expected_output
+    assert djpress_tags.post_categories_link(context) == expected_output
 
 
 @pytest.mark.django_db
@@ -552,7 +626,7 @@ def test_post_categories_no_categories_context(test_post1):
     context = Context({"post": test_post1})
 
     expected_output = ""
-    assert djpress_tags.post_categories(context) == expected_output
+    assert djpress_tags.post_categories_link(context) == expected_output
 
 
 @pytest.mark.django_db
@@ -564,7 +638,7 @@ def test_post_categories_ul(test_post1):
 
     expected_output = f'<ul><li><a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category">General</a></li></ul>'
 
-    assert djpress_tags.post_categories(context, "ul") == expected_output
+    assert djpress_tags.post_categories_link(context, "ul") == expected_output
 
 
 @pytest.mark.django_db
@@ -577,7 +651,7 @@ def test_post_categories_ul_class1(test_post1):
     expected_output = f'<ul><li><a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category" class="class1">General</a></li></ul>'
 
     assert (
-        djpress_tags.post_categories(context, outer="ul", link_class="class1")
+        djpress_tags.post_categories_link(context, outer="ul", link_class="class1")
         == expected_output
     )
 
@@ -592,7 +666,9 @@ def test_post_categories_ul_class1_class2(test_post1):
     expected_output = f'<ul><li><a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category" class="class1 class2">General</a></li></ul>'
 
     assert (
-        djpress_tags.post_categories(context, outer="ul", link_class="class1 class2")
+        djpress_tags.post_categories_link(
+            context, outer="ul", link_class="class1 class2"
+        )
         == expected_output
     )
 
@@ -606,7 +682,7 @@ def test_post_categories_div(test_post1):
 
     expected_output = f'<div><a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category">General</a></div>'
 
-    assert djpress_tags.post_categories(context, outer="div") == expected_output
+    assert djpress_tags.post_categories_link(context, outer="div") == expected_output
 
 
 @pytest.mark.django_db
@@ -619,7 +695,7 @@ def test_post_categories_div_class1(test_post1):
     expected_output = f'<div><a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category" class="class1">General</a></div>'
 
     assert (
-        djpress_tags.post_categories(context, outer="div", link_class="class1")
+        djpress_tags.post_categories_link(context, outer="div", link_class="class1")
         == expected_output
     )
 
@@ -634,7 +710,9 @@ def test_post_categories_div_class1_class2(test_post1):
     expected_output = f'<div><a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category" class="class1 class2">General</a></div>'
 
     assert (
-        djpress_tags.post_categories(context, outer="div", link_class="class1 class2")
+        djpress_tags.post_categories_link(
+            context, outer="div", link_class="class1 class2"
+        )
         == expected_output
     )
 
@@ -648,7 +726,7 @@ def test_post_categories_span(test_post1):
 
     expected_output = f'<span><a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category">General</a></span>'
 
-    assert djpress_tags.post_categories(context, outer="span") == expected_output
+    assert djpress_tags.post_categories_link(context, outer="span") == expected_output
 
 
 @pytest.mark.django_db
@@ -661,7 +739,7 @@ def test_post_categories_span_class1(test_post1):
     expected_output = f'<span><a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category" class="class1">General</a></span>'
 
     assert (
-        djpress_tags.post_categories(context, outer="span", link_class="class1")
+        djpress_tags.post_categories_link(context, outer="span", link_class="class1")
         == expected_output
     )
 
@@ -676,6 +754,8 @@ def test_post_categories_span_class1_class2(test_post1):
     expected_output = f'<span><a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category" class="class1 class2">General</a></span>'
 
     assert (
-        djpress_tags.post_categories(context, outer="span", link_class="class1 class2")
+        djpress_tags.post_categories_link(
+            context, outer="span", link_class="class1 class2"
+        )
         == expected_output
     )
