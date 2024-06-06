@@ -6,10 +6,10 @@ from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import render
-from django.utils.timezone import datetime
 
 from djpress.conf import settings
 from djpress.models import Category, Post
+from djpress.utils import validate_date
 
 logger = logging.getLogger(__name__)
 
@@ -17,13 +17,24 @@ logger = logging.getLogger(__name__)
 def index(
     request: HttpRequest,
 ) -> HttpResponse:
-    """View for the index page."""
+    """View for the index page.
+
+    Args:
+        request (HttpRequest): The request object.
+
+    Returns:
+        HttpResponse: The response.
+
+    Context:
+        _posts (Page): The published posts as a Page object.
+    """
     posts = Paginator(
         Post.post_objects.get_published_posts(),
         settings.RECENT_PUBLISHED_POSTS_COUNT,
     )
     page_number = request.GET.get("page")
     page = posts.get_page(page_number)
+
     return render(
         request,
         "djpress/index.html",
@@ -44,6 +55,12 @@ def archives_posts(
         year (str): The year.
         month (str): The month.
         day (str): The day.
+
+    Returns:
+        HttpResponse: The response.
+
+    Context:
+        _posts (Page): The published posts for the date as a Page object.
     """
     try:
         validate_date(year, month, day)
@@ -56,7 +73,6 @@ def archives_posts(
 
     # Django converts strings to integers when they are passed to the filter
     if day:
-        logger.debug(f"{year}/{month}/{day}")
         filtered_posts = published_posts.filter(
             date__year=year,
             date__month=month,
@@ -64,12 +80,15 @@ def archives_posts(
         )
 
     elif month:
-        logger.debug(f"{year}/{month}")
-        filtered_posts = published_posts.filter(date__year=year, date__month=month)
+        filtered_posts = published_posts.filter(
+            date__year=year,
+            date__month=month,
+        )
 
     elif year:
-        logger.debug(f"{year}")
-        filtered_posts = published_posts.filter(date__year=year)
+        filtered_posts = published_posts.filter(
+            date__year=year,
+        )
 
     posts = Paginator(filtered_posts, settings.RECENT_PUBLISHED_POSTS_COUNT)
     page_number = request.GET.get("page")
@@ -82,52 +101,20 @@ def archives_posts(
     )
 
 
-def validate_date(year: str, month: str, day: str) -> None:
-    """Test the date values.
-
-    Convert the date values to integers and test if they are valid dates.
-
-    The regex that gets the date values checks for the following:
-    - year: four digits
-    - month: two digits
-    - day: two digits
+def category_posts(request: HttpRequest, slug: str) -> HttpResponse:
+    """View for posts by category.
 
     Args:
-        year (str): The year.
-        month (str | None): The month.
-        day (str | None): The day.
-
-    Raises:
-        ValueError: If the date is invalid.
+        request (HttpRequest): The request object.
+        slug (str): The category slug.
 
     Returns:
-        None
+        HttpResponse: The response.
+
+    Context:
+        _posts (Page): The published posts for the category as a Page object.
+        category (Category): The category object.
     """
-    int_year: int = int(year)
-    int_month: int | None = int(month) if month else None
-    int_day: int | None = int(day) if day else None
-
-    if int_month == 0 or int_day == 0:
-        msg = "Invalid date"
-        raise ValueError(msg)
-
-    try:
-        if int_month and int_day:
-            datetime(int_year, int_month, int_day)
-
-        elif int_month:
-            datetime(int_year, int_month, 1)
-
-        else:
-            datetime(int_year, 1, 1)
-
-    except ValueError as exc:
-        msg = "Invalid date"
-        raise ValueError(msg) from exc
-
-
-def category_posts(request: HttpRequest, slug: str) -> HttpResponse:
-    """View for posts by category."""
     try:
         category: Category = Category.objects.get_category_by_slug(slug=slug)
     except ValueError as exc:
@@ -149,7 +136,19 @@ def category_posts(request: HttpRequest, slug: str) -> HttpResponse:
 
 
 def author_posts(request: HttpRequest, author: str) -> HttpResponse:
-    """View for posts by author."""
+    """View for posts by author.
+
+    Args:
+        request (HttpRequest): The request object.
+        author (str): The author username.
+
+    Returns:
+        HttpResponse: The response.
+
+    Context:
+        _posts (Page): The published posts by the author as a Page object.
+        author (User): The author as a User object.
+    """
     try:
         user: User = User.objects.get(username=author)
     except User.DoesNotExist as exc:
@@ -176,6 +175,12 @@ def post_detail(request: HttpRequest, path: str) -> HttpResponse:
     Args:
         request (HttpRequest): The request object.
         path (str): The path to the post.
+
+    Returns:
+        HttpResponse: The response.
+
+    Context:
+        _post (Post): The post object.
     """
     try:
         post = Post.post_objects.get_published_post_by_path(path)

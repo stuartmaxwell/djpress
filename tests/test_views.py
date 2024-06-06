@@ -4,7 +4,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from djpress.models import Category, Post
-from djpress.views import validate_date
+from djpress.utils import validate_date
 
 
 @pytest.fixture
