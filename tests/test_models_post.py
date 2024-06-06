@@ -87,7 +87,7 @@ def test_get_published_content_with_future_date(user):
         date=timezone.now() + timezone.timedelta(days=1),
     )
     assert Post.post_objects.all().count() == 2
-    assert Post.post_objects._get_published_posts().count() == 1
+    assert Post.post_objects.get_published_posts().count() == 1
 
 
 @pytest.mark.django_db

@@ -18,10 +18,11 @@
     <main>
 
       {% have_posts as posts %}
-      {% for post in posts %}
 
-        {% category_name "h1" pre_text="View Posts in the " post_text=" Category" %}
-        {% author_name "h1" pre_text="View Posts by " %}
+      {% category_name "h1" pre_text="View Posts in the " post_text=" Category" %}
+      {% author_name "h1" pre_text="View Posts by " %}
+
+      {% for post in posts %}
 
         <article>
           <header>
@@ -41,6 +42,10 @@
         <p>No posts available.</p>
 
       {% endfor %}
+
+      {% posts_nav_links %}
+
+      <br><br><br>
 
     </main>
 

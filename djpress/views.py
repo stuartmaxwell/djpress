@@ -3,10 +3,12 @@
 import logging
 
 from django.contrib.auth.models import User
+from django.core.paginator import Paginator
 from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import render
 from django.utils.timezone import datetime
 
+from djpress.conf import settings
 from djpress.models import Category, Post
 
 logger = logging.getLogger(__name__)
@@ -16,12 +18,16 @@ def index(
     request: HttpRequest,
 ) -> HttpResponse:
     """View for the index page."""
-    posts = Post.post_objects.get_recent_published_posts()
-
+    posts = Paginator(
+        Post.post_objects.get_published_posts(),
+        settings.RECENT_PUBLISHED_POSTS_COUNT,
+    )
+    page_number = request.GET.get("page")
+    page = posts.get_page(page_number)
     return render(
         request,
         "djpress/index.html",
-        {"_posts": posts},
+        {"_posts": page},
     )
 
 
@@ -46,12 +52,12 @@ def archives_posts(
         msg = "Invalid date"
         return HttpResponseBadRequest(msg)
 
-    posts = Post.post_objects._get_published_posts()  # noqa: SLF001
+    published_posts = Post.post_objects.get_published_posts()
 
     # Django converts strings to integers when they are passed to the filter
     if day:
         logger.debug(f"{year}/{month}/{day}")
-        posts = posts.filter(
+        filtered_posts = published_posts.filter(
             date__year=year,
             date__month=month,
             date__day=day,
@@ -59,16 +65,20 @@ def archives_posts(
 
     elif month:
         logger.debug(f"{year}/{month}")
-        posts = posts.filter(date__year=year, date__month=month)
+        filtered_posts = published_posts.filter(date__year=year, date__month=month)
 
     elif year:
         logger.debug(f"{year}")
-        posts = posts.filter(date__year=year)
+        filtered_posts = published_posts.filter(date__year=year)
+
+    posts = Paginator(filtered_posts, settings.RECENT_PUBLISHED_POSTS_COUNT)
+    page_number = request.GET.get("page")
+    page = posts.get_page(page_number)
 
     return render(
         request,
         "djpress/index.html",
-        {"_posts": posts},
+        {"_posts": page},
     )
 
 
@@ -116,6 +126,50 @@ def validate_date(year: str, month: str, day: str) -> None:
         raise ValueError(msg) from exc
 
 
+def category_posts(request: HttpRequest, slug: str) -> HttpResponse:
+    """View for posts by category."""
+    try:
+        category: Category = Category.objects.get_category_by_slug(slug=slug)
+    except ValueError as exc:
+        msg = "Category not found"
+        raise Http404(msg) from exc
+
+    posts = Paginator(
+        Post.post_objects.get_published_posts_by_category(category),
+        settings.RECENT_PUBLISHED_POSTS_COUNT,
+    )
+    page_number = request.GET.get("page")
+    page = posts.get_page(page_number)
+
+    return render(
+        request,
+        "djpress/index.html",
+        {"_posts": page, "category": category},
+    )
+
+
+def author_posts(request: HttpRequest, author: str) -> HttpResponse:
+    """View for posts by author."""
+    try:
+        user: User = User.objects.get(username=author)
+    except User.DoesNotExist as exc:
+        msg = "Author not found"
+        raise Http404(msg) from exc
+
+    posts = Paginator(
+        Post.post_objects.get_published_posts_by_author(user),
+        settings.RECENT_PUBLISHED_POSTS_COUNT,
+    )
+    page_number = request.GET.get("page")
+    page = posts.get_page(page_number)
+
+    return render(
+        request,
+        "djpress/index.html",
+        {"_posts": page, "author": user},
+    )
+
+
 def post_detail(request: HttpRequest, path: str) -> HttpResponse:
     """View for a single post.
 
@@ -133,38 +187,4 @@ def post_detail(request: HttpRequest, path: str) -> HttpResponse:
         request,
         "djpress/index.html",
         {"_post": post},
-    )
-
-
-def category_posts(request: HttpRequest, slug: str) -> HttpResponse:
-    """View for posts by category."""
-    try:
-        category: Category = Category.objects.get_category_by_slug(slug=slug)
-    except ValueError as exc:
-        msg = "Category not found"
-        raise Http404(msg) from exc
-
-    posts = Post.post_objects.get_published_posts_by_category(category)
-
-    return render(
-        request,
-        "djpress/index.html",
-        {"_posts": posts, "category": category},
-    )
-
-
-def author_posts(request: HttpRequest, author: str) -> HttpResponse:
-    """View for posts by author."""
-    try:
-        user: User = User.objects.get(username=author)
-    except User.DoesNotExist as exc:
-        msg = "Author not found"
-        raise Http404(msg) from exc
-
-    posts = Post.post_objects.get_published_posts_by_author(user)
-
-    return render(
-        request,
-        "djpress/index.html",
-        {"_posts": posts, "author": user},
     )

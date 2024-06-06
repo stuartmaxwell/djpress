@@ -26,7 +26,22 @@ class PostsManager(models.Manager):
         """Return the queryset for published posts."""
         return super().get_queryset().filter(post_type="post").order_by("-date")
 
-    def _get_published_posts(self: "PostsManager") -> models.QuerySet:
+    def get_recent_published_posts(self: "PostsManager") -> models.QuerySet:
+        """Return recent published posts.
+
+        This does not return a paginated queryset. Use get_paginated_published_posts
+        instead.
+
+        If CACHE_RECENT_PUBLISHED_POSTS is set to True, we return the cached queryset.
+        """
+        if settings.CACHE_RECENT_PUBLISHED_POSTS:
+            return self._get_cached_recent_published_posts()
+
+        return self.get_published_posts().prefetch_related("categories", "author")[
+            : settings.RECENT_PUBLISHED_POSTS_COUNT
+        ]
+
+    def get_published_posts(self: "PostsManager") -> models.QuerySet:
         """Returns all published posts.
 
         For a post to be considered published, it must meet the following requirements:
@@ -37,18 +52,6 @@ class PostsManager(models.Manager):
             status="published",
             date__lte=timezone.now(),
         )
-
-    def get_recent_published_posts(self: "PostsManager") -> models.QuerySet:
-        """Return recent published posts.
-
-        If CACHE_RECENT_PUBLISHED_POSTS is set to True, we return the cached queryset.
-        """
-        if settings.CACHE_RECENT_PUBLISHED_POSTS:
-            return self._get_cached_recent_published_posts()
-
-        return self._get_published_posts().prefetch_related("categories", "author")[
-            : settings.RECENT_PUBLISHED_POSTS_COUNT
-        ]
 
     def _get_cached_recent_published_posts(self: "PostsManager") -> models.QuerySet:
         """Return the cached recent published posts queryset.
@@ -117,7 +120,7 @@ class PostsManager(models.Manager):
         # If the post is not found in the cache, fetch it from the database
         if not post:
             try:
-                post = self._get_published_posts().get(slug=slug)
+                post = self.get_published_posts().get(slug=slug)
             except Post.DoesNotExist as exc:
                 msg = "Post not found"
                 raise ValueError(msg) from exc
@@ -178,7 +181,7 @@ class PostsManager(models.Manager):
         category, ordered by date in descending order.
         """
         return (
-            self._get_published_posts()
+            self.get_published_posts()
             .filter(categories=category)
             .prefetch_related("categories", "author")
         )
@@ -193,7 +196,7 @@ class PostsManager(models.Manager):
         author, ordered by date in descending order.
         """
         return (
-            self._get_published_posts()
+            self.get_published_posts()
             .filter(author=author)
             .prefetch_related("categories", "author")
         )
