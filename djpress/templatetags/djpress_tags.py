@@ -2,6 +2,7 @@
 
 from django import template
 from django.contrib.auth.models import User
+from django.core.paginator import Page
 from django.db import models
 from django.template import Context
 from django.urls import reverse
@@ -83,8 +84,13 @@ def blog_categories(
 
 
 @register.simple_tag(takes_context=True)
-def have_posts(context: Context) -> list[Post | None]:
+def have_posts(context: Context) -> list[Post | None] | Page:
     """Return the posts in the context.
+
+    If there's a `_post` in the context, then we return a list with that post.
+
+    If there's a `_posts` in the context, then we return the posts. The `_posts` should
+    be a Page object.
 
     Args:
         context: The context.
@@ -93,12 +99,12 @@ def have_posts(context: Context) -> list[Post | None]:
         list[Post]: The posts in the context.
     """
     post: Post | None = context.get("_post")
-    posts: models.QuerySet[Post] | None = context.get("_posts")
+    posts: Page | None = context.get("_posts")
 
     if post:
         return [post]
     if posts:
-        return list(posts)
+        return posts
 
     return []
 
@@ -462,3 +468,56 @@ def post_categories_link(
         return ""
 
     return mark_safe(categories_html(categories, outer, outer_class, link_class))
+
+
+@register.simple_tag(takes_context=True)
+def posts_nav_links(
+    context: Context,
+) -> str:
+    """Return the previous and next post links.
+
+    This checks if there is a Page object in the context. If there is, then we return
+    the previous and next post links. If there is no Page object in the context, then
+    we return an empty string.
+
+    Args:
+        context: The context.
+
+    Returns:
+        str: The previous and next post links.
+    """
+    page: Page | None = context.get("posts")
+    if not page or not isinstance(page, Page):
+        return ""
+
+    if page.has_previous():
+        previous_output = (
+            f'<span class="previous">'
+            f'<a href="?page=1">&laquo; first</a> '
+            f'<a href="?page={page.previous_page_number()}">previous</a>'
+            f"</span>"
+        )
+    else:
+        previous_output = ""
+
+    if page.has_next():
+        next_output = (
+            f'<span class="next">'
+            f'<a href="?page={page.next_page_number()}">next</a> '
+            f'<a href="?page={page.paginator.num_pages}">last &raquo;</a>'
+            f"</span>"
+        )
+    else:
+        next_output = ""
+
+    current_output = (
+        f'<span class="current">'
+        f"Page {page.number} of {page.paginator.num_pages}"
+        f"</span>"
+    )
+
+    return mark_safe(
+        f'<div class="pagination">'
+        f"{previous_output} {current_output} {next_output}"
+        "</div>",
+    )

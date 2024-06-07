@@ -2,6 +2,7 @@
 
 import markdown
 from django.contrib.auth.models import User
+from django.utils.timezone import datetime
 
 from djpress.conf import settings
 
@@ -35,3 +36,47 @@ def get_author_display_name(user: User) -> str:
         return user.first_name
 
     return user.username
+
+
+def validate_date(year: str, month: str, day: str) -> None:
+    """Test the date values.
+
+    Convert the date values to integers and test if they are valid dates.
+
+    The regex that gets the date values checks for the following:
+    - year: four digits
+    - month: two digits
+    - day: two digits
+
+    Args:
+        year (str): The year.
+        month (str | None): The month.
+        day (str | None): The day.
+
+    Raises:
+        ValueError: If the date is invalid.
+
+    Returns:
+        None
+    """
+    int_year: int = int(year)
+    int_month: int | None = int(month) if month else None
+    int_day: int | None = int(day) if day else None
+
+    if int_month == 0 or int_day == 0:
+        msg = "Invalid date"
+        raise ValueError(msg)
+
+    try:
+        if int_month and int_day:
+            datetime(int_year, int_month, int_day)
+
+        elif int_month:
+            datetime(int_year, int_month, 1)
+
+        else:
+            datetime(int_year, 1, 1)
+
+    except ValueError as exc:
+        msg = "Invalid date"
+        raise ValueError(msg) from exc
