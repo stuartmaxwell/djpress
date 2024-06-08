@@ -1,4 +1,7 @@
-"""djpress views file."""
+"""DJ Press views file.
+
+All views must return an iterable object in the `posts` context variable.
+"""
 
 import logging
 
@@ -26,7 +29,7 @@ def index(
         HttpResponse: The response.
 
     Context:
-        _posts (Page): The published posts as a Page object.
+        posts (Page): The published posts as a Page object.
     """
     posts = Paginator(
         Post.post_objects.get_published_posts(),
@@ -38,7 +41,7 @@ def index(
     return render(
         request,
         "djpress/index.html",
-        {"_posts": page},
+        {"posts": page},
     )
 
 
@@ -60,7 +63,7 @@ def archives_posts(
         HttpResponse: The response.
 
     Context:
-        _posts (Page): The published posts for the date as a Page object.
+        posts (Page): The published posts for the date as a Page object.
     """
     try:
         validate_date(year, month, day)
@@ -97,7 +100,7 @@ def archives_posts(
     return render(
         request,
         "djpress/index.html",
-        {"_posts": page},
+        {"posts": page},
     )
 
 
@@ -112,7 +115,7 @@ def category_posts(request: HttpRequest, slug: str) -> HttpResponse:
         HttpResponse: The response.
 
     Context:
-        _posts (Page): The published posts for the category as a Page object.
+        posts (Page): The published posts for the category as a Page object.
         category (Category): The category object.
     """
     try:
@@ -131,7 +134,7 @@ def category_posts(request: HttpRequest, slug: str) -> HttpResponse:
     return render(
         request,
         "djpress/index.html",
-        {"_posts": page, "category": category},
+        {"posts": page, "category": category},
     )
 
 
@@ -146,7 +149,7 @@ def author_posts(request: HttpRequest, author: str) -> HttpResponse:
         HttpResponse: The response.
 
     Context:
-        _posts (Page): The published posts by the author as a Page object.
+        posts (Page): The published posts by the author as a Page object.
         author (User): The author as a User object.
     """
     try:
@@ -165,7 +168,7 @@ def author_posts(request: HttpRequest, author: str) -> HttpResponse:
     return render(
         request,
         "djpress/index.html",
-        {"_posts": page, "author": user},
+        {"posts": page, "author": user},
     )
 
 
@@ -180,7 +183,7 @@ def post_detail(request: HttpRequest, path: str) -> HttpResponse:
         HttpResponse: The response.
 
     Context:
-        _post (Post): The post object.
+        posts (Post): The post object.
     """
     try:
         post = Post.post_objects.get_published_post_by_path(path)
@@ -191,5 +194,5 @@ def post_detail(request: HttpRequest, path: str) -> HttpResponse:
     return render(
         request,
         "djpress/index.html",
-        {"_post": post},
+        {"posts": [post], "is_single": True},
     )

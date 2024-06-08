@@ -6,7 +6,7 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% blog_title %}</title>
+    <title>{% blog_page_title post_text="|" %} {% blog_title %}</title>
     <link rel="stylesheet" href="{% static 'djpress/css/style.css' %}">
   </head>
   <body>
@@ -16,8 +16,6 @@
     </header>
 
     <main>
-
-      {% have_posts as posts %}
 
       {% category_name "h1" pre_text="View Posts in the " post_text=" Category" %}
       {% author_name "h1" pre_text="View Posts by " %}

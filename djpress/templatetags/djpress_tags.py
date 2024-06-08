@@ -84,6 +84,44 @@ def blog_categories(
 
 
 @register.simple_tag(takes_context=True)
+def blog_page_title(
+    context: Context,
+    pre_text: str = "",
+    post_text: str = "",
+) -> str:
+    """Return the page title.
+
+    Args:
+        context: The context.
+        pre_text: The text to prepend to the page title.
+        post_text: The text to append to the page title.
+
+    Returns:
+        str: The page title.
+    """
+    category: Category | None = context.get("category")
+    author: User | None = context.get("author")
+    posts: Page | list[Post] | None = context.get("posts")
+    is_single: bool | None = context.get("is_single", False)
+
+    if category:
+        page_title = category.name
+
+    elif author:
+        page_title = get_author_display_name(author)
+
+    elif is_single and posts:
+        page_title = posts[0].title
+    else:
+        page_title = ""
+
+    if page_title:
+        page_title = f"{pre_text} {page_title} {post_text}"
+
+    return page_title
+
+
+@register.simple_tag(takes_context=True)
 def have_posts(context: Context) -> list[Post | None] | Page:
     """Return the posts in the context.
 
