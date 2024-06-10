@@ -42,6 +42,7 @@ def index(
     if not template.template.name:
         msg = "Template not found"
         raise TemplateDoesNotExist(msg)
+
     posts = Paginator(
         Post.post_objects.get_published_posts(),
         settings.RECENT_PUBLISHED_POSTS_COUNT,
