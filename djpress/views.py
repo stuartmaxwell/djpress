@@ -10,6 +10,7 @@ from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import render
+from django.template.loader import TemplateDoesNotExist, select_template
 
 from djpress.conf import settings
 from djpress.models import Category, Post
@@ -32,6 +33,15 @@ def index(
     Context:
         posts (Page): The published posts as a Page object.
     """
+    template_names: list[str] = [
+        "djpress/home.html",
+        "djpress/index.html",
+    ]
+    template = select_template(template_names)
+
+    if not template.template.name:
+        msg = "Template not found"
+        raise TemplateDoesNotExist(msg)
     posts = Paginator(
         Post.post_objects.get_published_posts(),
         settings.RECENT_PUBLISHED_POSTS_COUNT,
@@ -66,6 +76,15 @@ def archives_posts(
     Context:
         posts (Page): The published posts for the date as a Page object.
     """
+    template_names: list[str] = [
+        "djpress/archives.html",
+        "djpress/index.html",
+    ]
+    template = select_template(template_names)
+
+    if not template.template.name:
+        msg = "Template not found"
+        raise TemplateDoesNotExist(msg)
     try:
         validate_date(year, month, day)
 
@@ -119,6 +138,15 @@ def category_posts(request: HttpRequest, slug: str) -> HttpResponse:
         posts (Page): The published posts for the category as a Page object.
         category (Category): The category object.
     """
+    template_names: list[str] = [
+        "djpress/category.html",
+        "djpress/index.html",
+    ]
+    template = select_template(template_names)
+
+    if not template.template.name:
+        msg = "Template not found"
+        raise TemplateDoesNotExist(msg)
     try:
         category: Category = Category.objects.get_category_by_slug(slug=slug)
     except ValueError as exc:
@@ -153,6 +181,15 @@ def author_posts(request: HttpRequest, author: str) -> HttpResponse:
         posts (Page): The published posts by the author as a Page object.
         author (User): The author as a User object.
     """
+    template_names: list[str] = [
+        "djpress/author.html",
+        "djpress/index.html",
+    ]
+    template = select_template(template_names)
+
+    if not template.template.name:
+        msg = "Template not found"
+        raise TemplateDoesNotExist(msg)
     try:
         user: User = User.objects.get(username=author)
     except User.DoesNotExist as exc:
@@ -186,6 +223,16 @@ def post_detail(request: HttpRequest, path: str) -> HttpResponse:
     Context:
         post (Post): The post object.
     """
+    template_names: list[str] = [
+        "djpress/single.html",
+        "djpress/index.html",
+    ]
+    template = select_template(template_names)
+
+    if not template.template.name:
+        msg = "Template not found"
+        raise TemplateDoesNotExist(msg)
+
     try:
         post = Post.post_objects.get_published_post_by_path(path)
     except ValueError as exc:
@@ -193,7 +240,7 @@ def post_detail(request: HttpRequest, path: str) -> HttpResponse:
         raise Http404(msg) from exc
 
     return render(
-        request,
-        "djpress/index.html",
-        {"post": post},
+        request=request,
+        context={"post": post},
+        template_name=template.template.name,
     )
