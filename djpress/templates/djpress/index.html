@@ -1,58 +1,49 @@
-{% load static %}
+{% extends "djpress/base.html" %}
 {% load djpress_tags %}
 
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% blog_page_title post_text="|" %} {% blog_title %}</title>
-    <link rel="stylesheet" href="{% static 'djpress/css/style.css' %}">
-  </head>
-  <body>
-    <header>
-      <h1>{% blog_title_link %}</h1>
-      {% blog_categories %}
-    </header>
+{% block main %}
 
-    <main>
+  {% category_name "h1" pre_text="View Posts in the " post_text=" Category" %}
+  {% author_name "h1" pre_text="View Posts by " %}
 
-      {% category_name "h1" pre_text="View Posts in the " post_text=" Category" %}
-      {% author_name "h1" pre_text="View Posts by " %}
+  {% if post %}
 
-      {% for post in posts %}
+    <article>
+      <header>
+        <h1>{% post_title_link %}</h1>
+        <p>By {% post_author_link %}. {% post_date_link %}</p>
+      </header>
+      <section>
+        {% post_content %}
+      </section>
+      <footer>
+        <p>Categories: {% post_categories_link "span" "badge" %}</p>
+      </footer>
+    </article>
 
-        <article>
-          <header>
-            <h1>{% post_title_link %}</h1>
-            <p>By {% post_author_link %}. {% post_date_link %}</p>
-          </header>
-          <section>
-            {% post_content %}
-          </section>
-          <footer>
-            <p>Categories: {% post_categories_link "span" "badge" %}</p>
-          </footer>
-        </article>
+  {% else %}
 
-      {% empty %}
+    {% for post in posts %}
 
-        <p>No posts available.</p>
+      <article>
+        <header>
+          <h1>{% post_title_link %}</h1>
+          <p>By {% post_author_link %}. {% post_date_link %}</p>
+        </header>
+        <section>
+          {% post_content %}
+        </section>
+      </article>
 
-      {% endfor %}
+    {% empty %}
 
-      {% posts_nav_links %}
+      <p>No posts available.</p>
 
-      <br><br><br>
+    {% endfor %}
 
-    </main>
+  {% endif %}
 
-    <footer>
-      <p>Powered by
-        <a href="https://www.djangoproject.com/" title="The web framework for perfectionists with deadlines">Django</a>
-        and
-        <a href="#">DJPress</a>
-      </p>
-    </footer>
-  </body>
-</html>
+
+  {% posts_nav_links %}
+
+{% endblock main %}
