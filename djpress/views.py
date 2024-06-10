@@ -1,6 +1,7 @@
 """DJ Press views file.
 
-All views must return an iterable object in the `posts` context variable.
+There are two type of views - those that return a collection of posts, and then a view
+that returns a single post.
 """
 
 import logging
@@ -183,7 +184,7 @@ def post_detail(request: HttpRequest, path: str) -> HttpResponse:
         HttpResponse: The response.
 
     Context:
-        posts (Post): The post object.
+        post (Post): The post object.
     """
     try:
         post = Post.post_objects.get_published_post_by_path(path)
@@ -194,5 +195,5 @@ def post_detail(request: HttpRequest, path: str) -> HttpResponse:
     return render(
         request,
         "djpress/index.html",
-        {"posts": [post], "is_single": True},
+        {"post": post},
     )
