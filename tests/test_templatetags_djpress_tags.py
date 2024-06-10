@@ -80,7 +80,7 @@ def test_long_post1(user, category1):
 @pytest.mark.django_db
 def test_have_posts_single_post(test_post1):
     """Return a list of posts in the context."""
-    context = Context({"_post": test_post1})
+    context = Context({"post": test_post1})
 
     assert djpress_tags.have_posts(context) == [test_post1]
 
@@ -96,7 +96,7 @@ def test_have_posts_no_posts():
 @pytest.mark.django_db
 def test_have_posts_multiple_posts(test_post1, test_long_post1):
     """Return a list of posts in the context."""
-    context = Context({"_posts": [test_post1, test_long_post1]})
+    context = Context({"posts": [test_post1, test_long_post1]})
 
     assert djpress_tags.have_posts(context) == [test_post1, test_long_post1]
 
@@ -136,23 +136,24 @@ def test_get_categories(category1, category2, category3):
 
 
 @pytest.mark.django_db
-def test_post_title(test_post1):
+def test_post_title_single_post(test_post1):
     context = Context({"post": test_post1})
     assert djpress_tags.post_title(context) == test_post1.title
 
 
-def test_post_title_no_post():
+def test_post_title_no_post_context():
     context = Context({"foo": "bar"})
     assert djpress_tags.post_title(context) == ""
     assert type(djpress_tags.post_title(context)) == str
 
 
 @pytest.mark.django_db
-def test_post_title_link(test_post1):
+def test_post_title_posts(test_post1):
     """Test the post_title_link template tag.
 
     This uses the post.permalink property to generate the link."""
-    context = Context({"post": test_post1})
+    # Context should have both a posts and a post to simulate the for post in posts loop
+    context = Context({"posts": [test_post1], "post": test_post1})
 
     # Confirm settings in settings_testing.py
     assert settings.POST_PREFIX == "test-posts"
@@ -179,7 +180,9 @@ def test_post_title_link_with_prefix(test_post1):
     # Confirm settings in settings_testing.py
     assert settings.POST_PREFIX == "test-posts"
 
-    context = Context({"post": test_post1})
+    # Context should have both a posts and a post to simulate the for post in posts loop
+    context = Context({"posts": [test_post1], "post": test_post1})
+
     post_url = reverse("djpress:post_detail", args=[test_post1.slug])
 
     expected_output = f'<a href="/test-posts{post_url}" title="{test_post1.title}">{test_post1.title}</a>'
@@ -518,9 +521,8 @@ def test_post_content_with_post(test_post1):
 @pytest.mark.django_db
 def test_post_content_with_posts(test_long_post1):
     """If there's a posts in the context, return the truncated post content."""
-    context = Context(
-        {"post": test_long_post1, "_posts": [test_long_post1]},
-    )
+    # Context should have both a posts and a post to simulate the for post in posts loop
+    context = Context({"posts": [test_long_post1], "post": test_long_post1})
 
     expected_output = (
         f"{test_long_post1.truncated_content_markdown}"

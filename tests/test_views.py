@@ -57,8 +57,8 @@ def test_post_detail_view(client, create_test_post):
     url = reverse("djpress:post_detail", args=[create_test_post.permalink])
     response = client.get(url)
     assert response.status_code == 200
-    assert "posts" in response.context
-    assert isinstance(response.context["posts"], Iterable)
+    assert "post" in response.context
+    assert not isinstance(response.context["post"], Iterable)
 
 
 @pytest.mark.django_db

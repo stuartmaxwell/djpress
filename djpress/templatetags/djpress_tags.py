@@ -125,9 +125,9 @@ def blog_page_title(
 def have_posts(context: Context) -> list[Post | None] | Page:
     """Return the posts in the context.
 
-    If there's a `_post` in the context, then we return a list with that post.
+    If there's a `post` in the context, then we return a list with that post.
 
-    If there's a `_posts` in the context, then we return the posts. The `_posts` should
+    If there's a `posts` in the context, then we return the posts. The `posts` should
     be a Page object.
 
     Args:
@@ -136,8 +136,8 @@ def have_posts(context: Context) -> list[Post | None] | Page:
     Returns:
         list[Post]: The posts in the context.
     """
-    post: Post | None = context.get("_post")
-    posts: Page | None = context.get("_posts")
+    post: Post | None = context.get("post")
+    posts: Page | None = context.get("posts")
 
     if post:
         return [post]
@@ -168,6 +168,13 @@ def post_title(context: Context) -> str:
 def post_title_link(context: Context, link_class: str = "") -> str:
     """Return the title link for a post.
 
+    If the post is part of a posts collection, then return the title and a link to the
+    post.
+
+    If the post is a single post, then return just the title of the post with no link.
+
+    Otherwise return and empty string.
+
     Args:
         context: The context.
         link_class: The CSS class(es) for the link.
@@ -176,23 +183,24 @@ def post_title_link(context: Context, link_class: str = "") -> str:
         str: The title link for the post.
     """
     post: Post | None = context.get("post")
-    if not post:
-        return ""
+    posts: Page | None = context.get("posts")
 
-    _post: Post | None = context.get("_post")
-    if _post:
+    if posts and post:
+        post_url = reverse("djpress:post_detail", args=[post.permalink])
+
+        link_class_html = f' class="{link_class}"' if link_class else ""
+
+        output = (
+            f'<a href="{post_url}" title="{post.title}"{link_class_html}>'
+            f"{post.title}</a>"
+        )
+
+        return mark_safe(output)
+
+    if post:
         return post_title(context)
 
-    post_url = reverse("djpress:post_detail", args=[post.permalink])
-
-    link_class_html = f' class="{link_class}"' if link_class else ""
-
-    output = (
-        f'<a href="{post_url}" title="{post.title}"{link_class_html}>'
-        f"{post.title}</a>"
-    )
-
-    return mark_safe(output)
+    return ""
 
 
 @register.simple_tag(takes_context=True)
@@ -350,9 +358,12 @@ def post_content(
 ) -> str:
     """Return the content of a post.
 
-    If there's no post in the context, then we return an empty string. If there are
-    multiple posts in the context, then we return the truncated content of the post with
-    the read more link. Otherwise, we return the full content of the post.
+    If the post is part of a posts collection, then we return the truncated content of
+    the post with the read more link.
+
+    If the post is a single post, then return the full content of the post.
+
+    Otherwise return and empty string.
 
     Args:
         context: The context.
@@ -362,25 +373,22 @@ def post_content(
     Returns:
         str: The content of the post.
     """
+    # Check if there's a post or posts in the context.
+    post: Post | None = context.get("post")
+    posts: Page | None = context.get("posts")
+
     content: str = ""
 
-    # Check if there's a post or _posts in the context.
-    post: Post | None = context.get("post")
-    _posts: models.QuerySet[Post] | None = context.get("_posts")
-
-    # If there's no post, then we return an empty string.
-    if not post:
-        return content
-
-    # If there are _posts, then we return the truncated content of the post.
-    if _posts:
+    if posts and post:
         content = mark_safe(post.truncated_content_markdown)
         if post.is_truncated:
             content += post_read_more_link(post, read_more_link_class, read_more_text)
         return mark_safe(content)
 
-    # If there
-    return mark_safe(post.content_markdown)
+    if post:
+        return mark_safe(post.content_markdown)
+
+    return ""
 
 
 @register.simple_tag(takes_context=True)
