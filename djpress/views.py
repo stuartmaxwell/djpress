@@ -235,13 +235,18 @@ def post_detail(request: HttpRequest, path: str) -> HttpResponse:
         raise TemplateDoesNotExist(msg)
 
     try:
-        post = Post.post_objects.get_published_post_by_path(path)
-    except ValueError as exc:
-        msg = "Post not found"
-        raise Http404(msg) from exc
+        page: Post = Post.page_objects.get_published_page_by_path(path)
+        context: dict = {"post": page}
+    except ValueError:
+        try:
+            post = Post.post_objects.get_published_post_by_path(path)
+            context: dict = {"post": post}
+        except ValueError as exc:
+            msg = "Post not found"
+            raise Http404(msg) from exc
 
     return render(
         request=request,
-        context={"post": post},
+        context=context,
         template_name=template.template.name,
     )

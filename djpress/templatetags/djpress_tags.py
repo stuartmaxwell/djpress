@@ -13,6 +13,7 @@ from djpress.models import Category, Post
 from djpress.templatetags.helpers import (
     categories_html,
     category_link,
+    get_page_link,
     post_read_more_link,
 )
 from djpress.utils import get_author_display_name
@@ -51,6 +52,18 @@ def blog_title_link(link_class: str = "") -> str:
 
 
 @register.simple_tag
+def get_pages() -> models.QuerySet[Post]:
+    """Return all pages as a queryset.
+
+    Returns:
+        models.QuerySet[Post]: All pages.
+    """
+    return (
+        Post.page_objects.get_published_pages().order_by("menu_order").order_by("title")
+    )
+
+
+@register.simple_tag
 def get_categories() -> models.QuerySet[Category] | None:
     """Return all categories as a queryset.
 
@@ -81,6 +94,54 @@ def blog_categories(
         return ""
 
     return mark_safe(categories_html(categories, outer, outer_class, link_class))
+
+
+@register.simple_tag
+def blog_pages(
+    outer: str = "ul",
+    outer_class: str = "",
+    link_class: str = "",
+) -> str:
+    """Return the pages of the blog.
+
+    Args:
+        outer: The outer HTML tag for the pages.
+        outer_class: The CSS class(es) for the outer tag.
+        link_class: The CSS class(es) for the link.
+
+    Returns:
+        str: The pages of the blog.
+    """
+    pages: models.QuerySet[Post] = get_pages()
+
+    if not pages:
+        return ""
+
+    output = ""
+
+    outer_class_html = f' class="{outer_class}"' if outer_class else ""
+
+    if outer == "ul":
+        output += f"<ul{outer_class_html}>"
+        for page in pages:
+            output += f"<li>{get_page_link(page=page, link_class=link_class)}</li>"
+        output += "</ul>"
+
+    if outer == "div":
+        output += f"<div{outer_class_html}>"
+        for page in pages:
+            output += f"{get_page_link(page=page, link_class=link_class)}, "
+        output = output[:-2]  # Remove the trailing comma and space
+        output += "</div>"
+
+    if outer == "span":
+        output += f"<span{outer_class_html}>"
+        for page in pages:
+            output += f"{get_page_link(page=page, link_class=link_class)}, "
+        output = output[:-2]  # Remove the trailing comma and space
+        output += "</span>"
+
+    return mark_safe(output)
 
 
 @register.simple_tag(takes_context=True)
@@ -567,3 +628,40 @@ def posts_nav_links(
         f"{previous_output} {current_output} {next_output}"
         "</div>",
     )
+
+
+@register.simple_tag()
+def page_link(
+    page_slug: str,
+    outer: str = "div",
+    outer_class: str = "",
+    link_class: str = "",
+) -> str:
+    """Return the link to a page.
+
+    Args:
+        page_slug: The slug of the page.
+        outer: The outer HTML tag for the page link.
+        outer_class: The CSS class(es) for the outer tag.
+        link_class: The CSS class(es) for the link.
+
+    Returns:
+        str: The link to the page.
+    """
+    page: Post | None = Post.page_objects.get_published_page_by_slug(page_slug)
+
+    if not page:
+        return ""
+
+    output = get_page_link(page, link_class=link_class)
+
+    if outer == "li":
+        return mark_safe(f"<li{outer_class}>{output}</li>")
+
+    if outer == "span":
+        return mark_safe(f"<span{outer_class}>{output}</span>")
+
+    if outer == "div":
+        return mark_safe(f"<div{outer_class}>{output}</div>")
+
+    return mark_safe(output)

@@ -1,5 +1,6 @@
 pytest
 pytest-django
+coverage
 build
 setuptools
 -r example/requirements.txt

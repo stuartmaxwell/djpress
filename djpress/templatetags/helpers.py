@@ -54,13 +54,13 @@ def categories_html(
 
 
 def category_link(category: Category, link_class: str = "") -> str:
-    """Return the category link for a post.
+    """Return the category link.
 
     This is not intded to be used as a template tag. It is used by the other
     template tags in this module to generate the category links.
 
     Args:
-        category: The category of the post.
+        category: The category.
         link_class: The CSS class(es) for the link.
     """
     category_url = reverse("djpress:category_posts", args=[category.slug])
@@ -70,6 +70,26 @@ def category_link(category: Category, link_class: str = "") -> str:
     return (
         f'<a href="{category_url}" title="View all posts in the {category.name} '
         f'category"{link_class_html}>{ category.name }</a>'
+    )
+
+
+def get_page_link(page: Post, link_class: str = "") -> str:
+    """Return the page link.
+
+    This is not intded to be used as a template tag. It is used by the other
+    template tags in this module to generate the page links.
+
+    Args:
+        page: The page.
+        link_class: The CSS class(es) for the link.
+    """
+    page_url = reverse("djpress:post_detail", args=[page.slug])
+
+    link_class_html = f' class="{link_class}"' if link_class else ""
+
+    return (
+        f'<a href="{page_url}" title="View the {page.title} page"'
+        f"{link_class_html}>{ page.title }</a>"
     )
 
 
