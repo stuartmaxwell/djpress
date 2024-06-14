@@ -10,11 +10,10 @@ from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import render
-from django.template.loader import TemplateDoesNotExist, select_template
 
 from djpress.conf import settings
 from djpress.models import Category, Post
-from djpress.utils import validate_date
+from djpress.utils import get_template_name, validate_date
 
 logger = logging.getLogger(__name__)
 
@@ -37,11 +36,8 @@ def index(
         "djpress/home.html",
         "djpress/index.html",
     ]
-    template = select_template(template_names)
 
-    if not template.template.name:
-        msg = "Template not found"
-        raise TemplateDoesNotExist(msg)
+    template: str = get_template_name(templates=template_names)
 
     posts = Paginator(
         Post.post_objects.get_published_posts(),
@@ -51,9 +47,9 @@ def index(
     page = posts.get_page(page_number)
 
     return render(
-        request,
-        "djpress/index.html",
-        {"posts": page},
+        request=request,
+        template_name=template,
+        context={"posts": page},
     )
 
 
@@ -81,14 +77,10 @@ def archives_posts(
         "djpress/archives.html",
         "djpress/index.html",
     ]
-    template = select_template(template_names)
+    template: str = get_template_name(templates=template_names)
 
-    if not template.template.name:
-        msg = "Template not found"
-        raise TemplateDoesNotExist(msg)
     try:
         validate_date(year, month, day)
-
     except ValueError:
         msg = "Invalid date"
         return HttpResponseBadRequest(msg)
@@ -119,9 +111,9 @@ def archives_posts(
     page = posts.get_page(page_number)
 
     return render(
-        request,
-        "djpress/index.html",
-        {"posts": page},
+        request=request,
+        template_name=template,
+        context={"posts": page},
     )
 
 
@@ -143,11 +135,8 @@ def category_posts(request: HttpRequest, slug: str) -> HttpResponse:
         "djpress/category.html",
         "djpress/index.html",
     ]
-    template = select_template(template_names)
+    template: str = get_template_name(templates=template_names)
 
-    if not template.template.name:
-        msg = "Template not found"
-        raise TemplateDoesNotExist(msg)
     try:
         category: Category = Category.objects.get_category_by_slug(slug=slug)
     except ValueError as exc:
@@ -162,9 +151,9 @@ def category_posts(request: HttpRequest, slug: str) -> HttpResponse:
     page = posts.get_page(page_number)
 
     return render(
-        request,
-        "djpress/index.html",
-        {"posts": page, "category": category},
+        request=request,
+        template_name=template,
+        context={"posts": page, "category": category},
     )
 
 
@@ -186,11 +175,8 @@ def author_posts(request: HttpRequest, author: str) -> HttpResponse:
         "djpress/author.html",
         "djpress/index.html",
     ]
-    template = select_template(template_names)
+    template: str = get_template_name(templates=template_names)
 
-    if not template.template.name:
-        msg = "Template not found"
-        raise TemplateDoesNotExist(msg)
     try:
         user: User = User.objects.get(username=author)
     except User.DoesNotExist as exc:
@@ -205,9 +191,9 @@ def author_posts(request: HttpRequest, author: str) -> HttpResponse:
     page = posts.get_page(page_number)
 
     return render(
-        request,
-        "djpress/index.html",
-        {"posts": page, "author": user},
+        request=request,
+        template_name=template,
+        context={"posts": page, "author": user},
     )
 
 
@@ -228,11 +214,7 @@ def post_detail(request: HttpRequest, path: str) -> HttpResponse:
         "djpress/single.html",
         "djpress/index.html",
     ]
-    template = select_template(template_names)
-
-    if not template.template.name:
-        msg = "Template not found"
-        raise TemplateDoesNotExist(msg)
+    template: str = get_template_name(templates=template_names)
 
     try:
         page: Post = Post.page_objects.get_published_page_by_path(path)
@@ -248,5 +230,5 @@ def post_detail(request: HttpRequest, path: str) -> HttpResponse:
     return render(
         request=request,
         context=context,
-        template_name=template.template.name,
+        template_name=template,
     )

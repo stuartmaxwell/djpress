@@ -13,54 +13,87 @@ def user():
     return User.objects.create_user(username="testuser", password="testpass")
 
 
-@pytest.mark.django_db
-def test_post_model(user):
-    category = Category.objects.create(name="Test Category", slug="test-category")
-    post = Post.post_objects.create(
-        title="Test Content",
-        slug="test-content",
-        content="This is a test content.",
-        author=user,
-        status="published",
-        post_type="post",
-    )
-    post.categories.add(category)
-    assert post.title == "Test Content"
-    assert post.slug == "test-content"
-    assert post.author == user
-    assert post.status == "published"
-    assert post.post_type == "post"
-    assert post.categories.count() == 1
-    assert str(post) == "Test Content"
+@pytest.fixture
+def category1():
+    return Category.objects.create(name="Test Category1", slug="test-category1")
 
 
-@pytest.mark.django_db
-def test_post_methods(user):
-    category1 = Category.objects.create(name="Category 1", slug="category-1")
-    category2 = Category.objects.create(name="Category 2", slug="category-2")
+@pytest.fixture
+def category2():
+    return Category.objects.create(name="Test Category2", slug="test-category2")
 
-    Post.post_objects.create(
-        title="Test Post 1",
-        slug="test-post-1",
+
+@pytest.fixture
+def test_post1(user, category1):
+    post = Post.objects.create(
+        title="Test Post1",
+        slug="test-post1",
         content="This is test post 1.",
         author=user,
         status="published",
         post_type="post",
-    ).categories.add(category1)
+    )
 
-    Post.post_objects.create(
-        title="Test Post 2",
-        slug="test-post-2",
+    return post
+
+
+@pytest.fixture
+def test_post2(user, category1):
+    post = Post.objects.create(
+        title="Test Post2",
+        slug="test-post2",
         content="This is test post 2.",
         author=user,
-        status="draft",
+        status="published",
         post_type="post",
     )
 
+    return post
+
+
+@pytest.fixture
+def test_page1(user):
+    return Post.objects.create(
+        title="Test Page1",
+        slug="test-page1",
+        content="This is test page 1.",
+        author=user,
+        status="published",
+        post_type="page",
+    )
+
+
+@pytest.fixture
+def test_page2(user):
+    return Post.objects.create(
+        title="Test Page2",
+        slug="test-page2",
+        content="This is test page 2.",
+        author=user,
+        status="published",
+        post_type="page",
+    )
+
+
+@pytest.mark.django_db
+def test_post_model(test_post1, user, category1):
+    test_post1.categories.add(category1)
+    assert test_post1.title == "Test Post1"
+    assert test_post1.slug == "test-post1"
+    assert test_post1.author == user
+    assert test_post1.status == "published"
+    assert test_post1.post_type == "post"
+    assert test_post1.categories.count() == 1
+    assert str(test_post1) == "Test Post1"
+
+
+@pytest.mark.django_db
+def test_post_methods(test_post1, test_post2, category1, category2):
+    test_post1.categories.add(category1)
+
     assert Post.post_objects.all().count() == 2
     assert (
-        Post.post_objects.get_published_post_by_slug("test-post-1").title
-        == "Test Post 1"
+        Post.post_objects.get_published_post_by_slug("test-post1").title == "Test Post1"
     )
     assert Post.post_objects.get_published_posts_by_category(category1).count() == 1
     assert Post.post_objects.get_published_posts_by_category(category2).count() == 0
@@ -423,6 +456,10 @@ def test_get_recent_published_posts(user):
     assert list(recent_posts) == [post3, post2]
     assert not post1 in recent_posts
 
+    # Set back to defaults
+    settings.set("RECENT_PUBLISHED_POSTS_COUNT", 3)
+    assert settings.RECENT_PUBLISHED_POSTS_COUNT == 3
+
 
 @pytest.mark.django_db
 def test_get_published_post_by_path(user):
@@ -453,3 +490,37 @@ def test_get_published_post_by_path(user):
 
     # Set back to default
     settings.set("POST_PREFIX", "test-posts")
+
+
+@pytest.mark.django_db
+def test_get_published_page_by_slug(test_page1):
+    """Test that the get_published_page_by_slug method returns the correct page."""
+    assert test_page1 == Post.page_objects.get_published_page_by_slug("test-page1")
+
+    with pytest.raises(ValueError):
+        Post.page_objects.get_published_page_by_slug("non-existent-page")
+
+
+@pytest.mark.django_db
+def test_get_published_pages(test_page1, test_page2):
+    """Test that the get_published_pages method returns the correct pages."""
+    assert list(Post.page_objects.get_published_pages()) == [test_page2, test_page1]
+
+
+@pytest.mark.django_db
+def test_get_published_page_by_path(test_page1: Post):
+    """Test that the get_published_page_by_path method returns the correct page."""
+
+    # Test case 1: pages can only be at the top level
+    page_path = f"test-pages/{test_page1.slug}"
+    with pytest.raises(expected_exception=ValueError):
+        Post.page_objects.get_published_page_by_path(page_path)
+
+    # Test case 2: pages at the top level
+    page_path: str = test_page1.slug
+    assert test_page1 == Post.page_objects.get_published_page_by_path(page_path)
+
+    # Test case 3: pages doesn't exist
+    page_path = "non-existent-page"
+    with pytest.raises(expected_exception=ValueError):
+        Post.page_objects.get_published_page_by_path(page_path)

@@ -162,8 +162,7 @@ def blog_page_title(
     """
     category: Category | None = context.get("category")
     author: User | None = context.get("author")
-    posts: Page | list[Post] | None = context.get("posts")
-    is_single: bool | None = context.get("is_single", False)
+    post: Post | None = context.get("post")
 
     if category:
         page_title = category.name
@@ -171,13 +170,13 @@ def blog_page_title(
     elif author:
         page_title = get_author_display_name(author)
 
-    elif is_single and posts:
-        page_title = posts[0].title
+    elif post:
+        page_title = post.title
     else:
         page_title = ""
 
     if page_title:
-        page_title = f"{pre_text} {page_title} {post_text}"
+        page_title = f"{pre_text}{page_title}{post_text}"
 
     return page_title
 
@@ -648,9 +647,9 @@ def page_link(
     Returns:
         str: The link to the page.
     """
-    page: Post | None = Post.page_objects.get_published_page_by_slug(page_slug)
-
-    if not page:
+    try:
+        page: Post | None = Post.page_objects.get_published_page_by_slug(page_slug)
+    except ValueError:
         return ""
 
     output = get_page_link(page, link_class=link_class)
