@@ -2,6 +2,7 @@
 
 import markdown
 from django.contrib.auth.models import User
+from django.template.loader import TemplateDoesNotExist, select_template
 from django.utils.timezone import datetime
 
 from djpress.conf import settings
@@ -80,3 +81,21 @@ def validate_date(year: str, month: str, day: str) -> None:
     except ValueError as exc:
         msg = "Invalid date"
         raise ValueError(msg) from exc
+
+
+def get_template_name(templates: list[str]) -> str:
+    """Return the first template that exists.
+
+    Args:
+        templates (list[str]): The list of template names.
+
+    Returns:
+        str: The template name.
+    """
+    try:
+        template = str(select_template(templates).template.name)
+    except TemplateDoesNotExist as exc:
+        msg = "No template found"
+        raise TemplateDoesNotExist(msg) from exc
+
+    return template

@@ -1,6 +1,8 @@
 import pytest
-from djpress.utils import get_author_display_name, render_markdown
+
+from djpress.utils import get_author_display_name, render_markdown, get_template_name
 from django.contrib.auth.models import User
+from django.template.loader import TemplateDoesNotExist
 
 
 # create a parameterized fixture for a test user with first name, last name, and username
@@ -120,3 +122,21 @@ print("Hello, DJ Press!")
     )
 
     assert output in html
+
+
+def test_get_template_name():
+    # Test case 1 - template exists
+    templates = [
+        "djpress/not-exists.html",
+        "djpress/index.html",
+    ]
+    template_name = get_template_name(templates)
+    assert template_name == "djpress/index.html"
+
+    # Test case 2 - template does not exist
+    templates = [
+        "djpress/not-exists.html",
+        "djpress/not-exists-2.html",
+    ]
+    with pytest.raises(TemplateDoesNotExist):
+        get_template_name(templates)

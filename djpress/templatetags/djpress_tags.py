@@ -13,6 +13,7 @@ from djpress.models import Category, Post
 from djpress.templatetags.helpers import (
     categories_html,
     category_link,
+    get_page_link,
     post_read_more_link,
 )
 from djpress.utils import get_author_display_name
@@ -51,6 +52,18 @@ def blog_title_link(link_class: str = "") -> str:
 
 
 @register.simple_tag
+def get_pages() -> models.QuerySet[Post]:
+    """Return all pages as a queryset.
+
+    Returns:
+        models.QuerySet[Post]: All pages.
+    """
+    return (
+        Post.page_objects.get_published_pages().order_by("menu_order").order_by("title")
+    )
+
+
+@register.simple_tag
 def get_categories() -> models.QuerySet[Category] | None:
     """Return all categories as a queryset.
 
@@ -83,13 +96,98 @@ def blog_categories(
     return mark_safe(categories_html(categories, outer, outer_class, link_class))
 
 
+@register.simple_tag
+def blog_pages(
+    outer: str = "ul",
+    outer_class: str = "",
+    link_class: str = "",
+) -> str:
+    """Return the pages of the blog.
+
+    Args:
+        outer: The outer HTML tag for the pages.
+        outer_class: The CSS class(es) for the outer tag.
+        link_class: The CSS class(es) for the link.
+
+    Returns:
+        str: The pages of the blog.
+    """
+    pages: models.QuerySet[Post] = get_pages()
+
+    if not pages:
+        return ""
+
+    output = ""
+
+    outer_class_html = f' class="{outer_class}"' if outer_class else ""
+
+    if outer == "ul":
+        output += f"<ul{outer_class_html}>"
+        for page in pages:
+            output += f"<li>{get_page_link(page=page, link_class=link_class)}</li>"
+        output += "</ul>"
+
+    if outer == "div":
+        output += f"<div{outer_class_html}>"
+        for page in pages:
+            output += f"{get_page_link(page=page, link_class=link_class)}, "
+        output = output[:-2]  # Remove the trailing comma and space
+        output += "</div>"
+
+    if outer == "span":
+        output += f"<span{outer_class_html}>"
+        for page in pages:
+            output += f"{get_page_link(page=page, link_class=link_class)}, "
+        output = output[:-2]  # Remove the trailing comma and space
+        output += "</span>"
+
+    return mark_safe(output)
+
+
+@register.simple_tag(takes_context=True)
+def blog_page_title(
+    context: Context,
+    pre_text: str = "",
+    post_text: str = "",
+) -> str:
+    """Return the page title.
+
+    Args:
+        context: The context.
+        pre_text: The text to prepend to the page title.
+        post_text: The text to append to the page title.
+
+    Returns:
+        str: The page title.
+    """
+    category: Category | None = context.get("category")
+    author: User | None = context.get("author")
+    post: Post | None = context.get("post")
+
+    if category:
+        page_title = category.name
+
+    elif author:
+        page_title = get_author_display_name(author)
+
+    elif post:
+        page_title = post.title
+    else:
+        page_title = ""
+
+    if page_title:
+        page_title = f"{pre_text}{page_title}{post_text}"
+
+    return page_title
+
+
 @register.simple_tag(takes_context=True)
 def have_posts(context: Context) -> list[Post | None] | Page:
     """Return the posts in the context.
 
-    If there's a `_post` in the context, then we return a list with that post.
+    If there's a `post` in the context, then we return a list with that post.
 
-    If there's a `_posts` in the context, then we return the posts. The `_posts` should
+    If there's a `posts` in the context, then we return the posts. The `posts` should
     be a Page object.
 
     Args:
@@ -98,8 +196,8 @@ def have_posts(context: Context) -> list[Post | None] | Page:
     Returns:
         list[Post]: The posts in the context.
     """
-    post: Post | None = context.get("_post")
-    posts: Page | None = context.get("_posts")
+    post: Post | None = context.get("post")
+    posts: Page | None = context.get("posts")
 
     if post:
         return [post]
@@ -130,6 +228,13 @@ def post_title(context: Context) -> str:
 def post_title_link(context: Context, link_class: str = "") -> str:
     """Return the title link for a post.
 
+    If the post is part of a posts collection, then return the title and a link to the
+    post.
+
+    If the post is a single post, then return just the title of the post with no link.
+
+    Otherwise return and empty string.
+
     Args:
         context: The context.
         link_class: The CSS class(es) for the link.
@@ -138,23 +243,24 @@ def post_title_link(context: Context, link_class: str = "") -> str:
         str: The title link for the post.
     """
     post: Post | None = context.get("post")
-    if not post:
-        return ""
+    posts: Page | None = context.get("posts")
 
-    _post: Post | None = context.get("_post")
-    if _post:
+    if posts and post:
+        post_url = reverse("djpress:post_detail", args=[post.permalink])
+
+        link_class_html = f' class="{link_class}"' if link_class else ""
+
+        output = (
+            f'<a href="{post_url}" title="{post.title}"{link_class_html}>'
+            f"{post.title}</a>"
+        )
+
+        return mark_safe(output)
+
+    if post:
         return post_title(context)
 
-    post_url = reverse("djpress:post_detail", args=[post.permalink])
-
-    link_class_html = f' class="{link_class}"' if link_class else ""
-
-    output = (
-        f'<a href="{post_url}" title="{post.title}"{link_class_html}>'
-        f"{post.title}</a>"
-    )
-
-    return mark_safe(output)
+    return ""
 
 
 @register.simple_tag(takes_context=True)
@@ -312,9 +418,12 @@ def post_content(
 ) -> str:
     """Return the content of a post.
 
-    If there's no post in the context, then we return an empty string. If there are
-    multiple posts in the context, then we return the truncated content of the post with
-    the read more link. Otherwise, we return the full content of the post.
+    If the post is part of a posts collection, then we return the truncated content of
+    the post with the read more link.
+
+    If the post is a single post, then return the full content of the post.
+
+    Otherwise return and empty string.
 
     Args:
         context: The context.
@@ -324,25 +433,22 @@ def post_content(
     Returns:
         str: The content of the post.
     """
+    # Check if there's a post or posts in the context.
+    post: Post | None = context.get("post")
+    posts: Page | None = context.get("posts")
+
     content: str = ""
 
-    # Check if there's a post or _posts in the context.
-    post: Post | None = context.get("post")
-    _posts: models.QuerySet[Post] | None = context.get("_posts")
-
-    # If there's no post, then we return an empty string.
-    if not post:
-        return content
-
-    # If there are _posts, then we return the truncated content of the post.
-    if _posts:
+    if posts and post:
         content = mark_safe(post.truncated_content_markdown)
         if post.is_truncated:
             content += post_read_more_link(post, read_more_link_class, read_more_text)
         return mark_safe(content)
 
-    # If there
-    return mark_safe(post.content_markdown)
+    if post:
+        return mark_safe(post.content_markdown)
+
+    return ""
 
 
 @register.simple_tag(takes_context=True)
@@ -521,3 +627,40 @@ def posts_nav_links(
         f"{previous_output} {current_output} {next_output}"
         "</div>",
     )
+
+
+@register.simple_tag()
+def page_link(
+    page_slug: str,
+    outer: str = "div",
+    outer_class: str = "",
+    link_class: str = "",
+) -> str:
+    """Return the link to a page.
+
+    Args:
+        page_slug: The slug of the page.
+        outer: The outer HTML tag for the page link.
+        outer_class: The CSS class(es) for the outer tag.
+        link_class: The CSS class(es) for the link.
+
+    Returns:
+        str: The link to the page.
+    """
+    try:
+        page: Post | None = Post.page_objects.get_published_page_by_slug(page_slug)
+    except ValueError:
+        return ""
+
+    output = get_page_link(page, link_class=link_class)
+
+    if outer == "li":
+        return mark_safe(f"<li{outer_class}>{output}</li>")
+
+    if outer == "span":
+        return mark_safe(f"<span{outer_class}>{output}</span>")
+
+    if outer == "div":
+        return mark_safe(f"<div{outer_class}>{output}</div>")
+
+    return mark_safe(output)

@@ -1,4 +1,8 @@
-"""djpress views file."""
+"""DJ Press views file.
+
+There are two type of views - those that return a collection of posts, and then a view
+that returns a single post.
+"""
 
 import logging
 
@@ -9,7 +13,7 @@ from django.shortcuts import render
 
 from djpress.conf import settings
 from djpress.models import Category, Post
-from djpress.utils import validate_date
+from djpress.utils import get_template_name, validate_date
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +30,15 @@ def index(
         HttpResponse: The response.
 
     Context:
-        _posts (Page): The published posts as a Page object.
+        posts (Page): The published posts as a Page object.
     """
+    template_names: list[str] = [
+        "djpress/home.html",
+        "djpress/index.html",
+    ]
+
+    template: str = get_template_name(templates=template_names)
+
     posts = Paginator(
         Post.post_objects.get_published_posts(),
         settings.RECENT_PUBLISHED_POSTS_COUNT,
@@ -36,9 +47,9 @@ def index(
     page = posts.get_page(page_number)
 
     return render(
-        request,
-        "djpress/index.html",
-        {"_posts": page},
+        request=request,
+        template_name=template,
+        context={"posts": page},
     )
 
 
@@ -60,11 +71,16 @@ def archives_posts(
         HttpResponse: The response.
 
     Context:
-        _posts (Page): The published posts for the date as a Page object.
+        posts (Page): The published posts for the date as a Page object.
     """
+    template_names: list[str] = [
+        "djpress/archives.html",
+        "djpress/index.html",
+    ]
+    template: str = get_template_name(templates=template_names)
+
     try:
         validate_date(year, month, day)
-
     except ValueError:
         msg = "Invalid date"
         return HttpResponseBadRequest(msg)
@@ -95,9 +111,9 @@ def archives_posts(
     page = posts.get_page(page_number)
 
     return render(
-        request,
-        "djpress/index.html",
-        {"_posts": page},
+        request=request,
+        template_name=template,
+        context={"posts": page},
     )
 
 
@@ -112,9 +128,15 @@ def category_posts(request: HttpRequest, slug: str) -> HttpResponse:
         HttpResponse: The response.
 
     Context:
-        _posts (Page): The published posts for the category as a Page object.
+        posts (Page): The published posts for the category as a Page object.
         category (Category): The category object.
     """
+    template_names: list[str] = [
+        "djpress/category.html",
+        "djpress/index.html",
+    ]
+    template: str = get_template_name(templates=template_names)
+
     try:
         category: Category = Category.objects.get_category_by_slug(slug=slug)
     except ValueError as exc:
@@ -129,9 +151,9 @@ def category_posts(request: HttpRequest, slug: str) -> HttpResponse:
     page = posts.get_page(page_number)
 
     return render(
-        request,
-        "djpress/index.html",
-        {"_posts": page, "category": category},
+        request=request,
+        template_name=template,
+        context={"posts": page, "category": category},
     )
 
 
@@ -146,9 +168,15 @@ def author_posts(request: HttpRequest, author: str) -> HttpResponse:
         HttpResponse: The response.
 
     Context:
-        _posts (Page): The published posts by the author as a Page object.
+        posts (Page): The published posts by the author as a Page object.
         author (User): The author as a User object.
     """
+    template_names: list[str] = [
+        "djpress/author.html",
+        "djpress/index.html",
+    ]
+    template: str = get_template_name(templates=template_names)
+
     try:
         user: User = User.objects.get(username=author)
     except User.DoesNotExist as exc:
@@ -163,9 +191,9 @@ def author_posts(request: HttpRequest, author: str) -> HttpResponse:
     page = posts.get_page(page_number)
 
     return render(
-        request,
-        "djpress/index.html",
-        {"_posts": page, "author": user},
+        request=request,
+        template_name=template,
+        context={"posts": page, "author": user},
     )
 
 
@@ -180,16 +208,27 @@ def post_detail(request: HttpRequest, path: str) -> HttpResponse:
         HttpResponse: The response.
 
     Context:
-        _post (Post): The post object.
+        post (Post): The post object.
     """
+    template_names: list[str] = [
+        "djpress/single.html",
+        "djpress/index.html",
+    ]
+    template: str = get_template_name(templates=template_names)
+
     try:
-        post = Post.post_objects.get_published_post_by_path(path)
-    except ValueError as exc:
-        msg = "Post not found"
-        raise Http404(msg) from exc
+        page: Post = Post.page_objects.get_published_page_by_path(path)
+        context: dict = {"post": page}
+    except ValueError:
+        try:
+            post = Post.post_objects.get_published_post_by_path(path)
+            context: dict = {"post": post}
+        except ValueError as exc:
+            msg = "Post not found"
+            raise Http404(msg) from exc
 
     return render(
-        request,
-        "djpress/index.html",
-        {"_post": post},
+        request=request,
+        context=context,
+        template_name=template,
     )

@@ -1,0 +1,32 @@
+{% load static %}
+{% load djpress_tags %}
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% blog_page_title post_text="| " %}{% blog_title %}</title>
+    <link rel="stylesheet" href="{% static 'djpress/css/style.css' %}">
+  </head>
+  <body>
+    <header>
+      <h1>{% blog_title_link %}</h1>
+      {% blog_pages %}
+    </header>
+
+    <main>
+
+      {% block main %}{% endblock main %}
+
+    </main>
+
+    <footer>
+      <p>Powered by
+        <a href="https://www.djangoproject.com/" title="The web framework for perfectionists with deadlines">Django</a>
+        and
+        <a href="#">DJPress</a>
+      </p>
+    </footer>
+  </body>
+</html>

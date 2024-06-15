@@ -19,12 +19,79 @@ logger = logging.getLogger(__name__)
 PUBLISHED_POSTS_CACHE_KEY = "published_posts"
 
 
+class PagesManager(models.Manager):
+    """Page custom manager."""
+
+    def get_queryset(self: "PagesManager") -> models.QuerySet:
+        """Return the queryset for pages."""
+        return super().get_queryset().filter(post_type="page").order_by("-date")
+
+    def get_published_pages(self: "PagesManager") -> models.QuerySet:
+        """Return all published pages.
+
+        For a page to be considered published, it must meet the following requirements:
+        - The status must be "published".
+        - The date must be less than or equal to the current date/time.
+        """
+        return self.get_queryset().filter(
+            status="published",
+            date__lte=timezone.now(),
+        )
+
+    def get_published_page_by_slug(
+        self: "PagesManager",
+        slug: str,
+    ) -> "Post":
+        """Return a single published page.
+
+        Args:
+            slug (str): The slug of the page.
+
+        Returns:
+            Post: The published page.
+        """
+        try:
+            page: Post = self.get_published_pages().get(slug=slug)
+        except Post.DoesNotExist as exc:
+            msg = "Page not found"
+            raise ValueError(msg) from exc
+
+        return page
+
+    def get_published_page_by_path(
+        self: "PagesManager",
+        path: str,
+    ) -> "Post":
+        """Return a single published post from a path.
+
+        For now, we'll only allow a top level path.
+        """
+        # Check for a single item in the path
+        if path.count("/") > 0:
+            msg = "Invalid path"
+            raise ValueError(msg)
+
+        return self.get_published_page_by_slug(path)
+
+
 class PostsManager(models.Manager):
     """Post custom manager."""
 
     def get_queryset(self: "PostsManager") -> models.QuerySet:
-        """Return the queryset for published posts."""
+        """Return the queryset for posts."""
         return super().get_queryset().filter(post_type="post").order_by("-date")
+
+    def get_published_posts(self: "PostsManager") -> models.QuerySet:
+        """Returns all published posts.
+
+        For a post to be considered published, it must meet the following requirements:
+        - The status must be "published".
+        - The date must be less than or equal to the current date/time.
+        """
+        return self.get_queryset().filter(
+            status="published",
+            date__lte=timezone.now(),
+        )
 
     def get_recent_published_posts(self: "PostsManager") -> models.QuerySet:
         """Return recent published posts.
@@ -40,18 +107,6 @@ class PostsManager(models.Manager):
         return self.get_published_posts().prefetch_related("categories", "author")[
             : settings.RECENT_PUBLISHED_POSTS_COUNT
         ]
-
-    def get_published_posts(self: "PostsManager") -> models.QuerySet:
-        """Returns all published posts.
-
-        For a post to be considered published, it must meet the following requirements:
-        - The status must be "published".
-        - The date must be less than or equal to the current date/time.
-        """
-        return self.get_queryset().filter(
-            status="published",
-            date__lte=timezone.now(),
-        )
 
     def _get_cached_recent_published_posts(self: "PostsManager") -> models.QuerySet:
         """Return the cached recent published posts queryset.
@@ -221,10 +276,12 @@ class Post(models.Model):
         default="post",
     )
     categories = models.ManyToManyField(Category, blank=True)
+    menu_order = models.IntegerField(default=0)
 
     # Managers
     objects = models.Manager()
     post_objects: "PostsManager" = PostsManager()
+    page_objects: "PagesManager" = PagesManager()
 
     class Meta:
         """Meta options for the Post model."""

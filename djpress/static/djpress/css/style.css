@@ -81,7 +81,7 @@ body > header ul li a:hover {
 main {
   padding: 2em;
   max-width: 992px;
-  margin: 0 auto;
+  margin: 0 auto 3em;
 }
 
 main > h1 {

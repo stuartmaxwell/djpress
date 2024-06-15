@@ -1,7 +1,11 @@
+from django.template import TemplateDoesNotExist
 import pytest
+from collections.abc import Iterable
+
 from django.contrib.auth.models import User
 from django.urls import reverse
 from django.utils import timezone
+from django.test.utils import override_settings
 
 from djpress.models import Category, Post
 from djpress.utils import validate_date
@@ -26,7 +30,7 @@ def category():
 
 
 @pytest.fixture
-def create_test_post(user, category):
+def test_post1(user, category):
     post = Post.post_objects.create(
         title="Test Post",
         slug="test-post",
@@ -40,20 +44,44 @@ def create_test_post(user, category):
     return post
 
 
+@pytest.fixture
+def test_page1(user):
+    page = Post.post_objects.create(
+        title="Test Page",
+        slug="test-page",
+        content="This is a test page.",
+        author=user,
+        status="published",
+        post_type="page",
+    )
+    return page
+
+
 @pytest.mark.django_db
 def test_index_view(client):
     url = reverse("djpress:index")
     response = client.get(url)
     assert response.status_code == 200
     assert b"No posts available" in response.content
+    assert "posts" in response.context
+    assert isinstance(response.context["posts"], Iterable)
 
 
 @pytest.mark.django_db
-def test_post_detail_view(client, create_test_post):
-    url = reverse("djpress:post_detail", args=[create_test_post.permalink])
+def test_post_detail_view(client, test_post1, test_page1):
+    # Test 1 - post
+    url = reverse("djpress:post_detail", args=[test_post1.permalink])
     response = client.get(url)
     assert response.status_code == 200
-    assert "_post" in response.context
+    assert "post" in response.context
+    assert not isinstance(response.context["post"], Iterable)
+
+    # Test 2 - page
+    url = reverse("djpress:post_detail", args=[test_page1.permalink])
+    response = client.get(url)
+    assert response.status_code == 200
+    assert "post" in response.context
+    assert not isinstance(response.context["post"], Iterable)
 
 
 @pytest.mark.django_db
@@ -69,18 +97,20 @@ def test_author_with_no_posts_view(client, user):
     response = client.get(url)
     assert response.status_code == 200
     assert "author" in response.context
-    assert "posts" in response.context
     assert b"No posts available" in response.content
+    assert "posts" in response.context
+    assert isinstance(response.context["posts"], Iterable)
 
 
 @pytest.mark.django_db
-def test_author_with_posts_view(client, create_test_post):
-    url = reverse("djpress:author_posts", args=[create_test_post.author.username])
+def test_author_with_posts_view(client, test_post1):
+    url = reverse("djpress:author_posts", args=[test_post1.author.username])
     response = client.get(url)
     assert response.status_code == 200
     assert "author" in response.context
-    assert "posts" in response.context
     assert not b"No posts available" in response.content
+    assert "posts" in response.context
+    assert isinstance(response.context["posts"], Iterable)
 
 
 @pytest.mark.django_db
@@ -96,18 +126,20 @@ def test_category_with_no_posts_view(client, category):
     response = client.get(url)
     assert response.status_code == 200
     assert "category" in response.context
-    assert "posts" in response.context
     assert b"No posts available" in response.content
+    assert "posts" in response.context
+    assert isinstance(response.context["posts"], Iterable)
 
 
 @pytest.mark.django_db
-def test_category_with_posts_view(client, create_test_post, category):
+def test_category_with_posts_view(client, test_post1, category):
     url = reverse("djpress:category_posts", args=[category.slug])
     response = client.get(url)
     assert response.status_code == 200
     assert "category" in response.context
-    assert "posts" in response.context
     assert not b"No posts available" in response.content
+    assert "posts" in response.context
+    assert isinstance(response.context["posts"], Iterable)
 
 
 @pytest.mark.django_db
@@ -141,12 +173,13 @@ def test_validate_date():
 
 
 @pytest.mark.django_db
-def test_date_archives_year(client, create_test_post):
+def test_date_archives_year(client, test_post1):
     url = reverse("djpress:archives_posts", kwargs={"year": "2024"})
     response = client.get(url)
     assert response.status_code == 200
+    assert test_post1.title.encode() in response.content
     assert "posts" in response.context
-    assert create_test_post.title.encode() in response.content
+    assert isinstance(response.context["posts"], Iterable)
 
 
 @pytest.mark.django_db
@@ -156,22 +189,24 @@ def test_date_archives_year_invalid_year(client):
 
 
 @pytest.mark.django_db
-def test_date_archives_year_no_posts(client, create_test_post):
+def test_date_archives_year_no_posts(client, test_post1):
     url = reverse("djpress:archives_posts", kwargs={"year": "2023"})
     response = client.get(url)
     assert response.status_code == 200
-    assert "posts" in response.context
-    assert not create_test_post.title.encode() in response.content
+    assert not test_post1.title.encode() in response.content
     assert b"No posts available" in response.content
+    assert "posts" in response.context
+    assert isinstance(response.context["posts"], Iterable)
 
 
 @pytest.mark.django_db
-def test_date_archives_month(client, create_test_post):
+def test_date_archives_month(client, test_post1):
     url = reverse("djpress:archives_posts", kwargs={"year": "2024", "month": "01"})
     response = client.get(url)
     assert response.status_code == 200
+    assert test_post1.title.encode() in response.content
     assert "posts" in response.context
-    assert create_test_post.title.encode() in response.content
+    assert isinstance(response.context["posts"], Iterable)
 
 
 @pytest.mark.django_db
@@ -183,24 +218,25 @@ def test_date_archives_month_invalid_month(client):
 
 
 @pytest.mark.django_db
-def test_date_archives_month_no_posts(client, create_test_post):
+def test_date_archives_month_no_posts(client, test_post1):
     url = reverse("djpress:archives_posts", kwargs={"year": "2024", "month": "02"})
     response = client.get(url)
     assert response.status_code == 200
-    assert "posts" in response.context
-    assert not create_test_post.title.encode() in response.content
+    assert not test_post1.title.encode() in response.content
     assert b"No posts available" in response.content
+    assert "posts" in response.context
+    assert isinstance(response.context["posts"], Iterable)
 
 
 @pytest.mark.django_db
-def test_date_archives_day(client, create_test_post):
+def test_date_archives_day(client, test_post1):
     url = reverse(
         "djpress:archives_posts", kwargs={"year": "2024", "month": "01", "day": "01"}
     )
     response = client.get(url)
     assert response.status_code == 200
     assert "posts" in response.context
-    assert create_test_post.title.encode() in response.content
+    assert test_post1.title.encode() in response.content
 
 
 @pytest.mark.django_db
@@ -212,12 +248,13 @@ def test_date_archives_day_invalid_day(client):
 
 
 @pytest.mark.django_db
-def test_date_archives_day_no_posts(client, create_test_post):
+def test_date_archives_day_no_posts(client, test_post1):
     url = reverse(
         "djpress:archives_posts", kwargs={"year": "2024", "month": "01", "day": "02"}
     )
     response = client.get(url)
     assert response.status_code == 200
-    assert "posts" in response.context
-    assert not create_test_post.title.encode() in response.content
+    assert not test_post1.title.encode() in response.content
     assert b"No posts available" in response.content
+    assert "posts" in response.context
+    assert isinstance(response.context["posts"], Iterable)
