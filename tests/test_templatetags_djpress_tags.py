@@ -878,15 +878,111 @@ def test_blog_page_title(test_post1, test_page1):
     assert "" == djpress_tags.blog_page_title(context)
 
 
-def test_posts_nav_links_no_posts():
+@pytest.mark.django_db
+def test_is_paginated(test_post1, test_post2, test_long_post1):
+    # Confirm settings are set according to settings_testing.py
+    assert settings.RECENT_PUBLISHED_POSTS_COUNT == 3
+
+    # Test case 1 - no paginator in context
+    context = Context()
+    assert djpress_tags.is_paginated(context) == False
+
+    # Test case 2 - paginator in context
+    posts = Paginator(
+        Post.post_objects.get_published_posts(),
+        settings.RECENT_PUBLISHED_POSTS_COUNT,
+    )
+    page = posts.get_page(number=None)
+    context = Context({"posts": page})
+    assert djpress_tags.is_paginated(context) == True
+
+
+def test_pagination_links_no_posts():
     context = Context()
 
-    assert djpress_tags.posts_nav_links(context) == ""
-    assert type(djpress_tags.posts_nav_links(context)) == str
+    assert djpress_tags.pagination_links(context) == ""
+    assert type(djpress_tags.pagination_links(context)) == str
 
 
 @pytest.mark.django_db
-def test_posts_nav_links_one_page(test_post1, test_post2, test_long_post1):
+def test_get_pagination_range(test_post1, test_post2, test_long_post1):
+    # Test case 1 - 1 page, i.e. 3 posts with 3 posts per page
+    # Confirm settings are set according to settings_testing.py
+    assert settings.RECENT_PUBLISHED_POSTS_COUNT == 3
+    posts = Paginator(
+        Post.post_objects.get_published_posts(),
+        settings.RECENT_PUBLISHED_POSTS_COUNT,
+    )
+    page = posts.get_page(number=None)
+    context = Context({"posts": page})
+    assert djpress_tags.get_pagination_range(context) == range(1, 2)
+
+    # Test case 2 - 2 pages, i.e. 3 posts with 2 posts per page
+    settings.set("RECENT_PUBLISHED_POSTS_COUNT", 2)
+    posts = Paginator(
+        Post.post_objects.get_published_posts(),
+        settings.RECENT_PUBLISHED_POSTS_COUNT,
+    )
+    page = posts.get_page(number=None)
+    context = Context({"posts": page})
+    assert settings.RECENT_PUBLISHED_POSTS_COUNT == 2
+    assert djpress_tags.get_pagination_range(context) == range(1, 3)
+
+    # Test case 3 - 3 pages, i.e. 3 posts with 1 posts per page
+    settings.set("RECENT_PUBLISHED_POSTS_COUNT", 1)
+    assert settings.RECENT_PUBLISHED_POSTS_COUNT == 1
+    posts = Paginator(
+        Post.post_objects.get_published_posts(),
+        settings.RECENT_PUBLISHED_POSTS_COUNT,
+    )
+    page = posts.get_page(number=None)
+    context = Context({"posts": page})
+    assert djpress_tags.get_pagination_range(context) == range(1, 4)
+
+    # Set back to defaults
+    settings.set("RECENT_PUBLISHED_POSTS_COUNT", 3)
+    assert settings.RECENT_PUBLISHED_POSTS_COUNT == 3
+
+
+@pytest.mark.django_db
+def test_get_pagination_current_page(test_post1, test_post2, test_long_post1):
+    # Confirm settings are set according to settings_testing.py
+    assert settings.RECENT_PUBLISHED_POSTS_COUNT == 3
+
+    settings.set("RECENT_PUBLISHED_POSTS_COUNT", 1)
+    assert settings.RECENT_PUBLISHED_POSTS_COUNT == 1
+
+    # Test case 1 - no page number
+    posts = Paginator(
+        Post.post_objects.get_published_posts(),
+        settings.RECENT_PUBLISHED_POSTS_COUNT,
+    )
+    page = posts.get_page(number=None)
+    context = Context({"posts": page})
+    assert djpress_tags.get_pagination_current_page(context) == 1
+
+    # Test case 2 - page number 1
+    page = posts.get_page(number=1)
+    context = Context({"posts": page})
+    assert djpress_tags.get_pagination_current_page(context) == 1
+
+    # Test case 3 - page number 2
+    page = posts.get_page(number=2)
+    context = Context({"posts": page})
+    assert djpress_tags.get_pagination_current_page(context) == 2
+
+    # Test case 4 - page number 3
+    page = posts.get_page(number=3)
+    context = Context({"posts": page})
+    assert djpress_tags.get_pagination_current_page(context) == 3
+
+    # Set back to defaults
+    settings.set("RECENT_PUBLISHED_POSTS_COUNT", 3)
+    assert settings.RECENT_PUBLISHED_POSTS_COUNT == 3
+
+
+@pytest.mark.django_db
+def test_pagination_links_one_page(test_post1, test_post2, test_long_post1):
     # Confirm settings are set according to settings_testing.py
     assert settings.RECENT_PUBLISHED_POSTS_COUNT == 3
 
@@ -908,11 +1004,11 @@ def test_posts_nav_links_one_page(test_post1, test_post2, test_long_post1):
 
     expected_output = f'<div class="pagination">{previous_output} {current_output} {next_output}</div>'
 
-    assert djpress_tags.posts_nav_links(context) == expected_output
+    assert djpress_tags.pagination_links(context) == expected_output
 
 
 @pytest.mark.django_db
-def test_posts_nav_links_two_pages(test_post1, test_post2, test_long_post1):
+def test_pagination_links_two_pages(test_post1, test_post2, test_long_post1):
     # Confirm settings are set according to settings_testing.py
     assert settings.RECENT_PUBLISHED_POSTS_COUNT == 3
 
@@ -945,7 +1041,7 @@ def test_posts_nav_links_two_pages(test_post1, test_post2, test_long_post1):
 
     expected_output = f'<div class="pagination">{previous_output} {current_output} {next_output}</div>'
 
-    assert djpress_tags.posts_nav_links(context) == expected_output
+    assert djpress_tags.pagination_links(context) == expected_output
 
     # Test case 2 - first page with page number 1
     page = posts.get_page(number=1)
@@ -967,7 +1063,7 @@ def test_posts_nav_links_two_pages(test_post1, test_post2, test_long_post1):
 
     expected_output = f'<div class="pagination">{previous_output} {current_output} {next_output}</div>'
 
-    assert djpress_tags.posts_nav_links(context) == expected_output
+    assert djpress_tags.pagination_links(context) == expected_output
 
     # Test case 3 - second page with page number 2
     page = posts.get_page(number=2)
@@ -989,7 +1085,7 @@ def test_posts_nav_links_two_pages(test_post1, test_post2, test_long_post1):
 
     expected_output = f'<div class="pagination">{previous_output} {current_output} {next_output}</div>'
 
-    assert djpress_tags.posts_nav_links(context) == expected_output
+    assert djpress_tags.pagination_links(context) == expected_output
 
     # Set back to defaults
     settings.set("RECENT_PUBLISHED_POSTS_COUNT", 3)
@@ -997,7 +1093,7 @@ def test_posts_nav_links_two_pages(test_post1, test_post2, test_long_post1):
 
 
 @pytest.mark.django_db
-def test_posts_nav_links_three_pages(test_post1, test_post2, test_long_post1):
+def test_pagination_links_three_pages(test_post1, test_post2, test_long_post1):
     # Confirm settings are set according to settings_testing.py
     assert settings.RECENT_PUBLISHED_POSTS_COUNT == 3
 
@@ -1030,7 +1126,7 @@ def test_posts_nav_links_three_pages(test_post1, test_post2, test_long_post1):
 
     expected_output = f'<div class="pagination">{previous_output} {current_output} {next_output}</div>'
 
-    assert djpress_tags.posts_nav_links(context) == expected_output
+    assert djpress_tags.pagination_links(context) == expected_output
 
     # Test case 2 - first page with page number 1
     page = posts.get_page(number=1)
@@ -1052,7 +1148,7 @@ def test_posts_nav_links_three_pages(test_post1, test_post2, test_long_post1):
 
     expected_output = f'<div class="pagination">{previous_output} {current_output} {next_output}</div>'
 
-    assert djpress_tags.posts_nav_links(context) == expected_output
+    assert djpress_tags.pagination_links(context) == expected_output
 
     # Test case 3 - first page with page number 2
     page = posts.get_page(number=2)
@@ -1079,7 +1175,7 @@ def test_posts_nav_links_three_pages(test_post1, test_post2, test_long_post1):
 
     expected_output = f'<div class="pagination">{previous_output} {current_output} {next_output}</div>'
 
-    assert djpress_tags.posts_nav_links(context) == expected_output
+    assert djpress_tags.pagination_links(context) == expected_output
 
     # Test case 4 - first page with page number 3
     page = posts.get_page(number=3)
@@ -1101,7 +1197,7 @@ def test_posts_nav_links_three_pages(test_post1, test_post2, test_long_post1):
 
     expected_output = f'<div class="pagination">{previous_output} {current_output} {next_output}</div>'
 
-    assert djpress_tags.posts_nav_links(context) == expected_output
+    assert djpress_tags.pagination_links(context) == expected_output
 
     # Set back to defaults
     settings.set("RECENT_PUBLISHED_POSTS_COUNT", 3)

@@ -577,7 +577,58 @@ def post_categories_link(
 
 
 @register.simple_tag(takes_context=True)
-def posts_nav_links(
+def is_paginated(context: Context) -> bool:
+    """Return whether the posts are paginated.
+
+    Args:
+        context: The context.
+
+    Returns:
+        bool: Whether the posts are paginated.
+    """
+    posts: Page | None = context.get("posts")
+    if not posts or not isinstance(posts, Page):
+        return False
+
+    return True
+
+
+@register.simple_tag(takes_context=True)
+def get_pagination_range(context: Context) -> range:
+    """Return the range of pagination pages.
+
+    Args:
+        context: The context.
+
+    Returns:
+        range: The pagination pages.
+    """
+    page: Page | None = context.get("posts")
+    if not page or not isinstance(page, Page):
+        return range(0)
+
+    return page.paginator.page_range
+
+
+@register.simple_tag(takes_context=True)
+def get_pagination_current_page(context: Context) -> int:
+    """Return the current page number.
+
+    Args:
+        context: The context.
+
+    Returns:
+        int: The current page number.
+    """
+    page: Page | None = context.get("posts")
+    if not page or not isinstance(page, Page):
+        return 0
+
+    return page.number
+
+
+@register.simple_tag(takes_context=True)
+def pagination_links(
     context: Context,
 ) -> str:
     """Return the previous and next post links.
