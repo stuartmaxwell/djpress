@@ -7,7 +7,11 @@ from django.utils.timezone import datetime
 
 from djpress.conf import settings
 
-md = markdown.Markdown(extensions=settings.MARKDOWN_EXTENSIONS, output_format="html")
+md = markdown.Markdown(
+    extensions=settings.MARKDOWN_EXTENSIONS,
+    extension_configs=settings.MARKDOWN_EXTENSION_CONFIGS,
+    output_format="html",
+)
 
 
 def render_markdown(markdown_text: str) -> str:

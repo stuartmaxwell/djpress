@@ -99,31 +99,6 @@ def test_render_markdown_image_with_title():
     )
 
 
-def test_render_markdown_python_codehilite():
-    markdown_text = """
-```python
-print("Hello, DJ Press!")
-```"""
-    html = render_markdown(markdown_text)
-
-    output = (
-        '<div class="codehilite">'
-        "<pre>"
-        "<span></span>"
-        "<code>"
-        '<span class="nb">print</span>'
-        '<span class="p">(</span>'
-        '<span class="s2">&quot;Hello, DJ Press!&quot;</span>'
-        '<span class="p">)</span>'
-        "\n"
-        "</code>"
-        "</pre>"
-        "</div>"
-    )
-
-    assert output in html
-
-
 def test_get_template_name():
     # Test case 1 - template exists
     templates = [

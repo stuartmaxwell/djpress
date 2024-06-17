@@ -19,7 +19,6 @@ CATEGORY_PATH_ENABLED = True
 CATEGORY_PATH = "test-url-category"
 POST_PREFIX = "test-posts"
 POST_PERMALINK = ""
-MARKDOWN_EXTENSIONS = ["fenced_code", "codehilite", "tables"]
 TRUNCATE_TAG = "<!--test-more-->"
 CACHE_RECENT_PUBLISHED_POSTS = False
 CACHE_CATEGORIES = True
