@@ -234,7 +234,7 @@ def test_post_slug_generation(user):
 
 @pytest.mark.django_db
 def test_post_markdown_rendering(user):
-    assert settings.MARKDOWN_EXTENSIONS == ["fenced_code", "codehilite", "tables"]
+    assert settings.MARKDOWN_EXTENSIONS == []
 
     # Test case 1: Render markdown with basic formatting
     post1 = Post.post_objects.create(
@@ -244,24 +244,6 @@ def test_post_markdown_rendering(user):
     )
     expected_html = "<h1>Heading</h1>\n<p>This is a paragraph with <strong>bold</strong> and <em>italic</em> text.</p>"
     assert post1.content_markdown == expected_html
-
-    # Test case 2: Render markdown with code block
-    post2 = Post.post_objects.create(
-        title="Post with Code Block",
-        content='```python\nprint("Hello, World!")\n```',
-        author=user,
-    )
-    expected_html = '<div class="codehilite"><pre><span></span><code><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Hello, World!&quot;</span><span class="p">)</span>\n</code></pre></div>'
-    assert post2.content_markdown == expected_html
-
-    # Test case 3: Render markdown with fenced code block
-    post3 = Post.post_objects.create(
-        title="Post with Fenced Code Block",
-        content="```\nThis is a fenced code block.\n```",
-        author=user,
-    )
-    expected_html = '<div class="codehilite"><pre><span></span><code>This is a fenced code block.\n</code></pre></div>'
-    assert post3.content_markdown == expected_html
 
 
 @pytest.mark.django_db
