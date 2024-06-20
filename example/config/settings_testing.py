@@ -10,6 +10,12 @@ DATABASES = {
     },
 }
 
+PASSWORD_HASHERS = [
+    "django.contrib.auth.hashers.MD5PasswordHasher",
+]
+
+CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
+
 # Changing these settings will affect lots of tests!
 BLOG_TITLE = "My Test DJ Press Blog"
 BLOG_DESCRIPTION = "This is a test blog."
