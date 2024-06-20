@@ -214,11 +214,12 @@ def post_detail(request: HttpRequest, path: str) -> HttpResponse:
         "djpress/single.html",
         "djpress/index.html",
     ]
-    template: str = get_template_name(templates=template_names)
 
     try:
         page: Post = Post.page_objects.get_published_page_by_path(path)
         context: dict = {"post": page}
+        # If the page is found, use the page template
+        template_names.insert(0, "djpress/page.html")
     except ValueError:
         try:
             post = Post.post_objects.get_published_post_by_path(path)
@@ -227,6 +228,7 @@ def post_detail(request: HttpRequest, path: str) -> HttpResponse:
             msg = "Post not found"
             raise Http404(msg) from exc
 
+    template: str = get_template_name(templates=template_names)
     return render(
         request=request,
         context=context,
