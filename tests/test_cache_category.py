@@ -15,8 +15,8 @@ def test_get_cached_categories():
     assert settings.CACHE_CATEGORIES is True
 
     # Create some test categories
-    Category.objects.create(name="Category 1")
-    Category.objects.create(name="Category 2")
+    Category.objects.create(title="Category 1")
+    Category.objects.create(title="Category 2")
 
     # Call the get_cached_categories method
     queryset = Category.objects._get_cached_categories()
@@ -38,7 +38,7 @@ def test_cache_invalidation_on_save():
     assert settings.CACHE_CATEGORIES is True
 
     # Create a test category
-    category = Category.objects.create(name="Category 1")
+    category = Category.objects.create(title="Category 1")
 
     # Call the get_cached_categories method
     queryset = Category.objects._get_cached_categories()
@@ -49,7 +49,7 @@ def test_cache_invalidation_on_save():
     assert len(queryset) == 1
 
     # Modify the category and save it
-    category.name = "Updated Category"
+    category.title = "Updated Category"
     category.save()
 
     # Assert that the cache is invalidated
@@ -63,7 +63,7 @@ def test_cache_invalidation_on_save():
     cached_queryset2 = cache.get(CATEGORY_CACHE_KEY)
     assert cached_queryset2 is not None
     assert len(queryset2) == 1
-    assert queryset2[0].name == "Updated Category"
+    assert queryset2[0].title == "Updated Category"
 
 
 @pytest.mark.django_db
@@ -72,7 +72,7 @@ def test_cache_invalidation_on_delete():
     assert settings.CACHE_CATEGORIES is True
 
     # Create a test category
-    category = Category.objects.create(name="Category 1")
+    category = Category.objects.create(title="Category 1")
 
     # Call the get_cached_categories method
     queryset = Category.objects._get_cached_categories()
@@ -104,8 +104,8 @@ def test_cache_get_category_by_slug():
     # Confirm the settings in settings_testing.py
     assert settings.CACHE_CATEGORIES is True
 
-    category1 = Category.objects.create(name="Category 1", slug="category-1")
-    category2 = Category.objects.create(name="Category 2", slug="category-2")
+    category1 = Category.objects.create(title="Category 1", slug="category-1")
+    category2 = Category.objects.create(title="Category 2", slug="category-2")
 
     category = Category.objects.get_category_by_slug("category-1")
 
@@ -119,8 +119,8 @@ def test_cache_get_category_by_slug_not_in_cache():
     # Confirm the settings in settings_testing.py
     assert settings.CACHE_CATEGORIES is True
 
-    category1 = Category.objects.create(name="Category 1", slug="category-1")
-    category2 = Category.objects.create(name="Category 2", slug="category-2")
+    category1 = Category.objects.create(title="Category 1", slug="category-1")
+    category2 = Category.objects.create(title="Category 2", slug="category-2")
 
     # Call the get_cached_categories method
     queryset = Category.objects._get_cached_categories()

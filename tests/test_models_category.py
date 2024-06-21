@@ -8,8 +8,8 @@ from djpress.conf import settings
 
 @pytest.mark.django_db
 def test_category_model():
-    category = Category.objects.create(name="Test Category", slug="test-category")
-    assert category.name == "Test Category"
+    category = Category.objects.create(title="Test Category", slug="test-category")
+    assert category.title == "Test Category"
     assert category.slug == "test-category"
     assert str(category) == "Test Category"
 
@@ -17,7 +17,7 @@ def test_category_model():
 @pytest.mark.django_db
 def test_category_save_slug_generation():
     """Test that the slug is correctly generated when saving a Category."""
-    category = Category(name="Test Category")
+    category = Category(title="Test Category")
     category.save()
 
     assert category.slug == slugify("Test Category")
@@ -26,10 +26,10 @@ def test_category_save_slug_generation():
 @pytest.mark.django_db
 def test_category_save_slug_uniqueness():
     """Test that an error is raised when trying to save a Category with a duplicate slug."""
-    category1 = Category(name="Test Category")
+    category1 = Category(title="Test Category")
     category1.save()
 
-    category2 = Category(name="Test Category")
+    category2 = Category(title="Test Category")
 
     with pytest.raises(ValueError) as excinfo:
         category2.save()
@@ -43,48 +43,48 @@ def test_category_save_slug_uniqueness():
 @pytest.mark.django_db
 def test_category_save_invalid_name():
     """Test that an error is raised when trying to save a Category with an invalid name."""
-    category = Category(name="-")
+    category = Category(title="-")
 
     with pytest.raises(ValueError) as excinfo:
         category.save()
 
-    assert str(excinfo.value) == "Invalid name. Unable to generate a valid slug."
+    assert str(excinfo.value) == "Invalid title. Unable to generate a valid slug."
 
 
 @pytest.mark.django_db
 def test_category_slug_auto_generation():
     # Test case 1: Slug auto-generated when not provided
-    category1 = Category.objects.create(name="Test Category")
-    assert category1.slug == slugify(category1.name)
+    category1 = Category.objects.create(title="Test Category")
+    assert category1.slug == slugify(category1.title)
 
     # Test case 2: Slug not overridden when provided
-    category2 = Category.objects.create(name="Another Category", slug="custom-slug")
+    category2 = Category.objects.create(title="Another Category", slug="custom-slug")
     assert category2.slug == "custom-slug"
 
     # Test case 3: Slug auto-generated with special characters
-    category3 = Category.objects.create(name="Special !@#$%^&*() Category")
+    category3 = Category.objects.create(title="Special !@#$%^&*() Category")
     assert category3.slug == "special-category"
 
     # Test case 4: Slug auto-generated with non-ASCII characters
-    category4 = Category.objects.create(name="Non-ASCII áéíóú Category")
+    category4 = Category.objects.create(title="Non-ASCII áéíóú Category")
     assert category4.slug == "non-ascii-aeiou-category"
 
     # Test case 5: Slug auto-generated with leading/trailing hyphens
-    category5 = Category.objects.create(name="--Leading/Trailing Hyphens--")
+    category5 = Category.objects.create(title="--Leading/Trailing Hyphens--")
     assert category5.slug == "leadingtrailing-hyphens"
 
-    # Test case 6: Raise ValueError for invalid name
+    # Test case 6: Raise ValueError for invalid title
     with pytest.raises(ValueError) as exc_info:
-        Category.objects.create(name="!@#$%^&*()")
-    assert str(exc_info.value) == "Invalid name. Unable to generate a valid slug."
+        Category.objects.create(title="!@#$%^&*()")
+    assert str(exc_info.value) == "Invalid title. Unable to generate a valid slug."
 
 
 @pytest.mark.django_db
 def test_get_categories_cache_enabled():
     """Test that the get_categories method returns the correct categories."""
-    category1 = Category.objects.create(name="Category 1")
-    category2 = Category.objects.create(name="Category 2")
-    category3 = Category.objects.create(name="Category 3")
+    category1 = Category.objects.create(title="Category 1")
+    category2 = Category.objects.create(title="Category 2")
+    category3 = Category.objects.create(title="Category 3")
 
     # Confirm the settings in settings_testing.py
     assert settings.CACHE_CATEGORIES is True
@@ -97,9 +97,9 @@ def test_get_categories_cache_enabled():
 @pytest.mark.django_db
 def test_get_categories_cache_disabled():
     """Test that the get_categories method returns the correct categories."""
-    category1 = Category.objects.create(name="Category 1")
-    category2 = Category.objects.create(name="Category 2")
-    category3 = Category.objects.create(name="Category 3")
+    category1 = Category.objects.create(title="Category 1")
+    category2 = Category.objects.create(title="Category 2")
+    category3 = Category.objects.create(title="Category 3")
 
     # Confirm the settings in settings_testing.py
     assert settings.CACHE_CATEGORIES is True
@@ -120,8 +120,8 @@ def test_get_category_by_slug_cache_enabled():
     # Confirm the settings in settings_testing.py
     assert settings.CACHE_CATEGORIES is True
 
-    category1 = Category.objects.create(name="Category 1", slug="category-1")
-    category2 = Category.objects.create(name="Category 2", slug="category-2")
+    category1 = Category.objects.create(title="Category 1", slug="category-1")
+    category2 = Category.objects.create(title="Category 2", slug="category-2")
 
     category = Category.objects.get_category_by_slug("category-1")
 
@@ -138,8 +138,8 @@ def test_get_category_by_slug_cache_disabled():
     settings.set("CACHE_CATEGORIES", False)
     assert settings.CACHE_CATEGORIES is False
 
-    category1 = Category.objects.create(name="Category 1", slug="category-1")
-    category2 = Category.objects.create(name="Category 2", slug="category-2")
+    category1 = Category.objects.create(title="Category 1", slug="category-1")
+    category2 = Category.objects.create(title="Category 2", slug="category-2")
 
     category = Category.objects.get_category_by_slug("category-1")
 
@@ -175,7 +175,7 @@ def test_category_permalink():
     assert settings.CATEGORY_PATH_ENABLED is True
     assert settings.CATEGORY_PATH == "test-url-category"
 
-    category = Category.objects.create(name="Test Category", slug="test-category")
+    category = Category.objects.create(title="Test Category", slug="test-category")
 
     assert category.permalink == "test-url-category/test-category"
 

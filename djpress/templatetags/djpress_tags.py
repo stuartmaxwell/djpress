@@ -70,7 +70,7 @@ def get_categories() -> models.QuerySet[Category] | None:
     Returns:
         models.QuerySet[Category]: All categories.
     """
-    return Category.objects.get_categories()
+    return Category.objects.get_categories().order_by("menu_order").order_by("title")
 
 
 @register.simple_tag
@@ -165,7 +165,7 @@ def blog_page_title(
     post: Post | None = context.get("post")
 
     if category:
-        page_title = category.name
+        page_title = category.title
 
     elif author:
         page_title = get_author_display_name(author)
@@ -329,7 +329,7 @@ def post_category_link(category: Category, link_class: str = "") -> str:
         link_class: The CSS class(es) for the link.
     """
     if not settings.CATEGORY_PATH_ENABLED:
-        return category.name
+        return category.title
 
     return mark_safe(category_link(category, link_class))
 
@@ -452,14 +452,14 @@ def post_content(
 
 
 @register.simple_tag(takes_context=True)
-def category_name(
+def category_title(
     context: Context,
     outer: str = "",
     outer_class: str = "",
     pre_text: str = "",
     post_text: str = "",
 ) -> str:
-    """Return the name of a category.
+    """Return the title of a category.
 
     Expects there to be an `category` in the context set to a Category object. If
     there's no category in the context or category is not a Category object, then retun
@@ -470,11 +470,11 @@ def category_name(
         context: The context.
         outer: The outer HTML tag for the category.
         outer_class: The CSS class(es) for the outer tag.
-        pre_text: The text to prepend to the category name.
-        post_text: The text to append to the category name.
+        pre_text: The text to prepend to the category title.
+        post_text: The text to append to the category title.
 
     Returns:
-        str: The name of the category formatted with the outer tag and class if
+        str: The title of the category formatted with the outer tag and class if
         provided.
     """
     category: Category | None = context.get("category")
@@ -485,7 +485,7 @@ def category_name(
     allowed_outer_tags = ["h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "span"]
     outer_class = f' class="{outer_class}"' if outer_class else ""
 
-    output = category.name
+    output = category.title
 
     if pre_text:
         output = f"{pre_text}{output}"

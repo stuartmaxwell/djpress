@@ -23,7 +23,7 @@ def user():
 @pytest.fixture
 def category():
     category = Category.objects.create(
-        name="Test Category",
+        title="Test Category",
         slug="test-category",
     )
     return category

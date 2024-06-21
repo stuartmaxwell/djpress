@@ -68,8 +68,8 @@ def category_link(category: Category, link_class: str = "") -> str:
     link_class_html = f' class="{link_class}"' if link_class else ""
 
     return (
-        f'<a href="{category_url}" title="View all posts in the {category.name} '
-        f'category"{link_class_html}>{ category.name }</a>'
+        f'<a href="{category_url}" title="View all posts in the {category.title} '
+        f'category"{link_class_html}>{ category.title }</a>'
     )
 
 

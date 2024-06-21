@@ -25,7 +25,7 @@ def user():
 @pytest.fixture
 def category1():
     category = Category.objects.create(
-        name="General",
+        title="General",
         slug="general",
     )
     return category
@@ -34,7 +34,7 @@ def category1():
 @pytest.fixture
 def category2():
     category = Category.objects.create(
-        name="News",
+        title="News",
         slug="news",
     )
     return category
@@ -43,7 +43,7 @@ def category2():
 @pytest.fixture
 def category3():
     category = Category.objects.create(
-        name="Development",
+        title="Development",
         slug="dev",
     )
     return category
@@ -76,9 +76,9 @@ def test_categories_html(category1, category2, category3):
     link_class = "category"
     expected_output = (
         '<ul class="categories">'
-        f'<li><a href="/{settings.CATEGORY_PATH}/{category1.slug}/" title="View all posts in the {category1.name} category" class="{link_class}">{category1.name}</a></li>'
-        f'<li><a href="/{settings.CATEGORY_PATH}/{category2.slug}/" title="View all posts in the {category2.name} category" class="{link_class}">{category2.name}</a></li>'
-        f'<li><a href="/{settings.CATEGORY_PATH}/{category3.slug}/" title="View all posts in the {category3.name} category" class="{link_class}">{category3.name}</a></li>'
+        f'<li><a href="/{settings.CATEGORY_PATH}/{category1.slug}/" title="View all posts in the {category1.title} category" class="{link_class}">{category1.title}</a></li>'
+        f'<li><a href="/{settings.CATEGORY_PATH}/{category2.slug}/" title="View all posts in the {category2.title} category" class="{link_class}">{category2.title}</a></li>'
+        f'<li><a href="/{settings.CATEGORY_PATH}/{category3.slug}/" title="View all posts in the {category3.title} category" class="{link_class}">{category3.title}</a></li>'
         "</ul>"
     )
     assert (
@@ -94,9 +94,9 @@ def test_categories_html(category1, category2, category3):
     link_class = ""
     expected_output = (
         "<ul>"
-        f'<li><a href="/{settings.CATEGORY_PATH}/{category1.slug}/" title="View all posts in the {category1.name} category">{category1.name}</a></li>'
-        f'<li><a href="/{settings.CATEGORY_PATH}/{category2.slug}/" title="View all posts in the {category2.name} category">{category2.name}</a></li>'
-        f'<li><a href="/{settings.CATEGORY_PATH}/{category3.slug}/" title="View all posts in the {category3.name} category">{category3.name}</a></li>'
+        f'<li><a href="/{settings.CATEGORY_PATH}/{category1.slug}/" title="View all posts in the {category1.title} category">{category1.title}</a></li>'
+        f'<li><a href="/{settings.CATEGORY_PATH}/{category2.slug}/" title="View all posts in the {category2.title} category">{category2.title}</a></li>'
+        f'<li><a href="/{settings.CATEGORY_PATH}/{category3.slug}/" title="View all posts in the {category3.title} category">{category3.title}</a></li>'
         "</ul>"
     )
     assert (
@@ -112,9 +112,9 @@ def test_categories_html(category1, category2, category3):
     link_class = "category"
     expected_output = (
         '<div class="categories">'
-        f'<a href="/{settings.CATEGORY_PATH}/{category1.slug}/" title="View all posts in the {category1.name} category" class="{link_class}">{category1.name}</a>, '
-        f'<a href="/{settings.CATEGORY_PATH}/{category2.slug}/" title="View all posts in the {category2.name} category" class="{link_class}">{category2.name}</a>, '
-        f'<a href="/{settings.CATEGORY_PATH}/{category3.slug}/" title="View all posts in the {category3.name} category" class="{link_class}">{category3.name}</a>'
+        f'<a href="/{settings.CATEGORY_PATH}/{category1.slug}/" title="View all posts in the {category1.title} category" class="{link_class}">{category1.title}</a>, '
+        f'<a href="/{settings.CATEGORY_PATH}/{category2.slug}/" title="View all posts in the {category2.title} category" class="{link_class}">{category2.title}</a>, '
+        f'<a href="/{settings.CATEGORY_PATH}/{category3.slug}/" title="View all posts in the {category3.title} category" class="{link_class}">{category3.title}</a>'
         "</div>"
     )
     assert (
@@ -130,9 +130,9 @@ def test_categories_html(category1, category2, category3):
     link_class = ""
     expected_output = (
         "<div>"
-        f'<a href="/{settings.CATEGORY_PATH}/{category1.slug}/" title="View all posts in the {category1.name} category">{category1.name}</a>, '
-        f'<a href="/{settings.CATEGORY_PATH}/{category2.slug}/" title="View all posts in the {category2.name} category">{category2.name}</a>, '
-        f'<a href="/{settings.CATEGORY_PATH}/{category3.slug}/" title="View all posts in the {category3.name} category">{category3.name}</a>'
+        f'<a href="/{settings.CATEGORY_PATH}/{category1.slug}/" title="View all posts in the {category1.title} category">{category1.title}</a>, '
+        f'<a href="/{settings.CATEGORY_PATH}/{category2.slug}/" title="View all posts in the {category2.title} category">{category2.title}</a>, '
+        f'<a href="/{settings.CATEGORY_PATH}/{category3.slug}/" title="View all posts in the {category3.title} category">{category3.title}</a>'
         "</div>"
     )
     assert (
@@ -148,9 +148,9 @@ def test_categories_html(category1, category2, category3):
     link_class = "category"
     expected_output = (
         '<span class="categories">'
-        f'<a href="/{settings.CATEGORY_PATH}/{category1.slug}/" title="View all posts in the {category1.name} category" class="{link_class}">{category1.name}</a>, '
-        f'<a href="/{settings.CATEGORY_PATH}/{category2.slug}/" title="View all posts in the {category2.name} category" class="{link_class}">{category2.name}</a>, '
-        f'<a href="/{settings.CATEGORY_PATH}/{category3.slug}/" title="View all posts in the {category3.name} category" class="{link_class}">{category3.name}</a>'
+        f'<a href="/{settings.CATEGORY_PATH}/{category1.slug}/" title="View all posts in the {category1.title} category" class="{link_class}">{category1.title}</a>, '
+        f'<a href="/{settings.CATEGORY_PATH}/{category2.slug}/" title="View all posts in the {category2.title} category" class="{link_class}">{category2.title}</a>, '
+        f'<a href="/{settings.CATEGORY_PATH}/{category3.slug}/" title="View all posts in the {category3.title} category" class="{link_class}">{category3.title}</a>'
         "</span>"
     )
     assert (
@@ -166,9 +166,9 @@ def test_categories_html(category1, category2, category3):
     link_class = ""
     expected_output = (
         "<span>"
-        f'<a href="/{settings.CATEGORY_PATH}/{category1.slug}/" title="View all posts in the {category1.name} category">{category1.name}</a>, '
-        f'<a href="/{settings.CATEGORY_PATH}/{category2.slug}/" title="View all posts in the {category2.name} category">{category2.name}</a>, '
-        f'<a href="/{settings.CATEGORY_PATH}/{category3.slug}/" title="View all posts in the {category3.name} category">{category3.name}</a>'
+        f'<a href="/{settings.CATEGORY_PATH}/{category1.slug}/" title="View all posts in the {category1.title} category">{category1.title}</a>, '
+        f'<a href="/{settings.CATEGORY_PATH}/{category2.slug}/" title="View all posts in the {category2.title} category">{category2.title}</a>, '
+        f'<a href="/{settings.CATEGORY_PATH}/{category3.slug}/" title="View all posts in the {category3.title} category">{category3.title}</a>'
         "</span>"
     )
     assert (
@@ -185,12 +185,12 @@ def testcategory_link(category1):
 
     # Test case 1 - no link class
     link_class = ""
-    expected_output = f'<a href="/{settings.CATEGORY_PATH}/{category1.slug}/" title="View all posts in the {category1.name} category">{category1.name}</a>'
+    expected_output = f'<a href="/{settings.CATEGORY_PATH}/{category1.slug}/" title="View all posts in the {category1.title} category">{category1.title}</a>'
     assert category_link(category1, link_class) == expected_output
 
     # Test case 2 - with link class
     link_class = "category-class"
-    expected_output = f'<a href="/{settings.CATEGORY_PATH}/{category1.slug}/" title="View all posts in the {category1.name} category" class="{link_class}">{category1.name}</a>'
+    expected_output = f'<a href="/{settings.CATEGORY_PATH}/{category1.slug}/" title="View all posts in the {category1.title} category" class="{link_class}">{category1.title}</a>'
     assert category_link(category1, link_class) == expected_output
 
 
