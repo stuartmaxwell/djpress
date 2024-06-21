@@ -15,12 +15,12 @@ def user():
 
 @pytest.fixture
 def category1():
-    return Category.objects.create(name="Test Category1", slug="test-category1")
+    return Category.objects.create(title="Test Category1", slug="test-category1")
 
 
 @pytest.fixture
 def category2():
-    return Category.objects.create(name="Test Category2", slug="test-category2")
+    return Category.objects.create(title="Test Category2", slug="test-category2")
 
 
 @pytest.fixture
@@ -165,7 +165,7 @@ def test_get_published_post_by_slug_with_future_date(user):
 
 @pytest.mark.django_db
 def test_get_published_content_by_category_with_future_date(user):
-    category = Category.objects.create(name="Test Category", slug="test-category")
+    category = Category.objects.create(title="Test Category", slug="test-category")
     Post.post_objects.create(
         title="Past Post",
         slug="past-post",

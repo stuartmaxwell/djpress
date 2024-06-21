@@ -30,7 +30,7 @@ def user():
 @pytest.fixture
 def category1():
     category = Category.objects.create(
-        name="General",
+        title="General",
         slug="general",
     )
     return category
@@ -39,7 +39,7 @@ def category1():
 @pytest.fixture
 def category2():
     category = Category.objects.create(
-        name="News",
+        title="News",
         slug="news",
     )
     return category
@@ -48,7 +48,7 @@ def category2():
 @pytest.fixture
 def category3():
     category = Category.objects.create(
-        name="Development",
+        title="Development",
         slug="dev",
     )
     return category
@@ -167,7 +167,7 @@ def test_blog_title():
 
 @pytest.mark.django_db
 def test_get_categories(category1, category2, category3):
-    categories = Category.objects.all()
+    categories = Category.objects.all().order_by("menu_order").order_by("title")
     djpress_categories = djpress_tags.get_categories()
 
     assert category1 in categories
@@ -342,7 +342,7 @@ def test_post_category_link_without_category_path(category1):
     settings.set("CATEGORY_PATH_ENABLED", False)
     assert settings.CATEGORY_PATH_ENABLED is False
 
-    assert djpress_tags.post_category_link(category1) == category1.name
+    assert djpress_tags.post_category_link(category1) == category1.title
 
     # Set back to defaults
     settings.set("CATEGORY_PATH_ENABLED", True)
@@ -360,7 +360,7 @@ def test_post_category_link_without_category_pathwith_one_link(category1):
     settings.set("CATEGORY_PATH_ENABLED", False)
     assert settings.CATEGORY_PATH_ENABLED is False
 
-    assert djpress_tags.post_category_link(category1, "class1") == category1.name
+    assert djpress_tags.post_category_link(category1, "class1") == category1.title
 
     # Set back to defaults
     settings.set("CATEGORY_PATH_ENABLED", True)
@@ -372,7 +372,7 @@ def test_post_category_link_with_category_path(category1):
     assert settings.CATEGORY_PATH_ENABLED is True
     assert settings.CATEGORY_PATH == "test-url-category"
 
-    expected_output = f'<a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category">{category1.name}</a>'
+    expected_output = f'<a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category">{category1.title}</a>'
 
     assert djpress_tags.post_category_link(category1) == expected_output
 
@@ -383,7 +383,7 @@ def test_post_category_link_with_category_path_with_one_link_class(category1):
     assert settings.CATEGORY_PATH_ENABLED is True
     assert settings.CATEGORY_PATH == "test-url-category"
 
-    expected_output = f'<a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category" class="class1">{category1.name}</a>'
+    expected_output = f'<a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category" class="class1">{category1.title}</a>'
 
     assert djpress_tags.post_category_link(category1, "class1") == expected_output
 
@@ -394,7 +394,7 @@ def test_post_category_link_with_category_path_with_two_link_classes(category1):
     assert settings.CATEGORY_PATH_ENABLED is True
     assert settings.CATEGORY_PATH == "test-url-category"
 
-    expected_output = f'<a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category" class="class1 class2">{category1.name}</a>'
+    expected_output = f'<a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category" class="class1 class2">{category1.title}</a>'
 
     assert (
         djpress_tags.post_category_link(category1, "class1 class2") == expected_output
@@ -609,20 +609,20 @@ def test_author_name_no_author():
 
 
 @pytest.mark.django_db
-def test_category_name(category1):
-    """category_name only works if there's a category in the context."""
+def test_category_title(category1):
+    """category_title only works if there's a category in the context."""
     context = Context({"category": category1})
 
     # Test case 1 - no options
-    expected_output = category1.name
-    assert djpress_tags.category_name(context) == expected_output
+    expected_output = category1.title
+    assert djpress_tags.category_title(context) == expected_output
 
     # Test case 2 - with options
     expected_output = (
-        f'<h1 class="title">View posts in the {category1.name} category</h1>'
+        f'<h1 class="title">View posts in the {category1.title} category</h1>'
     )
     assert (
-        djpress_tags.category_name(
+        djpress_tags.category_title(
             context,
             outer="h1",
             outer_class="title",
@@ -633,12 +633,12 @@ def test_category_name(category1):
     )
 
 
-def test_category_name_no_category():
+def test_category_title_no_category():
     """If there's no category in the context, return an empty string."""
     context = Context({"foo": "bar"})
 
-    assert djpress_tags.category_name(context) == ""
-    assert type(djpress_tags.category_name(context)) == str
+    assert djpress_tags.category_title(context) == ""
+    assert type(djpress_tags.category_title(context)) == str
 
 
 @pytest.mark.django_db
@@ -857,7 +857,7 @@ def test_blog_pages(test_page1, test_page2):
 def test_blog_page_title(test_post1, test_page1):
     # Test case 1 - category page
     context = Context({"category": test_post1.categories.first()})
-    assert test_post1.categories.first().name == djpress_tags.blog_page_title(context)
+    assert test_post1.categories.first().title == djpress_tags.blog_page_title(context)
 
     # Test case 2 - author page
     context = Context({"author": test_post1.author})

@@ -56,9 +56,10 @@ class CategoryManager(models.Manager):
 class Category(models.Model):
     """Category model."""
 
-    name = models.CharField(max_length=100)
+    title = models.CharField(max_length=100)
     slug = models.SlugField(unique=True, blank=True)
     description = models.TextField(blank=True)
+    menu_order = models.IntegerField(default=0)
 
     # Custom Manager
     objects: "CategoryManager" = CategoryManager()
@@ -71,14 +72,14 @@ class Category(models.Model):
 
     def __str__(self: "Category") -> str:
         """Return the string representation of the category."""
-        return self.name
+        return self.title
 
     def save(self: "Category", *args, **kwargs) -> None:  # noqa: ANN002, ANN003
         """Override the save method to auto-generate the slug."""
         if not self.slug:
-            self.slug = slugify(self.name)
+            self.slug = slugify(self.title)
             if not self.slug or self.slug.strip("-") == "":
-                msg = "Invalid name. Unable to generate a valid slug."
+                msg = "Invalid title. Unable to generate a valid slug."
                 raise ValueError(msg)
 
         try:
