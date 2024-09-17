@@ -68,7 +68,7 @@ python_files = "tests.py test_*.py *_tests.py"
 [tool.uv]
 dev-dependencies = [
   "coverage>=7.6.1",
-  "django-debug-toolbar>=4.4.6",
+  "django-debug-toolbar>=4.4.0",
   "tox-uv>=1.11.3",
 ]
 
