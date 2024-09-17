@@ -170,7 +170,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "coverage", specifier = ">=7.6.1" },
-    { name = "django-debug-toolbar", specifier = ">=4.4.6" },
+    { name = "django-debug-toolbar", specifier = ">=4.4.0" },
     { name = "tox-uv", specifier = ">=1.11.3" },
 ]
 

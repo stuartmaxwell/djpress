@@ -51,6 +51,10 @@ coverage:
 sync:
     uv sync --python {{python_version}} --all-extras
 
+# Lock the package version
+lock:
+    uv lock
+
 # Build the package
 build:
     uv build
