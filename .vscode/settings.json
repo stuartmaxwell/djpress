@@ -2,5 +2,5 @@
   "python.testing.pytestArgs": ["tests", "-v"],
   "python.testing.unittestEnabled": false,
   "python.testing.pytestEnabled": true,
-  "python.analysis.exclude": ["**/build/**"]
+  "python.analysis.exclude": ["**/build/**", "**/.tox/**", "**/.venv/**"]
 }
