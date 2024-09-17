@@ -145,12 +145,16 @@ dependencies = [
     { name = "pygments" },
 ]
 
+[package.optional-dependencies]
+test = [
+    { name = "pytest" },
+    { name = "pytest-django" },
+]
+
 [package.dev-dependencies]
 dev = [
     { name = "coverage" },
     { name = "django-debug-toolbar" },
-    { name = "pytest" },
-    { name = "pytest-django" },
     { name = "tox-uv" },
 ]
 
@@ -159,14 +163,14 @@ requires-dist = [
     { name = "django" },
     { name = "markdown" },
     { name = "pygments" },
+    { name = "pytest", marker = "extra == 'test'", specifier = ">=8.3.3" },
+    { name = "pytest-django", marker = "extra == 'test'", specifier = ">=4.9.0" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "coverage", specifier = ">=7.6.1" },
     { name = "django-debug-toolbar", specifier = ">=4.4.6" },
-    { name = "pytest", specifier = ">=8.3.3" },
-    { name = "pytest-django", specifier = ">=4.9.0" },
     { name = "tox-uv", specifier = ">=1.11.3" },
 ]
 

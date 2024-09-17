@@ -22,7 +22,7 @@ jobs:
         run: uv python install ${{ matrix.python-version }}
 
       - name: Install the project
-        run: uv sync --dev
+        run: uv sync --no-dev --extra test
 
       - name: Install Specific Django ${{ matrix.django-version }}
         run: uv add django==${{ matrix.django-version }}

@@ -7,6 +7,7 @@ python_version := "3.12"
 
 # Run the Django development server
 run:
+    @just sync
     uv run --python {{python_version}} example/manage.py runserver
 
 # Make migrations
@@ -45,6 +46,10 @@ tox:
 coverage:
     uv run --python {{python_version}} coverage run -m pytest
     uv run --python {{python_version}} coverage report --show-missing
+
+# Sync the package
+sync:
+    uv sync --python {{python_version}} --all-extras
 
 # Build the package
 build:

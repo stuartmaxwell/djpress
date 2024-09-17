@@ -37,6 +37,9 @@ Homepage = "https://github.com/stuartmaxwell/djpress"
 Repository = "https://github.com/stuartmaxwell/djpress"
 Issues = "https://github.com/stuartmaxwell/djpress/issues"
 
+[project.optional-dependencies]
+test = ["pytest>=8.3.3", "pytest-django>=4.9.0"]
+
 [tool.ruff.lint]
 select = ["ALL"]
 ignore = [
@@ -66,8 +69,6 @@ python_files = "tests.py test_*.py *_tests.py"
 dev-dependencies = [
   "coverage>=7.6.1",
   "django-debug-toolbar>=4.4.6",
-  "pytest-django>=4.9.0",
-  "pytest>=8.3.3",
   "tox-uv>=1.11.3",
 ]
 
