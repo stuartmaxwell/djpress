@@ -28,4 +28,4 @@ jobs:
         run: uv pip install django==${{ matrix.django-version }}
 
       - name: Run tests
-        run: uv run --with django==${{ matrix.django-version }} pytest
+        run: pytest
