@@ -1,8 +1,6 @@
 import pytest
 from django.contrib.auth.models import User
-from django.http import Http404
 from django.utils import timezone
-from django.utils.text import slugify
 
 from djpress.conf import settings
 from djpress.models import Category, Post
@@ -436,7 +434,7 @@ def test_get_recent_published_posts(user):
 
     # Assert that the correct posts are returned
     assert list(recent_posts) == [post3, post2]
-    assert not post1 in recent_posts
+    assert post1 not in recent_posts
 
     # Set back to defaults
     settings.set("RECENT_PUBLISHED_POSTS_COUNT", 3)

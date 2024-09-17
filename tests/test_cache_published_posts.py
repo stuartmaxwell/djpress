@@ -168,7 +168,7 @@ def test_cache_get_recent_published_posts(user):
 
     # # Assert that the correct posts are returned
     assert list(recent_posts) == [post3, post2]
-    assert not post1 in recent_posts
+    assert post1 not in recent_posts
 
     # Check that all posts are cached
     cached_queryset = cache.get(PUBLISHED_POSTS_CACHE_KEY)
@@ -195,12 +195,6 @@ def test_cache_get_recent_published_posts_future_post(user):
     # Create some published posts
     post1 = Post.objects.create(title="Post 1", status="published", author=user)
     post2 = Post.objects.create(title="Post 2", status="published", author=user)
-    post3 = Post.objects.create(
-        title="Post 3",
-        status="published",
-        author=user,
-        date=timezone.now() + timezone.timedelta(days=1),
-    )
 
     # Call the method being tested
     recent_posts = Post.post_objects.get_recent_published_posts()

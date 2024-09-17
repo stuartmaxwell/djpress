@@ -3,7 +3,6 @@ from django.contrib.auth.models import User
 from django.urls import reverse
 
 from djpress.conf import settings
-from djpress.feeds import PostFeed
 from djpress.models import Post
 
 

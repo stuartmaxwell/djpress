@@ -123,7 +123,7 @@ def test_cache_get_category_by_slug_not_in_cache():
     category2 = Category.objects.create(title="Category 2", slug="category-2")
 
     # Call the get_cached_categories method
-    queryset = Category.objects._get_cached_categories()
+    Category.objects._get_cached_categories()
 
     cached_queryset = cache.get(CATEGORY_CACHE_KEY)
 
