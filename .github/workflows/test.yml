@@ -14,16 +14,18 @@ jobs:
         django-version: ["4.2", "5.0", "5.1"]
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v2
+
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-          cache: pip
-          cache-dependency-path: pyproject.toml
-          allow-prereleases: true
-      - name: Install dependencies
-        run: |
-          pip install '.[tests]'
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Install the project
+        run: uv sync --dev
+
+      - name: Install Specific Django ${{ matrix.django-version }}
+        run: uv pip install django==${{ matrix.django-version }}
+
       - name: Run tests
-        run: |
-          pytest
+        run: uv run pytest
