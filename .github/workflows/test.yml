@@ -25,7 +25,7 @@ jobs:
         run: uv sync --dev
 
       - name: Install Specific Django ${{ matrix.django-version }}
-        run: uv pip install django==${{ matrix.django-version }}
+        run: uv add django==${{ matrix.django-version }}
 
       - name: Run tests
-        run: pytest
+        run: uv run --with django==${{ matrix.django-version }} pytest
