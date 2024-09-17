@@ -56,7 +56,7 @@ def categories_html(
 def category_link(category: Category, link_class: str = "") -> str:
     """Return the category link.
 
-    This is not intded to be used as a template tag. It is used by the other
+    This is not intended to be used as a template tag. It is used by the other
     template tags in this module to generate the category links.
 
     Args:
@@ -69,14 +69,14 @@ def category_link(category: Category, link_class: str = "") -> str:
 
     return (
         f'<a href="{category_url}" title="View all posts in the {category.title} '
-        f'category"{link_class_html}>{ category.title }</a>'
+        f'category"{link_class_html}>{category.title}</a>'
     )
 
 
 def get_page_link(page: Post, link_class: str = "") -> str:
     """Return the page link.
 
-    This is not intded to be used as a template tag. It is used by the other
+    This is not intended to be used as a template tag. It is used by the other
     template tags in this module to generate the page links.
 
     Args:
@@ -89,7 +89,7 @@ def get_page_link(page: Post, link_class: str = "") -> str:
 
     return (
         f'<a href="{page_url}" title="View the {page.title} page"'
-        f"{link_class_html}>{ page.title }</a>"
+        f"{link_class_html}>{page.title}</a>"
     )
 
 

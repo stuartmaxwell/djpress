@@ -105,6 +105,8 @@ def archives_posts(
         filtered_posts = published_posts.filter(
             date__year=year,
         )
+    else:
+        filtered_posts = published_posts
 
     posts = Paginator(filtered_posts, settings.RECENT_PUBLISHED_POSTS_COUNT)
     page_number = request.GET.get("page")

@@ -153,6 +153,7 @@ class PostsManager(models.Manager):
             int | None: The number of seconds until the next future post, or None if
             there are no future posts.
         """
+        # TODO: total_seconds returns a float not an int.
         future_posts = queryset.filter(date__gt=timezone.now())
         if future_posts.exists():
             future_post = future_posts[0]
@@ -214,7 +215,7 @@ class PostsManager(models.Manager):
 
         I don't think I can avoid regex matching here...
 
-        For now we'll just look at the POST_PREFIX.
+        For now, we'll just look at the POST_PREFIX.
         """
         if settings.POST_PREFIX and path.startswith(settings.POST_PREFIX):
             slug = path.split(settings.POST_PREFIX + "/")[1]
@@ -342,7 +343,7 @@ class Post(models.Model):
         if self.post_type == "page":
             return permalink
 
-        # The only other post type is a post so we don't need to check for that
+        # The only other post type is a post, so we don't need to check for that
         # If there's a permalink structure defined, we add that to the permalink
         if settings.POST_PERMALINK:
             permalink = f"{self.date.strftime(settings.POST_PERMALINK)}/{self.slug}"
