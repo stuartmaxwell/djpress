@@ -3,7 +3,7 @@
 import markdown
 from django.contrib.auth.models import User
 from django.template.loader import TemplateDoesNotExist, select_template
-from django.utils.timezone import datetime
+from django.utils import timezone
 
 from djpress.conf import settings
 
@@ -74,13 +74,13 @@ def validate_date(year: str, month: str, day: str) -> None:
 
     try:
         if int_month and int_day:
-            datetime(int_year, int_month, int_day)
+            timezone.datetime(int_year, int_month, int_day)
 
         elif int_month:
-            datetime(int_year, int_month, 1)
+            timezone.datetime(int_year, int_month, 1)
 
         else:
-            datetime(int_year, 1, 1)
+            timezone.datetime(int_year, 1, 1)
 
     except ValueError as exc:
         msg = "Invalid date"

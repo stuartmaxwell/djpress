@@ -1,11 +1,9 @@
-from django.template import TemplateDoesNotExist
-import pytest
 from collections.abc import Iterable
 
+import pytest
 from django.contrib.auth.models import User
 from django.urls import reverse
 from django.utils import timezone
-from django.test.utils import override_settings
 
 from djpress.models import Category, Post
 from djpress.utils import validate_date
@@ -108,7 +106,7 @@ def test_author_with_posts_view(client, test_post1):
     response = client.get(url)
     assert response.status_code == 200
     assert "author" in response.context
-    assert not b"No posts available" in response.content
+    assert b"No posts available" not in response.content
     assert "posts" in response.context
     assert isinstance(response.context["posts"], Iterable)
 
@@ -137,7 +135,7 @@ def test_category_with_posts_view(client, test_post1, category):
     response = client.get(url)
     assert response.status_code == 200
     assert "category" in response.context
-    assert not b"No posts available" in response.content
+    assert b"No posts available" not in response.content
     assert "posts" in response.context
     assert isinstance(response.context["posts"], Iterable)
 

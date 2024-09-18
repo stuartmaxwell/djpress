@@ -43,12 +43,12 @@ def blog_title_link(link_class: str = "") -> str:
     """
     link_class_html = f' class="{link_class}"' if link_class else ""
 
-    ouptut = (
+    output = (
         f'<a href="{reverse("djpress:index")}"{link_class_html}>'
         f'{settings.BLOG_TITLE}</a>'
     )
 
-    return mark_safe(ouptut)
+    return mark_safe(output)
 
 
 @register.simple_tag
@@ -281,9 +281,8 @@ def post_author(context: Context) -> str:
         return ""
 
     author = post.author
-    author_display_name = get_author_display_name(author)
 
-    return mark_safe(f'<span rel="author">{author_display_name}</span>')
+    return get_author_display_name(author)
 
 
 @register.simple_tag(takes_context=True)
@@ -313,8 +312,8 @@ def post_author_link(context: Context, link_class: str = "") -> str:
 
     output = (
         f'<a href="{author_url}" title="View all posts by '
-        f'{ author_display_name }"{link_class_html}>'
-        f'<span rel="author">{ author_display_name }</span></a>'
+        f'{author_display_name}"{link_class_html}>'
+        f'<span rel="author">{author_display_name}</span></a>'
     )
 
     return mark_safe(output)
@@ -323,6 +322,8 @@ def post_author_link(context: Context, link_class: str = "") -> str:
 @register.simple_tag
 def post_category_link(category: Category, link_class: str = "") -> str:
     """Return the category links for a post.
+
+    TODO: do we need this?
 
     Args:
         category: The category of the post.
@@ -348,8 +349,8 @@ def post_date(context: Context) -> str:
     if not post:
         return ""
 
-    post_date = post.date
-    return mark_safe(post_date.strftime("%b %-d, %Y"))
+    output_date = post.date
+    return output_date.strftime("%b %-d, %Y")
 
 
 @register.simple_tag(takes_context=True)
@@ -366,17 +367,17 @@ def post_date_link(context: Context, link_class: str = "") -> str:
     post: Post | None = context.get("post")
     if not post:
         return ""
-    post_date = post.date
+    output_date = post.date
 
     if not settings.DATE_ARCHIVES_ENABLED:
-        return mark_safe(post_date.strftime("%b %-d, %Y"))
+        return mark_safe(output_date.strftime("%b %-d, %Y"))
 
-    post_year = post_date.strftime("%Y")
-    post_month = post_date.strftime("%m")
-    post_month_name = post_date.strftime("%b")
-    post_day = post_date.strftime("%d")
-    post_day_name = post_date.strftime("%-d")
-    post_time = post_date.strftime("%-I:%M %p")
+    post_year = output_date.strftime("%Y")
+    post_month = output_date.strftime("%m")
+    post_month_name = output_date.strftime("%b")
+    post_day = output_date.strftime("%d")
+    post_day_name = output_date.strftime("%-d")
+    post_time = output_date.strftime("%-I:%M %p")
 
     year_url = reverse(
         "djpress:archives_posts",
@@ -448,7 +449,7 @@ def post_content(
     if post:
         return mark_safe(post.content_markdown)
 
-    return ""
+    return content
 
 
 @register.simple_tag(takes_context=True)
@@ -462,7 +463,7 @@ def category_title(
     """Return the title of a category.
 
     Expects there to be an `category` in the context set to a Category object. If
-    there's no category in the context or category is not a Category object, then retun
+    there's no category in the context or category is not a Category object, then return
     an empty string.
 
 
@@ -507,10 +508,10 @@ def author_name(
     pre_text: str = "",
     post_text: str = "",
 ) -> str:
-    """Return the name of a author.
+    """Return the name of an author.
 
     Expects there to be an `author` in the context set to a user object. If there's no
-    author in the context or author is not a User object, then retun an empty string.
+    author in the context or author is not a User object, then return an empty string.
 
     Args:
         context: The context.
@@ -587,7 +588,7 @@ def is_paginated(context: Context) -> bool:
         bool: Whether the posts are paginated.
     """
     posts: Page | None = context.get("posts")
-    if not posts or not isinstance(posts, Page):
+    if not posts or not isinstance(posts, Page):  # noqa: SIM103
         return False
 
     return True

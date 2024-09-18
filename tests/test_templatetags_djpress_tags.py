@@ -1,9 +1,8 @@
 import pytest
 from django.contrib.auth.models import User
+from django.core.paginator import Paginator
 from django.template import Context
 from django.urls import reverse
-from django.utils import timezone
-from django.core.paginator import Paginator
 
 from djpress.conf import settings
 from djpress.models import Category, Post
@@ -196,7 +195,7 @@ def test_post_title_no_post_context():
 def test_post_title_posts(test_post1):
     """Test the post_title_link template tag.
 
-    This uses the post.permalink property to generate the link."""
+    This uses the `post.permalink` property to generate the link."""
     # Context should have both a posts and a post to simulate the for post in posts loop
     context = Context({"posts": [test_post1], "post": test_post1})
 
@@ -239,7 +238,7 @@ def test_post_author(test_post1):
     context = Context({"post": test_post1})
 
     author = test_post1.author
-    output = f'<span rel="author">{ get_author_display_name(author) }</span>'
+    output = get_author_display_name(author)
     assert djpress_tags.post_author(context) == output
 
 
@@ -269,8 +268,8 @@ def test_post_author_link(test_post1):
 
     expected_output = (
         f'<a href="/{settings.AUTHOR_PATH}/testuser/" title="View all posts by '
-        f'{ get_author_display_name(author) }"><span rel="author">'
-        f"{ get_author_display_name(author) }</span></a>"
+        f'{get_author_display_name(author)}"><span rel="author">'
+        f"{get_author_display_name(author)}</span></a>"
     )
     assert djpress_tags.post_author_link(context) == expected_output
 
@@ -306,8 +305,8 @@ def test_post_author_link_with_author_path_with_one_link_class(test_post1):
 
     expected_output = (
         f'<a href="/{settings.AUTHOR_PATH}/testuser/" title="View all posts by '
-        f'{ get_author_display_name(author) }" class="class1">'
-        f'<span rel="author">{ get_author_display_name(author) }</span></a>'
+        f'{get_author_display_name(author)}" class="class1">'
+        f'<span rel="author">{get_author_display_name(author)}</span></a>'
     )
     assert djpress_tags.post_author_link(context, "class1") == expected_output
 
@@ -324,8 +323,8 @@ def test_post_author_link_with_author_path_with_two_link_class(test_post1):
 
     expected_output = (
         f'<a href="/{settings.AUTHOR_PATH}/testuser/" title="View all posts by '
-        f'{ get_author_display_name(author) }" class="class1 class2">'
-        f'<span rel="author">{ get_author_display_name(author) }</span></a>'
+        f'{get_author_display_name(author)}" class="class1 class2">'
+        f'<span rel="author">{get_author_display_name(author)}</span></a>'
     )
     assert djpress_tags.post_author_link(context, "class1 class2") == expected_output
 
@@ -349,7 +348,7 @@ def test_post_category_link_without_category_path(category1):
 
 
 @pytest.mark.django_db
-def test_post_category_link_without_category_pathwith_one_link(category1):
+def test_post_category_link_without_category_path_with_one_link(category1):
     """Test the post_category_link template tag without the category path enabled.
 
     If the CATEGORY_PATH_ENABLED setting is False, the template tag should just return
@@ -579,7 +578,7 @@ def test_post_content_with_posts(test_long_post1):
 
 @pytest.mark.django_db
 def test_author_name(user):
-    """author_name only works if there's a author in the context."""
+    """author_name only works if there's an author in the context."""
     context = Context({"author": user})
 
     # Test case 1 - no options
@@ -885,7 +884,7 @@ def test_is_paginated(test_post1, test_post2, test_long_post1):
 
     # Test case 1 - no paginator in context
     context = Context()
-    assert djpress_tags.is_paginated(context) == False
+    assert djpress_tags.is_paginated(context) is False
 
     # Test case 2 - paginator in context
     posts = Paginator(
@@ -894,7 +893,7 @@ def test_is_paginated(test_post1, test_post2, test_long_post1):
     )
     page = posts.get_page(number=None)
     context = Context({"posts": page})
-    assert djpress_tags.is_paginated(context) == True
+    assert djpress_tags.is_paginated(context) is True
 
 
 def test_pagination_links_no_posts():
@@ -945,6 +944,20 @@ def test_get_pagination_range(test_post1, test_post2, test_long_post1):
 
 
 @pytest.mark.django_db
+def test_get_pagination_range_no_posts():
+    # Test case 1 - no posts
+    # Confirm settings are set according to settings_testing.py
+    assert settings.RECENT_PUBLISHED_POSTS_COUNT == 3
+    posts = Paginator(
+        Post.post_objects.get_published_posts(),
+        settings.RECENT_PUBLISHED_POSTS_COUNT,
+    )
+    page = posts.get_page(number=None)
+    context = Context({"posts": page})
+    assert djpress_tags.get_pagination_range(context) == range(0)
+
+
+@pytest.mark.django_db
 def test_get_pagination_current_page(test_post1, test_post2, test_long_post1):
     # Confirm settings are set according to settings_testing.py
     assert settings.RECENT_PUBLISHED_POSTS_COUNT == 3
@@ -979,6 +992,21 @@ def test_get_pagination_current_page(test_post1, test_post2, test_long_post1):
     # Set back to defaults
     settings.set("RECENT_PUBLISHED_POSTS_COUNT", 3)
     assert settings.RECENT_PUBLISHED_POSTS_COUNT == 3
+
+
+@pytest.mark.django_db
+def test_get_pagination_current_page_no_posts():
+    # Confirm settings are set according to settings_testing.py
+    assert settings.RECENT_PUBLISHED_POSTS_COUNT == 3
+
+    # Test case 1 - no posts
+    posts = Paginator(
+        Post.post_objects.get_published_posts(),
+        settings.RECENT_PUBLISHED_POSTS_COUNT,
+    )
+    page = posts.get_page(number=None)
+    context = Context({"posts": page})
+    assert djpress_tags.get_pagination_current_page(context) == 0
 
 
 @pytest.mark.django_db
@@ -1021,7 +1049,7 @@ def test_pagination_links_two_pages(test_post1, test_post2, test_long_post1):
         settings.RECENT_PUBLISHED_POSTS_COUNT,
     )
 
-    # Test case 1 - first page with no page page
+    # Test case 1 - first page with no page
     page = posts.get_page(number=None)
 
     context = Context({"posts": page})
@@ -1206,13 +1234,12 @@ def test_pagination_links_three_pages(test_post1, test_post2, test_long_post1):
 
 @pytest.mark.django_db
 def test_page_link(test_page1):
-    # Test 1 - page with a non existent page_slug
+    # Test 1 - page with a non-existent page_slug
     page_slug = ""
     assert djpress_tags.page_link(page_slug=page_slug) == ""
 
     # Test 2 - page with a page_slug and no options
     page_slug = test_page1.slug
-    outer = ""
     outer_class = ""
     link_class = ""
 
@@ -1222,7 +1249,6 @@ def test_page_link(test_page1):
 
     # Test 3 - page with a page_slug and div and no options
     page_slug = test_page1.slug
-    outer = "div"
     outer_class = ""
     link_class = ""
 

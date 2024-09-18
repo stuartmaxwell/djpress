@@ -33,9 +33,7 @@ body {
 
 body > header {
   background-color: var(--dark1);
-  padding: 1rem;
-  padding-left: calc((100% - 992px) / 2);
-  padding-right: calc((100% - 992px) / 2);
+  padding: 1rem calc((100% - 992px) / 2);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -93,8 +91,7 @@ main > h1 {
 
 /* General article styles */
 article {
-  margin: 0;
-  margin-bottom: 2em;
+  margin: 0 0 2em;
   padding: 2em;
   border: 1px solid var(--light4);
   border-radius: 0.5em;
@@ -147,6 +144,7 @@ article > footer p {
   color: #555555;
 }
 
+/*noinspection CssUnusedSymbol*/
 .badge {
   background-color: var(--primary8);
   color: var(--dark0);
@@ -158,6 +156,7 @@ article > footer p {
   text-decoration: none;
 }
 
+/*noinspection CssUnusedSymbol*/
 .badge:hover {
   background-color: var(--tertiary10);
   color: var(--light4);
@@ -167,9 +166,7 @@ article > footer p {
 
 body > footer {
   background-color: var(--dark1);
-  padding: 1rem;
-  padding-left: calc((100% - 992px) / 2);
-  padding-right: calc((100% - 992px) / 2);
+  padding: 1rem calc((100% - 992px) / 2);
   display: flex;
   align-items: center;
   justify-content: space-between;

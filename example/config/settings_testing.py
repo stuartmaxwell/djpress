@@ -10,7 +10,7 @@ DATABASES = {
     },
 }
 
-PASSWORD_HASHERS = [
+PASSWORD_HASHERS: list[str] = [
     "django.contrib.auth.hashers.MD5PasswordHasher",
 ]
 

@@ -1,11 +1,13 @@
 import pytest
 from django.contrib.auth.models import User
-from django.http import Http404
 from django.utils import timezone
-from django.utils.text import slugify
-
+from unittest.mock import Mock
 from djpress.conf import settings
 from djpress.models import Category, Post
+from django.core.cache import cache
+from unittest.mock import patch
+
+from djpress.models.post import PUBLISHED_POSTS_CACHE_KEY
 
 
 @pytest.fixture
@@ -436,7 +438,7 @@ def test_get_recent_published_posts(user):
 
     # Assert that the correct posts are returned
     assert list(recent_posts) == [post3, post2]
-    assert not post1 in recent_posts
+    assert post1 not in recent_posts
 
     # Set back to defaults
     settings.set("RECENT_PUBLISHED_POSTS_COUNT", 3)
@@ -506,3 +508,60 @@ def test_get_published_page_by_path(test_page1: Post):
     page_path = "non-existent-page"
     with pytest.raises(expected_exception=ValueError):
         Post.page_objects.get_published_page_by_path(page_path)
+
+
+@pytest.fixture
+def mock_timezone_now(monkeypatch):
+    current_time = timezone.now()
+    monkeypatch.setattr(timezone, "now", lambda: current_time)
+    return current_time
+
+
+@pytest.mark.django_db
+def test_get_cached_recent_published_posts(user, mock_timezone_now, monkeypatch):
+    """Test that the def _get_cached_recent_published_posts method sets the correct timeout.
+
+    This is a complicated test that involves mocking the timezone.now function and the cache.set function.
+
+    The mocking can tell what arguments were passed to cache.set and if the timeout is set correctly.
+    """
+    # Confirm settings are set according to settings_testing.py
+    assert settings.CACHE_RECENT_PUBLISHED_POSTS is False
+    assert settings.RECENT_PUBLISHED_POSTS_COUNT == 3
+
+    settings.set("CACHE_RECENT_PUBLISHED_POSTS", True)
+    assert settings.CACHE_RECENT_PUBLISHED_POSTS is True
+
+    assert mock_timezone_now == timezone.now()
+
+    Post.post_objects.create(
+        title="Test Post",
+        slug="test-post",
+        content="This is a test post.",
+        author=user,
+        date=mock_timezone_now + timezone.timedelta(hours=2),
+        status="published",
+        post_type="post",
+    )
+
+    mock_cache_set = Mock()
+    monkeypatch.setattr(cache, "set", mock_cache_set)
+
+    queryset = cache.get(PUBLISHED_POSTS_CACHE_KEY)
+    assert queryset is None
+
+    queryset = Post.post_objects.get_recent_published_posts()
+    assert len(queryset) == 0
+
+    # Check if cache.set was called
+    assert mock_cache_set.called
+
+    # Get the arguments passed to cache.set
+    args, kwargs = mock_cache_set.call_args
+
+    # Check if the timeout is correct (should be close to 2 hours)
+    expected_timeout = 7200  # 2 hours in seconds
+    actual_timeout = (
+        kwargs.get("timeout") or args[2]
+    )  # timeout might be a kwarg or the third positional arg
+    assert abs(actual_timeout - expected_timeout) < 5  # Allow a small margin of error
