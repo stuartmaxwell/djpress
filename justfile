@@ -43,9 +43,9 @@ tox:
     uv run --python {{python_version}} tox
 
 # Run coverage
-coverage:
+cov:
     uv run --python {{python_version}} coverage run -m pytest
-    uv run --python {{python_version}} coverage report --show-missing
+    uv run --python {{python_version}} coverage html
 
 # Sync the package
 sync:
