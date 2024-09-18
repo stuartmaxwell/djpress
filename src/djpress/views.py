@@ -61,6 +61,8 @@ def archives_posts(
 ) -> HttpResponse:
     """View for the date-based archives pages.
 
+    There will always be a year at least.
+
     Args:
         request (HttpRequest): The request object.
         year (str): The year.
@@ -101,12 +103,10 @@ def archives_posts(
             date__month=month,
         )
 
-    elif year:
+    else:
         filtered_posts = published_posts.filter(
             date__year=year,
         )
-    else:
-        filtered_posts = published_posts
 
     posts = Paginator(filtered_posts, settings.RECENT_PUBLISHED_POSTS_COUNT)
     page_number = request.GET.get("page")
