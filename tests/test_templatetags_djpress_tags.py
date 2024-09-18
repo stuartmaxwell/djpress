@@ -944,6 +944,20 @@ def test_get_pagination_range(test_post1, test_post2, test_long_post1):
 
 
 @pytest.mark.django_db
+def test_get_pagination_range_no_posts():
+    # Test case 1 - no posts
+    # Confirm settings are set according to settings_testing.py
+    assert settings.RECENT_PUBLISHED_POSTS_COUNT == 3
+    posts = Paginator(
+        Post.post_objects.get_published_posts(),
+        settings.RECENT_PUBLISHED_POSTS_COUNT,
+    )
+    page = posts.get_page(number=None)
+    context = Context({"posts": page})
+    assert djpress_tags.get_pagination_range(context) == range(0)
+
+
+@pytest.mark.django_db
 def test_get_pagination_current_page(test_post1, test_post2, test_long_post1):
     # Confirm settings are set according to settings_testing.py
     assert settings.RECENT_PUBLISHED_POSTS_COUNT == 3
@@ -978,6 +992,21 @@ def test_get_pagination_current_page(test_post1, test_post2, test_long_post1):
     # Set back to defaults
     settings.set("RECENT_PUBLISHED_POSTS_COUNT", 3)
     assert settings.RECENT_PUBLISHED_POSTS_COUNT == 3
+
+
+@pytest.mark.django_db
+def test_get_pagination_current_page_no_posts():
+    # Confirm settings are set according to settings_testing.py
+    assert settings.RECENT_PUBLISHED_POSTS_COUNT == 3
+
+    # Test case 1 - no posts
+    posts = Paginator(
+        Post.post_objects.get_published_posts(),
+        settings.RECENT_PUBLISHED_POSTS_COUNT,
+    )
+    page = posts.get_page(number=None)
+    context = Context({"posts": page})
+    assert djpress_tags.get_pagination_current_page(context) == 0
 
 
 @pytest.mark.django_db
