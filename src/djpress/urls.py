@@ -13,6 +13,15 @@ from djpress.views import (
 )
 
 regex_path = r"^(?P<path>[0-9A-Za-z/_-]*)$"
+
+# The following regex is used to match the archives path. It is used to match
+# the following patterns:
+# - 2024
+# - 2024/01
+# - 2024/01/01
+# There will always be a year.
+# If there is a month, there will always be a year.
+# If there is a day, there will always be a month and a year.
 regex_archives = r"(?P<year>\d{4})(?:/(?P<month>\d{2})(?:/(?P<day>\d{2}))?)?$"
 
 if settings.APPEND_SLASH:
