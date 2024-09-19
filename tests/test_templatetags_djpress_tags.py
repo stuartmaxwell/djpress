@@ -481,9 +481,9 @@ def test_post_date_link_with_date_archives_enabled(test_post1):
     post_time = post_date.strftime("%-I:%M %p")
 
     expected_output = (
-        f'<a href="/archives/{post_year}/{post_month}/" title="View all posts in {post_month_name} {post_year}">{post_month_name}</a> '
-        f'<a href="/archives/{post_year}/{post_month}/{post_day}/" title="View all posts on {post_day_name} {post_month_name} {post_year}">{post_day_name}</a>, '
-        f'<a href="/archives/{post_year}/" title="View all posts in {post_year}">{post_year}</a>, '
+        f'<a href="/test-url-archives/{post_year}/{post_month}/" title="View all posts in {post_month_name} {post_year}">{post_month_name}</a> '
+        f'<a href="/test-url-archives/{post_year}/{post_month}/{post_day}/" title="View all posts on {post_day_name} {post_month_name} {post_year}">{post_day_name}</a>, '
+        f'<a href="/test-url-archives/{post_year}/" title="View all posts in {post_year}">{post_year}</a>, '
         f"{post_time}."
     )
 
@@ -508,9 +508,9 @@ def test_post_date_link_with_date_archives_enabled_with_one_link_class(
     post_time = post_date.strftime("%-I:%M %p")
 
     expected_output = (
-        f'<a href="/archives/{post_year}/{post_month}/" title="View all posts in {post_month_name} {post_year}" class="class1">{post_month_name}</a> '
-        f'<a href="/archives/{post_year}/{post_month}/{post_day}/" title="View all posts on {post_day_name} {post_month_name} {post_year}" class="class1">{post_day_name}</a>, '
-        f'<a href="/archives/{post_year}/" title="View all posts in {post_year}" class="class1">{post_year}</a>, '
+        f'<a href="/test-url-archives/{post_year}/{post_month}/" title="View all posts in {post_month_name} {post_year}" class="class1">{post_month_name}</a> '
+        f'<a href="/test-url-archives/{post_year}/{post_month}/{post_day}/" title="View all posts on {post_day_name} {post_month_name} {post_year}" class="class1">{post_day_name}</a>, '
+        f'<a href="/test-url-archives/{post_year}/" title="View all posts in {post_year}" class="class1">{post_year}</a>, '
         f"{post_time}."
     )
 
@@ -535,9 +535,9 @@ def test_post_date_link_with_date_archives_enabled_with_two_link_classes(
     post_time = post_date.strftime("%-I:%M %p")
 
     expected_output = (
-        f'<a href="/archives/{post_year}/{post_month}/" title="View all posts in {post_month_name} {post_year}" class="class1 class2">{post_month_name}</a> '
-        f'<a href="/archives/{post_year}/{post_month}/{post_day}/" title="View all posts on {post_day_name} {post_month_name} {post_year}" class="class1 class2">{post_day_name}</a>, '
-        f'<a href="/archives/{post_year}/" title="View all posts in {post_year}" class="class1 class2">{post_year}</a>, '
+        f'<a href="/test-url-archives/{post_year}/{post_month}/" title="View all posts in {post_month_name} {post_year}" class="class1 class2">{post_month_name}</a> '
+        f'<a href="/test-url-archives/{post_year}/{post_month}/{post_day}/" title="View all posts on {post_day_name} {post_month_name} {post_year}" class="class1 class2">{post_day_name}</a>, '
+        f'<a href="/test-url-archives/{post_year}/" title="View all posts in {post_year}" class="class1 class2">{post_year}</a>, '
         f"{post_time}."
     )
 

@@ -19,6 +19,8 @@ CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"
 # Changing these settings will affect lots of tests!
 BLOG_TITLE = "My Test DJ Press Blog"
 BLOG_DESCRIPTION = "This is a test blog."
+ARCHIVES_PATH = "test-url-archives"
+ARCHIVES_PATH_ENABLED = True
 AUTHOR_PATH_ENABLED = True
 AUTHOR_PATH = "test-url-author"
 CATEGORY_PATH_ENABLED = True
@@ -31,3 +33,4 @@ CACHE_CATEGORIES = True
 RECENT_PUBLISHED_POSTS_COUNT = 3
 DATE_ARCHIVES_ENABLED = True
 POST_READ_MORE_TEXT = "Test read more..."
+RSS_PATH = "test-rss"

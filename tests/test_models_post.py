@@ -565,3 +565,6 @@ def test_get_cached_recent_published_posts(user, mock_timezone_now, monkeypatch)
         kwargs.get("timeout") or args[2]
     )  # timeout might be a kwarg or the third positional arg
     assert abs(actual_timeout - expected_timeout) < 5  # Allow a small margin of error
+
+    settings.set("CACHE_RECENT_PUBLISHED_POSTS", False)
+    assert settings.CACHE_RECENT_PUBLISHED_POSTS is False
