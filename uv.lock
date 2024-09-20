@@ -147,6 +147,7 @@ dependencies = [
 
 [package.optional-dependencies]
 test = [
+    { name = "coverage" },
     { name = "pytest" },
     { name = "pytest-django" },
 ]
@@ -160,6 +161,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "coverage", marker = "extra == 'test'", specifier = ">=7.6.1" },
     { name = "django" },
     { name = "markdown" },
     { name = "pygments" },

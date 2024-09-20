@@ -38,7 +38,11 @@ Repository = "https://github.com/stuartmaxwell/djpress"
 Issues = "https://github.com/stuartmaxwell/djpress/issues"
 
 [project.optional-dependencies]
-test = ["pytest>=8.3.3", "pytest-django>=4.9.0"]
+test = [
+    "pytest>=8.3.3",
+    "pytest-django>=4.9.0",
+    "coverage>=7.6.1",
+]
 
 [tool.ruff.lint]
 select = ["ALL"]
