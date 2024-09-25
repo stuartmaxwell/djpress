@@ -34,10 +34,7 @@ def test_category_save_slug_uniqueness():
     with pytest.raises(ValueError) as excinfo:
         category2.save()
 
-    assert (
-        str(excinfo.value)
-        == f"A category with the slug {category2.slug} already exists."
-    )
+    assert str(excinfo.value) == f"A category with the slug {category2.slug} already exists."
 
 
 @pytest.mark.django_db

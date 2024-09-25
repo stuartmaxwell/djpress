@@ -33,19 +33,13 @@ def test_regex_archives():
     assert settings.APPEND_SLASH is True
 
     # Test that the URL is correctly set
-    assert (
-        regex_archives()
-        == r"(?P<year>\d{4})(?:/(?P<month>\d{2})(?:/(?P<day>\d{2}))?)?/$"
-    )
+    assert regex_archives() == r"(?P<year>\d{4})(?:/(?P<month>\d{2})(?:/(?P<day>\d{2}))?)?/$"
 
     settings.set("APPEND_SLASH", False)
     assert settings.APPEND_SLASH is False
 
     # Test that the URL is correctly set
-    assert (
-        regex_archives()
-        == r"(?P<year>\d{4})(?:/(?P<month>\d{2})(?:/(?P<day>\d{2}))?)?$"
-    )
+    assert regex_archives() == r"(?P<year>\d{4})(?:/(?P<month>\d{2})(?:/(?P<day>\d{2}))?)?$"
 
     # Set back to default value
     settings.set("APPEND_SLASH", True)

@@ -43,10 +43,7 @@ def blog_title_link(link_class: str = "") -> str:
     """
     link_class_html = f' class="{link_class}"' if link_class else ""
 
-    output = (
-        f'<a href="{reverse("djpress:index")}"{link_class_html}>'
-        f'{settings.BLOG_TITLE}</a>'
-    )
+    output = f'<a href="{reverse("djpress:index")}"{link_class_html}>{settings.BLOG_TITLE}</a>'
 
     return mark_safe(output)
 
@@ -58,9 +55,7 @@ def get_pages() -> models.QuerySet[Post]:
     Returns:
         models.QuerySet[Post]: All pages.
     """
-    return (
-        Post.page_objects.get_published_pages().order_by("menu_order").order_by("title")
-    )
+    return Post.page_objects.get_published_pages().order_by("menu_order").order_by("title")
 
 
 @register.simple_tag
@@ -250,10 +245,7 @@ def post_title_link(context: Context, link_class: str = "") -> str:
 
         link_class_html = f' class="{link_class}"' if link_class else ""
 
-        output = (
-            f'<a href="{post_url}" title="{post.title}"{link_class_html}>'
-            f"{post.title}</a>"
-        )
+        output = f'<a href="{post_url}" title="{post.title}"{link_class_html}>{post.title}</a>'
 
         return mark_safe(output)
 
@@ -668,16 +660,10 @@ def pagination_links(
     else:
         next_output = ""
 
-    current_output = (
-        f'<span class="current">'
-        f"Page {page.number} of {page.paginator.num_pages}"
-        f"</span>"
-    )
+    current_output = f'<span class="current">Page {page.number} of {page.paginator.num_pages}</span>'
 
     return mark_safe(
-        f'<div class="pagination">'
-        f"{previous_output} {current_output} {next_output}"
-        "</div>",
+        f'<div class="pagination">{previous_output} {current_output} {next_output}</div>',
     )
 
 

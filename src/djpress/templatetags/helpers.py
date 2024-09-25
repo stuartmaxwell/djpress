@@ -87,10 +87,7 @@ def get_page_link(page: Post, link_class: str = "") -> str:
 
     link_class_html = f' class="{link_class}"' if link_class else ""
 
-    return (
-        f'<a href="{page_url}" title="View the {page.title} page"'
-        f"{link_class_html}>{page.title}</a>"
-    )
+    return f'<a href="{page_url}" title="View the {page.title} page"{link_class_html}>{page.title}</a>'
 
 
 def post_read_more_link(

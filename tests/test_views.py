@@ -228,9 +228,7 @@ def test_date_archives_month_no_posts(client, test_post1):
 
 @pytest.mark.django_db
 def test_date_archives_day(client, test_post1):
-    url = reverse(
-        "djpress:archives_posts", kwargs={"year": "2024", "month": "01", "day": "01"}
-    )
+    url = reverse("djpress:archives_posts", kwargs={"year": "2024", "month": "01", "day": "01"})
     response = client.get(url)
     assert response.status_code == 200
     assert "posts" in response.context
@@ -247,9 +245,7 @@ def test_date_archives_day_invalid_day(client):
 
 @pytest.mark.django_db
 def test_date_archives_day_no_posts(client, test_post1):
-    url = reverse(
-        "djpress:archives_posts", kwargs={"year": "2024", "month": "01", "day": "02"}
-    )
+    url = reverse("djpress:archives_posts", kwargs={"year": "2024", "month": "01", "day": "02"})
     response = client.get(url)
     assert response.status_code == 200
     assert not test_post1.title.encode() in response.content
