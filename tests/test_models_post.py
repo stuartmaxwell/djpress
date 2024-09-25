@@ -8,6 +8,7 @@ from django.core.cache import cache
 from unittest.mock import patch
 
 from djpress.models.post import PUBLISHED_POSTS_CACHE_KEY
+from djpress.exceptions import SlugNotFoundError
 
 
 @pytest.fixture
@@ -94,9 +95,7 @@ def test_post_methods(test_post1, test_post2, category1, category2):
     test_post1.categories.add(category1)
 
     assert Post.post_objects.all().count() == 2
-    assert (
-        Post.post_objects.get_published_post_by_slug("test-post1").title == "Test Post1"
-    )
+    assert Post.post_objects.get_published_post_by_slug("test-post1").title == "Test Post1"
     assert Post.post_objects.get_published_posts_by_category(category1).count() == 1
     assert Post.post_objects.get_published_posts_by_category(category2).count() == 0
 
@@ -319,7 +318,7 @@ def test_post_permalink(user):
         slug="test-post",
         content="This is a test post.",
         author=user,
-        date=timezone.datetime(2024, 1, 1),
+        date=timezone.make_aware(timezone.datetime(2024, 1, 1)),
         status="published",
         post_type="post",
     )
@@ -451,26 +450,39 @@ def test_get_published_post_by_path(user):
 
     # Confirm settings are set according to settings_testing.py
     assert settings.POST_PREFIX == "test-posts"
+    assert settings.POST_PERMALINK == ""
 
     # Create a post
-    post = Post.objects.create(title="Test Post", status="published", author=user)
+    post = Post.objects.create(
+        title="Test Post",
+        status="published",
+        author=user,
+        date=timezone.make_aware(timezone.datetime(2024, 1, 1)),
+    )
 
-    # Test case 1: POST_PREFIX is set and path starts with POST_PREFIX
+    # Test case 1: POST_PREFIX is set and no POST_PERMALINK
     post_path = f"test-posts/{post.slug}"
     assert post == Post.post_objects.get_published_post_by_path(post_path)
 
     # Test case 2: POST_PREFIX is set but path does not start with POST_PREFIX
     post_path = f"/incorrect-path/{post.slug}"
-    # Should raise a ValueError
-    with pytest.raises(ValueError):
+    # Should raise a SlugNotFoundError since we can't parse the path to get the slug
+    with pytest.raises(SlugNotFoundError):
         Post.post_objects.get_published_post_by_path(post_path)
 
     # Test case 3: POST_PREFIX is not set but path starts with POST_PREFIX
     settings.set("POST_PREFIX", "")
     post_path = f"test-posts/non-existent-slug"
-    # Should raise a ValueError
+    # Should raise a ValueError since we can parse the path but the slug doesn't exist
     with pytest.raises(ValueError):
         Post.post_objects.get_published_post_by_path(post_path)
+
+    # # Test case 4: POST_PREFIX is set and POST_PERMALINK is set
+    # settings.set("POST_PERMALINK", "%Y/%m/%d")
+    # assert settings.POST_PREFIX == ""
+    # assert settings.POST_PERMALINK == "%Y/%m/%d"
+    # post_path = f"2024/01/01/{post.slug}"
+    # # assert post == Post.post_objects.get_published_post_by_path(post_path)
 
     # Set back to default
     settings.set("POST_PREFIX", "test-posts")
@@ -561,9 +573,7 @@ def test_get_cached_recent_published_posts(user, mock_timezone_now, monkeypatch)
 
     # Check if the timeout is correct (should be close to 2 hours)
     expected_timeout = 7200  # 2 hours in seconds
-    actual_timeout = (
-        kwargs.get("timeout") or args[2]
-    )  # timeout might be a kwarg or the third positional arg
+    actual_timeout = kwargs.get("timeout") or args[2]  # timeout might be a kwarg or the third positional arg
     assert abs(actual_timeout - expected_timeout) < 5  # Allow a small margin of error
 
     settings.set("CACHE_RECENT_PUBLISHED_POSTS", False)

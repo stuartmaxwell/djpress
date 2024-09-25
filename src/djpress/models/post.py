@@ -11,7 +11,7 @@ from django.utils.text import slugify
 
 from djpress.conf import settings
 from djpress.models import Category
-from djpress.utils import render_markdown
+from djpress.utils import extract_parts_from_path, render_markdown
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +65,8 @@ class PagesManager(models.Manager):
         """Return a single published post from a path.
 
         For now, we'll only allow a top level path.
+
+        This will raise a ValueError if the path is invalid.
         """
         # Check for a single item in the path
         if path.count("/") > 0:
@@ -127,9 +129,7 @@ class PostsManager(models.Manager):
 
             timeout = self._get_cache_timeout(queryset)
 
-            queryset = queryset.filter(date__lte=timezone.now())[
-                : settings.RECENT_PUBLISHED_POSTS_COUNT
-            ]
+            queryset = queryset.filter(date__lte=timezone.now())[: settings.RECENT_PUBLISHED_POSTS_COUNT]
             cache.set(
                 PUBLISHED_POSTS_CACHE_KEY,
                 queryset,
@@ -189,9 +189,16 @@ class PostsManager(models.Manager):
     ) -> "Post":
         """Return a single published post from a path.
 
-        This is a complex piece of logic...
+        This is a complex piece of logic that needs to extract the slug from the following path structures:
+
+        `/{POST_PREFIX}/{POST_PERMALINK}/{slug}`
+
+        - POST_PREFIX is optional and could be an empty string or a custom string.
+        - POST_PERMALINK is optional and could be an empty string or a custom date format string.
+        - slug is everything after the slash
 
         Here are all the different valid paths that we need to check:
+
         - /blog/2021/01/01/post-slug
         - /blog/2021/01/post-slug
         - /blog/2021/post-slug
@@ -210,22 +217,17 @@ class PostsManager(models.Manager):
 
         First, we need to know the following:
         - Is there a POST_PREFIX defined?
+        - Is there a POST_PERMALINK defined?
         - Are DATE_ARCHIVES enabled?
-        - If DATE_ARCHIVES are enabled, what is the POST_PERMALINK set to?
 
         I don't think I can avoid regex matching here...
 
         For now, we'll just look at the POST_PREFIX.
         """
-        if settings.POST_PREFIX and path.startswith(settings.POST_PREFIX):
-            slug = path.split(settings.POST_PREFIX + "/")[1]
-            return self.get_published_post_by_slug(slug)
+        # This will raise a SlugNotFoundError exception if the path is invalid
+        path_parts = extract_parts_from_path(path)
 
-        if settings.POST_PREFIX and not path.startswith(settings.POST_PREFIX):
-            msg = "Invalid path"
-            raise ValueError(msg)
-
-        return self.get_published_post_by_slug(path)
+        return self.get_published_post_by_slug(path_parts.slug)
 
     def get_published_posts_by_category(
         self: "PostsManager",
@@ -236,11 +238,7 @@ class PostsManager(models.Manager):
         Must have a date less than or equal to the current date/time for a specific
         category, ordered by date in descending order.
         """
-        return (
-            self.get_published_posts()
-            .filter(categories=category)
-            .prefetch_related("categories", "author")
-        )
+        return self.get_published_posts().filter(categories=category).prefetch_related("categories", "author")
 
     def get_published_posts_by_author(
         self: "PostsManager",
@@ -251,11 +249,7 @@ class PostsManager(models.Manager):
         Must have a date less than or equal to the current date/time for a specific
         author, ordered by date in descending order.
         """
-        return (
-            self.get_published_posts()
-            .filter(author=author)
-            .prefetch_related("categories", "author")
-        )
+        return self.get_published_posts().filter(author=author).prefetch_related("categories", "author")
 
 
 class Post(models.Model):
@@ -312,10 +306,7 @@ class Post(models.Model):
     def truncated_content_markdown(self: "Post") -> str:
         """Return the truncated content as HTML converted from Markdown."""
         read_more_index = self.content.find(settings.TRUNCATE_TAG)
-        if read_more_index != -1:
-            truncated_content = self.content[:read_more_index]
-        else:
-            truncated_content = self.content
+        truncated_content = self.content[:read_more_index] if read_more_index != -1 else self.content
         return render_markdown(truncated_content)
 
     @property
