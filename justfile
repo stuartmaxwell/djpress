@@ -5,47 +5,66 @@ default:
 # Set the Python version
 python_version := "3.12"
 
+# Set the uv run command
+uv := "uv run --python 3.12 --extra test"
+
+#Set the uv command to run a tool
+uv-tool := "uv tool run"
+
 # Run the Django development server
 run:
     @just sync
-    uv run --python {{python_version}} example/manage.py runserver
+    {{uv}} example/manage.py runserver
 
 # Make migrations
 makemigrations:
-    uv run --python {{python_version}} example/manage.py makemigrations
+    {{uv}} example/manage.py makemigrations
 
 # Apply migrations
 migrate:
-    uv run --python {{python_version}} example/manage.py migrate
+    {{uv}} example/manage.py migrate
 
 # Create a superuser
 createsuperuser:
-    uv run --python {{python_version}} example/manage.py createsuperuser
+    {{uv}} example/manage.py createsuperuser
 
 # Collect static files
 collectstatic:
-    uv run --python {{python_version}} example/manage.py collectstatic
+    {{uv}} example/manage.py collectstatic
 
 # Run Django shell
 shell:
-    uv run --python {{python_version}} example/manage.py shell
+    {{uv}} example/manage.py shell
 
 # Check for any problems in your project
 check:
-    uv run --python {{python_version}} example/manage.py check
+    {{uv}} example/manage.py check
 
 # Run pytest
 test:
-    uv run --python {{python_version}} pytest
+    {{uv}} pytest
 
-# Run tox
-tox:
-    uv run --python {{python_version}} tox
+# Run Ruff linking
+lint:
+    {{uv-tool}} ruff check
+
+# Run Ruff formatting
+format:
+    {{uv-tool}} ruff format
+
+# Run nox
+nox:
+    {{uv-tool}} nox --session test
 
 # Run coverage
 cov:
-    uv run --python {{python_version}} coverage run -m pytest
-    uv run --python {{python_version}} coverage html
+    {{uv}} coverage run -m pytest
+    {{uv}} coverage report -m
+
+# Run coverage
+cov-html:
+    {{uv}} coverage run -m pytest
+    {{uv}} coverage html
 
 # Sync the package
 sync:
@@ -63,13 +82,13 @@ build:
 publish:
       rm -rf ./dist/*
       uv build
-      uv tool run twine check dist/*
-      uv tool run twine upload dist/*
+      {{uv-tool}} twine check dist/*
+      {{uv-tool}} twine upload dist/*
 
 # Upgrade pre-commit hooks
-pc-upgrade:
-    uv tool run pre-commit autoupdate
+pc-up:
+    {{uv-tool}} pre-commit autoupdate
 
 # Run pre-commit hooks
 pc-run:
-    uv tool run pre-commit run --all-files
+    {{uv-tool}} pre-commit run --all-files

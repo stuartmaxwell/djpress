@@ -13,6 +13,7 @@ from djpress.templatetags.helpers import (
     get_page_link,
 )
 from djpress.utils import get_author_display_name
+from djpress.exceptions import PageNotFoundError
 
 
 @pytest.fixture
@@ -395,9 +396,7 @@ def test_post_category_link_with_category_path_with_two_link_classes(category1):
 
     expected_output = f'<a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category" class="class1 class2">{category1.title}</a>'
 
-    assert (
-        djpress_tags.post_category_link(category1, "class1 class2") == expected_output
-    )
+    assert djpress_tags.post_category_link(category1, "class1 class2") == expected_output
 
 
 def test_post_date_no_post():
@@ -481,9 +480,9 @@ def test_post_date_link_with_date_archives_enabled(test_post1):
     post_time = post_date.strftime("%-I:%M %p")
 
     expected_output = (
-        f'<a href="/archives/{post_year}/{post_month}/" title="View all posts in {post_month_name} {post_year}">{post_month_name}</a> '
-        f'<a href="/archives/{post_year}/{post_month}/{post_day}/" title="View all posts on {post_day_name} {post_month_name} {post_year}">{post_day_name}</a>, '
-        f'<a href="/archives/{post_year}/" title="View all posts in {post_year}">{post_year}</a>, '
+        f'<a href="/test-url-archives/{post_year}/{post_month}/" title="View all posts in {post_month_name} {post_year}">{post_month_name}</a> '
+        f'<a href="/test-url-archives/{post_year}/{post_month}/{post_day}/" title="View all posts on {post_day_name} {post_month_name} {post_year}">{post_day_name}</a>, '
+        f'<a href="/test-url-archives/{post_year}/" title="View all posts in {post_year}">{post_year}</a>, '
         f"{post_time}."
     )
 
@@ -508,9 +507,9 @@ def test_post_date_link_with_date_archives_enabled_with_one_link_class(
     post_time = post_date.strftime("%-I:%M %p")
 
     expected_output = (
-        f'<a href="/archives/{post_year}/{post_month}/" title="View all posts in {post_month_name} {post_year}" class="class1">{post_month_name}</a> '
-        f'<a href="/archives/{post_year}/{post_month}/{post_day}/" title="View all posts on {post_day_name} {post_month_name} {post_year}" class="class1">{post_day_name}</a>, '
-        f'<a href="/archives/{post_year}/" title="View all posts in {post_year}" class="class1">{post_year}</a>, '
+        f'<a href="/test-url-archives/{post_year}/{post_month}/" title="View all posts in {post_month_name} {post_year}" class="class1">{post_month_name}</a> '
+        f'<a href="/test-url-archives/{post_year}/{post_month}/{post_day}/" title="View all posts on {post_day_name} {post_month_name} {post_year}" class="class1">{post_day_name}</a>, '
+        f'<a href="/test-url-archives/{post_year}/" title="View all posts in {post_year}" class="class1">{post_year}</a>, '
         f"{post_time}."
     )
 
@@ -535,9 +534,9 @@ def test_post_date_link_with_date_archives_enabled_with_two_link_classes(
     post_time = post_date.strftime("%-I:%M %p")
 
     expected_output = (
-        f'<a href="/archives/{post_year}/{post_month}/" title="View all posts in {post_month_name} {post_year}" class="class1 class2">{post_month_name}</a> '
-        f'<a href="/archives/{post_year}/{post_month}/{post_day}/" title="View all posts on {post_day_name} {post_month_name} {post_year}" class="class1 class2">{post_day_name}</a>, '
-        f'<a href="/archives/{post_year}/" title="View all posts in {post_year}" class="class1 class2">{post_year}</a>, '
+        f'<a href="/test-url-archives/{post_year}/{post_month}/" title="View all posts in {post_month_name} {post_year}" class="class1 class2">{post_month_name}</a> '
+        f'<a href="/test-url-archives/{post_year}/{post_month}/{post_day}/" title="View all posts on {post_day_name} {post_month_name} {post_year}" class="class1 class2">{post_day_name}</a>, '
+        f'<a href="/test-url-archives/{post_year}/" title="View all posts in {post_year}" class="class1 class2">{post_year}</a>, '
         f"{post_time}."
     )
 
@@ -568,10 +567,7 @@ def test_post_content_with_posts(test_long_post1):
     # Context should have both a posts and a post to simulate the for post in posts loop
     context = Context({"posts": [test_long_post1], "post": test_long_post1})
 
-    expected_output = (
-        f"{test_long_post1.truncated_content_markdown}"
-        f"{post_read_more_link(test_long_post1)}"
-    )
+    expected_output = f"{test_long_post1.truncated_content_markdown}" f"{post_read_more_link(test_long_post1)}"
 
     assert djpress_tags.post_content(context) == expected_output
 
@@ -617,9 +613,7 @@ def test_category_title(category1):
     assert djpress_tags.category_title(context) == expected_output
 
     # Test case 2 - with options
-    expected_output = (
-        f'<h1 class="title">View posts in the {category1.title} category</h1>'
-    )
+    expected_output = f'<h1 class="title">View posts in the {category1.title} category</h1>'
     assert (
         djpress_tags.category_title(
             context,
@@ -696,10 +690,7 @@ def test_post_categories_ul_class1(test_post1):
 
     expected_output = f'<ul><li><a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category" class="class1">General</a></li></ul>'
 
-    assert (
-        djpress_tags.post_categories_link(context, outer="ul", link_class="class1")
-        == expected_output
-    )
+    assert djpress_tags.post_categories_link(context, outer="ul", link_class="class1") == expected_output
 
 
 @pytest.mark.django_db
@@ -711,12 +702,7 @@ def test_post_categories_ul_class1_class2(test_post1):
 
     expected_output = f'<ul><li><a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category" class="class1 class2">General</a></li></ul>'
 
-    assert (
-        djpress_tags.post_categories_link(
-            context, outer="ul", link_class="class1 class2"
-        )
-        == expected_output
-    )
+    assert djpress_tags.post_categories_link(context, outer="ul", link_class="class1 class2") == expected_output
 
 
 @pytest.mark.django_db
@@ -740,10 +726,7 @@ def test_post_categories_div_class1(test_post1):
 
     expected_output = f'<div><a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category" class="class1">General</a></div>'
 
-    assert (
-        djpress_tags.post_categories_link(context, outer="div", link_class="class1")
-        == expected_output
-    )
+    assert djpress_tags.post_categories_link(context, outer="div", link_class="class1") == expected_output
 
 
 @pytest.mark.django_db
@@ -755,12 +738,7 @@ def test_post_categories_div_class1_class2(test_post1):
 
     expected_output = f'<div><a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category" class="class1 class2">General</a></div>'
 
-    assert (
-        djpress_tags.post_categories_link(
-            context, outer="div", link_class="class1 class2"
-        )
-        == expected_output
-    )
+    assert djpress_tags.post_categories_link(context, outer="div", link_class="class1 class2") == expected_output
 
 
 @pytest.mark.django_db
@@ -784,10 +762,7 @@ def test_post_categories_span_class1(test_post1):
 
     expected_output = f'<span><a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category" class="class1">General</a></span>'
 
-    assert (
-        djpress_tags.post_categories_link(context, outer="span", link_class="class1")
-        == expected_output
-    )
+    assert djpress_tags.post_categories_link(context, outer="span", link_class="class1") == expected_output
 
 
 @pytest.mark.django_db
@@ -799,12 +774,7 @@ def test_post_categories_span_class1_class2(test_post1):
 
     expected_output = f'<span><a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category" class="class1 class2">General</a></span>'
 
-    assert (
-        djpress_tags.post_categories_link(
-            context, outer="span", link_class="class1 class2"
-        )
-        == expected_output
-    )
+    assert djpress_tags.post_categories_link(context, outer="span", link_class="class1 class2") == expected_output
 
 
 @pytest.mark.django_db
@@ -837,13 +807,10 @@ def test_blog_pages(test_page1, test_page2):
     assert test_page2 in pages
 
     expected_output_ul = (
-        f"<ul><li>{get_page_link(page=test_page1)}</li>"
-        f"<li>{get_page_link(page=test_page2)}</li></ul>"
+        f"<ul><li>{get_page_link(page=test_page1)}</li>" f"<li>{get_page_link(page=test_page2)}</li></ul>"
     )
 
-    expected_output_div = (
-        f"<div>{get_page_link(page=test_page1)}, {get_page_link(page=test_page2)}</div>"
-    )
+    expected_output_div = f"<div>{get_page_link(page=test_page1)}, {get_page_link(page=test_page2)}</div>"
 
     expected_output_span = f"<span>{get_page_link(page=test_page1)}, {get_page_link(page=test_page2)}</span>"
 
@@ -860,9 +827,7 @@ def test_blog_page_title(test_post1, test_page1):
 
     # Test case 2 - author page
     context = Context({"author": test_post1.author})
-    assert get_author_display_name(test_post1.author) == djpress_tags.blog_page_title(
-        context
-    )
+    assert get_author_display_name(test_post1.author) == djpress_tags.blog_page_title(context)
 
     # Test case 3 - single post
     context = Context({"post": test_post1})
@@ -1023,11 +988,7 @@ def test_pagination_links_one_page(test_post1, test_post2, test_long_post1):
     context = Context({"posts": page})
 
     previous_output = ""
-    current_output = (
-        f'<span class="current">'
-        f"Page {page.number} of {page.paginator.num_pages}"
-        f"</span>"
-    )
+    current_output = f'<span class="current">' f"Page {page.number} of {page.paginator.num_pages}" f"</span>"
     next_output = ""
 
     expected_output = f'<div class="pagination">{previous_output} {current_output} {next_output}</div>'
@@ -1055,11 +1016,7 @@ def test_pagination_links_two_pages(test_post1, test_post2, test_long_post1):
     context = Context({"posts": page})
 
     previous_output = ""
-    current_output = (
-        f'<span class="current">'
-        f"Page {page.number} of {page.paginator.num_pages}"
-        f"</span>"
-    )
+    current_output = f'<span class="current">' f"Page {page.number} of {page.paginator.num_pages}" f"</span>"
     next_output = (
         f'<span class="next">'
         f'<a href="?page={page.next_page_number()}">next</a> '
@@ -1077,11 +1034,7 @@ def test_pagination_links_two_pages(test_post1, test_post2, test_long_post1):
     context = Context({"posts": page})
 
     previous_output = ""
-    current_output = (
-        f'<span class="current">'
-        f"Page {page.number} of {page.paginator.num_pages}"
-        f"</span>"
-    )
+    current_output = f'<span class="current">' f"Page {page.number} of {page.paginator.num_pages}" f"</span>"
     next_output = (
         f'<span class="next">'
         f'<a href="?page={page.next_page_number()}">next</a> '
@@ -1104,11 +1057,7 @@ def test_pagination_links_two_pages(test_post1, test_post2, test_long_post1):
         f'<a href="?page={page.previous_page_number()}">previous</a>'
         f"</span>"
     )
-    current_output = (
-        f'<span class="current">'
-        f"Page {page.number} of {page.paginator.num_pages}"
-        f"</span>"
-    )
+    current_output = f'<span class="current">' f"Page {page.number} of {page.paginator.num_pages}" f"</span>"
     next_output = ""
 
     expected_output = f'<div class="pagination">{previous_output} {current_output} {next_output}</div>'
@@ -1140,11 +1089,7 @@ def test_pagination_links_three_pages(test_post1, test_post2, test_long_post1):
     context = Context({"posts": page})
 
     previous_output = ""
-    current_output = (
-        f'<span class="current">'
-        f"Page {page.number} of {page.paginator.num_pages}"
-        f"</span>"
-    )
+    current_output = f'<span class="current">' f"Page {page.number} of {page.paginator.num_pages}" f"</span>"
     next_output = (
         f'<span class="next">'
         f'<a href="?page={page.next_page_number()}">next</a> '
@@ -1162,11 +1107,7 @@ def test_pagination_links_three_pages(test_post1, test_post2, test_long_post1):
     context = Context({"posts": page})
 
     previous_output = ""
-    current_output = (
-        f'<span class="current">'
-        f"Page {page.number} of {page.paginator.num_pages}"
-        f"</span>"
-    )
+    current_output = f'<span class="current">' f"Page {page.number} of {page.paginator.num_pages}" f"</span>"
     next_output = (
         f'<span class="next">'
         f'<a href="?page={page.next_page_number()}">next</a> '
@@ -1189,11 +1130,7 @@ def test_pagination_links_three_pages(test_post1, test_post2, test_long_post1):
         f'<a href="?page={page.previous_page_number()}">previous</a>'
         f"</span>"
     )
-    current_output = (
-        f'<span class="current">'
-        f"Page {page.number} of {page.paginator.num_pages}"
-        f"</span>"
-    )
+    current_output = f'<span class="current">' f"Page {page.number} of {page.paginator.num_pages}" f"</span>"
     next_output = (
         f'<span class="next">'
         f'<a href="?page={page.next_page_number()}">next</a> '
@@ -1216,11 +1153,7 @@ def test_pagination_links_three_pages(test_post1, test_post2, test_long_post1):
         f'<a href="?page={page.previous_page_number()}">previous</a>'
         f"</span>"
     )
-    current_output = (
-        f'<span class="current">'
-        f"Page {page.number} of {page.paginator.num_pages}"
-        f"</span>"
-    )
+    current_output = f'<span class="current">' f"Page {page.number} of {page.paginator.num_pages}" f"</span>"
     next_output = ""
 
     expected_output = f'<div class="pagination">{previous_output} {current_output} {next_output}</div>'

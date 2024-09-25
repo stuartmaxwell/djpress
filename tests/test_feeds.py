@@ -13,12 +13,8 @@ def user():
 
 @pytest.mark.django_db
 def test_latest_posts_feed(client, user):
-    Post.post_objects.create(
-        title="Post 1", content="Content of post 1.", author=user, status="published"
-    )
-    Post.post_objects.create(
-        title="Post 2", content="Content of post 2.", author=user, status="published"
-    )
+    Post.post_objects.create(title="Post 1", content="Content of post 1.", author=user, status="published")
+    Post.post_objects.create(title="Post 2", content="Content of post 2.", author=user, status="published")
 
     url = reverse("djpress:rss_feed")
     response = client.get(url)
@@ -65,6 +61,4 @@ def test_truncated_posts_feed(client, user):
     assert "<item>" in feed
     assert "<title>Post 1</title>" in feed
     assert "Truncated content" not in feed
-    assert (
-        f'&lt;a href="/{post_prefix}/post-1/"&gt;Read more&lt;/a&gt;&lt;/p&gt;' in feed
-    )
+    assert f'&lt;a href="/{post_prefix}/post-1/"&gt;Read more&lt;/a&gt;&lt;/p&gt;' in feed

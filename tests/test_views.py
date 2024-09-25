@@ -182,7 +182,7 @@ def test_date_archives_year(client, test_post1):
 
 @pytest.mark.django_db
 def test_date_archives_year_invalid_year(client):
-    response = client.get("/archives/0000/")
+    response = client.get("/test-url-archives/0000/")
     assert response.status_code == 400
 
 
@@ -209,9 +209,9 @@ def test_date_archives_month(client, test_post1):
 
 @pytest.mark.django_db
 def test_date_archives_month_invalid_month(client):
-    response1 = client.get("/archives/2024/00/")
+    response1 = client.get("/test-url-archives/2024/00/")
     assert response1.status_code == 400
-    response2 = client.get("/archives/2024/13/")
+    response2 = client.get("/test-url-archives/2024/13/")
     assert response2.status_code == 400
 
 
@@ -228,9 +228,7 @@ def test_date_archives_month_no_posts(client, test_post1):
 
 @pytest.mark.django_db
 def test_date_archives_day(client, test_post1):
-    url = reverse(
-        "djpress:archives_posts", kwargs={"year": "2024", "month": "01", "day": "01"}
-    )
+    url = reverse("djpress:archives_posts", kwargs={"year": "2024", "month": "01", "day": "01"})
     response = client.get(url)
     assert response.status_code == 200
     assert "posts" in response.context
@@ -239,17 +237,15 @@ def test_date_archives_day(client, test_post1):
 
 @pytest.mark.django_db
 def test_date_archives_day_invalid_day(client):
-    response1 = client.get("/archives/2024/01/00/")
+    response1 = client.get("/test-url-archives/2024/01/00/")
     assert response1.status_code == 400
-    response2 = client.get("/archives/2024/01/32/")
+    response2 = client.get("/test-url-archives/2024/01/32/")
     assert response2.status_code == 400
 
 
 @pytest.mark.django_db
 def test_date_archives_day_no_posts(client, test_post1):
-    url = reverse(
-        "djpress:archives_posts", kwargs={"year": "2024", "month": "01", "day": "02"}
-    )
+    url = reverse("djpress:archives_posts", kwargs={"year": "2024", "month": "01", "day": "02"})
     response = client.get(url)
     assert response.status_code == 200
     assert not test_post1.title.encode() in response.content

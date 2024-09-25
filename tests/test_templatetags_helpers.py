@@ -81,12 +81,7 @@ def test_categories_html(category1, category2, category3):
         f'<li><a href="/{settings.CATEGORY_PATH}/{category3.slug}/" title="View all posts in the {category3.title} category" class="{link_class}">{category3.title}</a></li>'
         "</ul>"
     )
-    assert (
-        categories_html(
-            categories, outer=outer, outer_class=outer_class, link_class=link_class
-        )
-        == expected_output
-    )
+    assert categories_html(categories, outer=outer, outer_class=outer_class, link_class=link_class) == expected_output
 
     # Test case 2
     outer = "ul"
@@ -99,12 +94,7 @@ def test_categories_html(category1, category2, category3):
         f'<li><a href="/{settings.CATEGORY_PATH}/{category3.slug}/" title="View all posts in the {category3.title} category">{category3.title}</a></li>'
         "</ul>"
     )
-    assert (
-        categories_html(
-            categories, outer=outer, outer_class=outer_class, link_class=link_class
-        )
-        == expected_output
-    )
+    assert categories_html(categories, outer=outer, outer_class=outer_class, link_class=link_class) == expected_output
 
     # Test case 3
     outer = "div"
@@ -117,12 +107,7 @@ def test_categories_html(category1, category2, category3):
         f'<a href="/{settings.CATEGORY_PATH}/{category3.slug}/" title="View all posts in the {category3.title} category" class="{link_class}">{category3.title}</a>'
         "</div>"
     )
-    assert (
-        categories_html(
-            categories, outer=outer, outer_class=outer_class, link_class=link_class
-        )
-        == expected_output
-    )
+    assert categories_html(categories, outer=outer, outer_class=outer_class, link_class=link_class) == expected_output
 
     # Test case 4
     outer = "div"
@@ -135,12 +120,7 @@ def test_categories_html(category1, category2, category3):
         f'<a href="/{settings.CATEGORY_PATH}/{category3.slug}/" title="View all posts in the {category3.title} category">{category3.title}</a>'
         "</div>"
     )
-    assert (
-        categories_html(
-            categories, outer=outer, outer_class=outer_class, link_class=link_class
-        )
-        == expected_output
-    )
+    assert categories_html(categories, outer=outer, outer_class=outer_class, link_class=link_class) == expected_output
 
     # Test case 5
     outer = "span"
@@ -153,12 +133,7 @@ def test_categories_html(category1, category2, category3):
         f'<a href="/{settings.CATEGORY_PATH}/{category3.slug}/" title="View all posts in the {category3.title} category" class="{link_class}">{category3.title}</a>'
         "</span>"
     )
-    assert (
-        categories_html(
-            categories, outer=outer, outer_class=outer_class, link_class=link_class
-        )
-        == expected_output
-    )
+    assert categories_html(categories, outer=outer, outer_class=outer_class, link_class=link_class) == expected_output
 
     # Test case 6
     outer = "span"
@@ -171,12 +146,7 @@ def test_categories_html(category1, category2, category3):
         f'<a href="/{settings.CATEGORY_PATH}/{category3.slug}/" title="View all posts in the {category3.title} category">{category3.title}</a>'
         "</span>"
     )
-    assert (
-        categories_html(
-            categories, outer=outer, outer_class=outer_class, link_class=link_class
-        )
-        == expected_output
-    )
+    assert categories_html(categories, outer=outer, outer_class=outer_class, link_class=link_class) == expected_output
 
 
 @pytest.mark.django_db
@@ -208,5 +178,7 @@ def test_post_read_more_link(test_post):
     # Test case 2 - use all options
     link_class = "read-more"
     read_more_text = "Continue reading"
-    expected_output = f'<p><a href="/{settings.POST_PREFIX}/{test_post.slug}/" class="{link_class}">{read_more_text}</a></p>'
+    expected_output = (
+        f'<p><a href="/{settings.POST_PREFIX}/{test_post.slug}/" class="{link_class}">{read_more_text}</a></p>'
+    )
     assert post_read_more_link(test_post, link_class, read_more_text) == expected_output

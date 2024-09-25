@@ -12,6 +12,7 @@ from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBadReque
 from django.shortcuts import render
 
 from djpress.conf import settings
+from djpress.exceptions import PageNotFoundError, PostNotFoundError, SlugNotFoundError
 from djpress.models import Category, Post
 from djpress.utils import get_template_name, validate_date
 
@@ -222,11 +223,15 @@ def post_detail(request: HttpRequest, path: str) -> HttpResponse:
         context: dict = {"post": page}
         # If the page is found, use the page template
         template_names.insert(0, "djpress/page.html")
-    except ValueError:
+    except (PageNotFoundError, ValueError):
+        # A PageNotFoundError means we were able to parse the path, but the page was not found
+        # A ValueError means we were not able to parse the path
+        # For either case, try to get a post
         try:
             post = Post.post_objects.get_published_post_by_path(path)
             context: dict = {"post": post}
-        except ValueError as exc:
+        except (PostNotFoundError, SlugNotFoundError) as exc:
+            # A SlugNotFoundError means we were not able to parse the path
             msg = "Post not found"
             raise Http404(msg) from exc
 
