@@ -9,6 +9,7 @@ from django.urls import reverse
 from django.utils.safestring import mark_safe
 
 from djpress.conf import settings
+from djpress.exceptions import PageNotFoundError
 from djpress.models import Category, Post
 from djpress.templatetags.helpers import (
     categories_html,
@@ -687,7 +688,7 @@ def page_link(
     """
     try:
         page: Post | None = Post.page_objects.get_published_page_by_slug(page_slug)
-    except ValueError:
+    except PageNotFoundError:
         return ""
 
     output = get_page_link(page, link_class=link_class)

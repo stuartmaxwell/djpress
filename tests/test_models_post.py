@@ -8,7 +8,7 @@ from django.core.cache import cache
 from unittest.mock import patch
 
 from djpress.models.post import PUBLISHED_POSTS_CACHE_KEY
-from djpress.exceptions import SlugNotFoundError
+from djpress.exceptions import SlugNotFoundError, PostNotFoundError, PageNotFoundError
 
 
 @pytest.fixture
@@ -160,7 +160,7 @@ def test_get_published_post_by_slug_with_future_date(user):
         post_type="post",
         date=timezone.now() + timezone.timedelta(days=1),
     )
-    with pytest.raises(ValueError):
+    with pytest.raises(PostNotFoundError):
         Post.post_objects.get_published_post_by_slug("future-post")
 
 
@@ -473,8 +473,8 @@ def test_get_published_post_by_path(user):
     # Test case 3: POST_PREFIX is not set but path starts with POST_PREFIX
     settings.set("POST_PREFIX", "")
     post_path = f"test-posts/non-existent-slug"
-    # Should raise a ValueError since we can parse the path but the slug doesn't exist
-    with pytest.raises(ValueError):
+    # Should raise a PostNotFoundError since we can parse the path but the post doesn't exist
+    with pytest.raises(PostNotFoundError):
         Post.post_objects.get_published_post_by_path(post_path)
 
     # # Test case 4: POST_PREFIX is set and POST_PERMALINK is set
@@ -493,7 +493,7 @@ def test_get_published_page_by_slug(test_page1):
     """Test that the get_published_page_by_slug method returns the correct page."""
     assert test_page1 == Post.page_objects.get_published_page_by_slug("test-page1")
 
-    with pytest.raises(ValueError):
+    with pytest.raises(PageNotFoundError):
         Post.page_objects.get_published_page_by_slug("non-existent-page")
 
 
@@ -518,7 +518,7 @@ def test_get_published_page_by_path(test_page1: Post):
 
     # Test case 3: pages doesn't exist
     page_path = "non-existent-page"
-    with pytest.raises(expected_exception=ValueError):
+    with pytest.raises(expected_exception=PageNotFoundError):
         Post.page_objects.get_published_page_by_path(page_path)
 
 

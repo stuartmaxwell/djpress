@@ -13,6 +13,7 @@ from djpress.templatetags.helpers import (
     get_page_link,
 )
 from djpress.utils import get_author_display_name
+from djpress.exceptions import PageNotFoundError
 
 
 @pytest.fixture

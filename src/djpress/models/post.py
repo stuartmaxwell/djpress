@@ -10,6 +10,7 @@ from django.utils import timezone
 from django.utils.text import slugify
 
 from djpress.conf import settings
+from djpress.exceptions import PageNotFoundError, PostNotFoundError
 from djpress.models import Category
 from djpress.utils import extract_parts_from_path, render_markdown
 
@@ -54,7 +55,7 @@ class PagesManager(models.Manager):
             page: Post = self.get_published_pages().get(slug=slug)
         except Post.DoesNotExist as exc:
             msg = "Page not found"
-            raise ValueError(msg) from exc
+            raise PageNotFoundError(msg) from exc
 
         return page
 
@@ -179,7 +180,7 @@ class PostsManager(models.Manager):
                 post = self.get_published_posts().get(slug=slug)
             except Post.DoesNotExist as exc:
                 msg = "Post not found"
-                raise ValueError(msg) from exc
+                raise PostNotFoundError(msg) from exc
 
         return post
 
@@ -189,42 +190,18 @@ class PostsManager(models.Manager):
     ) -> "Post":
         """Return a single published post from a path.
 
-        This is a complex piece of logic that needs to extract the slug from the following path structures:
+        This takes a path and extracts the parts of the path using the `djpress.utils.extract_parts_from_path` function.
 
-        `/{POST_PREFIX}/{POST_PERMALINK}/{slug}`
+        Args:
+            path (str): The path of the post.
 
-        - POST_PREFIX is optional and could be an empty string or a custom string.
-        - POST_PERMALINK is optional and could be an empty string or a custom date format string.
-        - slug is everything after the slash
+        Returns:
+            Post: The published post.
 
-        Here are all the different valid paths that we need to check:
-
-        - /blog/2021/01/01/post-slug
-        - /blog/2021/01/post-slug
-        - /blog/2021/post-slug
-        - /blog/post-slug
-        - /2021/01/01/post-slug
-        - /2021/01/post-slug
-        - /2021/post-slug
-        - /post-slug
-
-        But we could be getting any invalid path too, e.g.
-        - /blog/2021/01/01/post-slug/extra
-        - /blog/2021/01/post-slug/extra
-        - etc.
-
-        This is what we need to do...
-
-        First, we need to know the following:
-        - Is there a POST_PREFIX defined?
-        - Is there a POST_PERMALINK defined?
-        - Are DATE_ARCHIVES enabled?
-
-        I don't think I can avoid regex matching here...
-
-        For now, we'll just look at the POST_PREFIX.
+        Raises:
+            SlugNotFoundError: If the path is invalid.
+            PostNotFoundError: If the post is not found in the database.
         """
-        # This will raise a SlugNotFoundError exception if the path is invalid
         path_parts = extract_parts_from_path(path)
 
         return self.get_published_post_by_slug(path_parts.slug)
