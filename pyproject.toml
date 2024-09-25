@@ -45,6 +45,9 @@ test = [
     "django-debug-toolbar>=4.4.0",
 ]
 
+[tool.ruff]
+line-length = 120
+
 [tool.ruff.lint]
 select = ["ALL"]
 ignore = [
