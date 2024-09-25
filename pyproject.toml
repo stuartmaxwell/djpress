@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "djpress"
-version = "0.8.0"
+version = "0.8.1"
 description = "A blog application for Django sites, inspired by classic WordPress."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -39,10 +39,10 @@ Issues = "https://github.com/stuartmaxwell/djpress/issues"
 
 [project.optional-dependencies]
 test = [
-    "pytest>=8.3.3",
-    "pytest-django>=4.9.0",
-    "coverage>=7.6.1",
-    "django-debug-toolbar>=4.4.0",
+  "pytest>=8.3.3",
+  "pytest-django>=4.9.0",
+  "coverage>=7.6.1",
+  "django-debug-toolbar>=4.4.0",
 ]
 
 [tool.ruff]
@@ -76,7 +76,4 @@ python_files = "tests.py test_*.py *_tests.py"
 [tool.coverage.run]
 branch = true
 include = ["src/djpress/*"]
-omit = [
-  "*/tests/*",
-  "*/migrations/*",
-]
+omit = ["*/tests/*", "*/migrations/*"]
