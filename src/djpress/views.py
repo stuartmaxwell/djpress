@@ -230,12 +230,8 @@ def post_detail(request: HttpRequest, path: str) -> HttpResponse:
         try:
             post = Post.post_objects.get_published_post_by_path(path)
             context: dict = {"post": post}
-        except SlugNotFoundError as exc:
+        except (PostNotFoundError, SlugNotFoundError) as exc:
             # A SlugNotFoundError means we were not able to parse the path
-            msg = "Post not found"
-            raise Http404(msg) from exc
-        except PostNotFoundError as exc:
-            # A PostNotFoundError means we were able to parse the path, but the post was not found
             msg = "Post not found"
             raise Http404(msg) from exc
 
