@@ -8,6 +8,9 @@ python_version := "3.12"
 # Set the uv run command
 uv := "uv run --python 3.12 --extra test"
 
+#Set the uv command to run a tool
+uv-tool := "uv tool run"
+
 # Run the Django development server
 run:
     @just sync
@@ -41,9 +44,17 @@ check:
 test:
     {{uv}} pytest
 
+# Run Ruff linking
+lint:
+    {{uv-tool}} ruff check
+
+# Run Ruff formatting
+format:
+    {{uv-tool}} ruff format
+
 # Run nox
 nox:
-    uv tool run nox --session test
+    {{uv-tool}} nox --session test
 
 # Run coverage
 cov:
@@ -71,13 +82,13 @@ build:
 publish:
       rm -rf ./dist/*
       uv build
-      uv tool run twine check dist/*
-      uv tool run twine upload dist/*
+      {{uv-tool}} twine check dist/*
+      {{uv-tool}} twine upload dist/*
 
 # Upgrade pre-commit hooks
 pc-up:
-    uv tool run pre-commit autoupdate
+    {{uv-tool}} pre-commit autoupdate
 
 # Run pre-commit hooks
 pc-run:
-    uv tool run pre-commit run --all-files
+    {{uv-tool}} pre-commit run --all-files
