@@ -58,4 +58,4 @@ def test_truncated_posts_feed(client, user):
     assert "<item>" in feed
     assert "<title>Post 1</title>" in feed
     assert "Truncated content" not in feed
-    assert f'&lt;a href="/{post_prefix}/post-1/"&gt;Read more&lt;/a&gt;&lt;/p&gt;' in feed
+    assert f'&lt;a href="/{post_prefix}/post-1"&gt;Read more&lt;/a&gt;&lt;/p&gt;' in feed

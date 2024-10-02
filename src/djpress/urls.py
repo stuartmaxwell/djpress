@@ -14,3 +14,4 @@ urlpatterns = [
     path("<djpress_path:path>", entry, name="entry"),
     path("", index, name="index"),
 ]
+

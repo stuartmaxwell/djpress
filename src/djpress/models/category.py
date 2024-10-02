@@ -103,3 +103,4 @@ class Category(models.Model):
         from djpress.url_utils import get_category_url
 
         return get_category_url(self)
+

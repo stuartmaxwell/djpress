@@ -6,6 +6,7 @@ from typing import ClassVar
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.db import models
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
 
@@ -299,6 +300,40 @@ class Post(models.Model):
         return get_post_url(self)
 
     @property
+    def url(self: "Post") -> str:
+        """Return the post's URL.
+
+        To get the post's URL, we need to use the reverse function and pass in the kwargs that are currently configured
+        in the POST_PREFIX setting.
+
+        The POST_PREFIX may have one or more of the following placeholders:
+        - {{ year }}
+        - {{ month }}
+        - {{ day }}
+
+        Returns:
+            str: The post's URL.
+        """
+        prefix = settings.POST_PREFIX
+
+        # Build the kwargs for the reverse function
+        kwargs = {"slug": self.slug}
+
+        # If the post type is a page, we just need the slug
+        if self.post_type == "page":
+            return reverse("djpress:single_page", kwargs=kwargs)
+
+        # Now get the kwargs for the date parts for the post
+        if "{{ year }}" in prefix:
+            kwargs["year"] = self.date.strftime("%Y")
+        if "{{ month }}" in prefix:
+            kwargs["month"] = self.date.strftime("%m")
+        if "{{ day }}" in prefix:
+            kwargs["day"] = self.date.strftime("%d")
+
+        return reverse("djpress:single_post", kwargs=kwargs)
+
+    @property
     def permalink(self: "Post") -> str:
         """Return the post's permalink.
 
@@ -329,3 +364,4 @@ class Post(models.Model):
         url_parts = [part for part in prefix.split("/") if part] + [self.slug]
 
         return "/".join(url_parts)
+

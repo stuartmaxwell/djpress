@@ -34,3 +34,4 @@ DJPRESS_SETTINGS = {
     "POST_READ_MORE_TEXT": "Test read more...",
     "RSS_PATH": "test-rss",
 }
+
