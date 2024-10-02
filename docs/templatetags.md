@@ -152,7 +152,7 @@ Get the pages and display as a list:
 <ul>
   {% for page in pages %}
     <li>
-      <a href="{% url 'djpress:post_detail' page.slug %}>{{ page.title }}</a>
+      <a href="{% url 'djpress:single_post' page.slug %}>{{ page.title }}</a>
     </li>
   {% endfor %}
 </ul>
