@@ -169,18 +169,18 @@ def test_category_permalink():
     """Test that the permalink property returns the correct URL."""
     # Confirm the settings in settings_testing.py
     assert settings.CACHE_CATEGORIES is True
-    assert settings.CATEGORY_PATH_ENABLED is True
-    assert settings.CATEGORY_PATH == "test-url-category"
+    assert settings.CATEGORY_ENABLED is True
+    assert settings.CATEGORY_PREFIX == "test-url-category"
 
     category = Category.objects.create(title="Test Category", slug="test-category")
 
     assert category.permalink == "test-url-category/test-category"
 
-    settings.set("CATEGORY_PATH_ENABLED", False)
-    settings.set("CATEGORY_PATH", "")
+    settings.set("CATEGORY_ENABLED", False)
+    settings.set("CATEGORY_PREFIX", "")
 
     assert category.permalink == "test-category"
 
     # Set back to default
-    settings.set("CATEGORY_PATH_ENABLED", True)
-    settings.set("CATEGORY_PATH", "test-url-category")
+    settings.set("CATEGORY_ENABLED", True)
+    settings.set("CATEGORY_PREFIX", "test-url-category")

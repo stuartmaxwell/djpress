@@ -6,13 +6,14 @@ from typing import ClassVar
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.db import models
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
 
 from djpress.conf import settings
 from djpress.exceptions import PageNotFoundError, PostNotFoundError
 from djpress.models import Category
-from djpress.utils import extract_parts_from_path, render_markdown
+from djpress.utils import render_markdown
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +64,7 @@ class PagesManager(models.Manager):
         self: "PagesManager",
         path: str,
     ) -> "Post":
-        """Return a single published post from a path.
+        """Return a single published page from a path.
 
         For now, we'll only allow a top level path.
 
@@ -165,46 +166,42 @@ class PostsManager(models.Manager):
     def get_published_post_by_slug(
         self: "PostsManager",
         slug: str,
+        year: int | None = None,
+        month: int | None = None,
+        day: int | None = None,
     ) -> "Post":
         """Return a single published post.
 
-        Must have a date less than or equal to the current date/time based on its slug.
-        """
-        # First, try to get the post from the cache
-        posts = self.get_recent_published_posts()
-        post = next((post for post in posts if post.slug == slug), None)
-
-        # If the post is not found in the cache, fetch it from the database
-        if not post:
-            try:
-                post = self.get_published_posts().get(slug=slug)
-            except Post.DoesNotExist as exc:
-                msg = "Post not found"
-                raise PostNotFoundError(msg) from exc
-
-        return post
-
-    def get_published_post_by_path(
-        self: "PostsManager",
-        path: str,
-    ) -> "Post":
-        """Return a single published post from a path.
-
-        This takes a path and extracts the parts of the path using the `djpress.utils.extract_parts_from_path` function.
-
         Args:
-            path (str): The path of the post.
+            slug (str): The post slug.
+            year (int | None): The year.
+            month (int | None): The month.
+            day (int | None): The day.
 
         Returns:
             Post: The published post.
 
         Raises:
-            SlugNotFoundError: If the path is invalid.
             PostNotFoundError: If the post is not found in the database.
         """
-        path_parts = extract_parts_from_path(path)
+        # TODO: try to get the post from the cache
 
-        return self.get_published_post_by_slug(path_parts.slug)
+        filters = {"slug": slug}
+
+        if year:
+            filters["date__year"] = year
+
+        if month:
+            filters["date__month"] = month
+
+        if day:
+            filters["date__day"] = day
+
+        try:
+            return self.get_published_posts().get(**filters)
+        except Post.DoesNotExist as exc:
+            msg = "Post not found"
+            raise PostNotFoundError(msg) from exc
 
     def get_published_posts_by_category(
         self: "PostsManager",
@@ -292,32 +289,67 @@ class Post(models.Model):
         return settings.TRUNCATE_TAG in self.content
 
     @property
+    def url(self: "Post") -> str:
+        """Return the post's URL.
+
+        To get the post's URL, we need to use the reverse function and pass in the kwargs that are currently configured
+        in the POST_PREFIX setting.
+
+        The POST_PREFIX may have one or more of the following placeholders:
+        - {{ year }}
+        - {{ month }}
+        - {{ day }}
+
+        Returns:
+            str: The post's URL.
+        """
+        prefix = settings.POST_PREFIX
+
+        # Build the kwargs for the reverse function
+        kwargs = {"slug": self.slug}
+
+        # If the post type is a page, we just need the slug
+        if self.post_type == "page":
+            return reverse("djpress:single_page", kwargs=kwargs)
+
+        # Now get the kwargs for the date parts for the post
+        if "{{ year }}" in prefix:
+            kwargs["year"] = self.date.strftime("%Y")
+        if "{{ month }}" in prefix:
+            kwargs["month"] = self.date.strftime("%m")
+        if "{{ day }}" in prefix:
+            kwargs["day"] = self.date.strftime("%d")
+
+        return reverse("djpress:single_post", kwargs=kwargs)
+
+    @property
     def permalink(self: "Post") -> str:
         """Return the post's permalink.
 
         The posts permalink is constructed of the following elements:
         - The post prefix - this is configured in POST_PREFIX and could be an empty
-          string or a custom string, e.g. `blog` or `posts`.
-        - The post date structure - this is configured in POST_PERMALINK and is a
-          `strftime` value, e.g. `%Y/%m/%d` or `%Y/%m`. Or it could be an empty string
-          to indicate that no date structure is used.
+          string or a custom string.
         - The post slug - this is a unique identifier for the post. TODO: should this be
           a database unique constraint, or should we handle it in software instead?
         """
-        # We start the permalink with just the slug
-        permalink = self.slug
-
         # If the post type is a page, we return just the slug
+        # TODO: needs to support parent pages
         if self.post_type == "page":
-            return permalink
+            return self.slug
 
-        # The only other post type is a post, so we don't need to check for that
-        # If there's a permalink structure defined, we add that to the permalink
-        if settings.POST_PERMALINK:
-            permalink = f"{self.date.strftime(settings.POST_PERMALINK)}/{self.slug}"
+        prefix = settings.POST_PREFIX
 
-        # If there's a post prefix defined, we add that to the permalink
-        if settings.POST_PREFIX:
-            permalink = f"{settings.POST_PREFIX}/{permalink}"
+        # Replace placeholders in POST_PREFIX with actual values
+        replacements = {
+            "{{ year }}": self.date.strftime("%Y"),
+            "{{ month }}": self.date.strftime("%m"),
+            "{{ day }}": self.date.strftime("%d"),
+        }
 
-        return permalink
+        for placeholder, value in replacements.items():
+            prefix = prefix.replace(placeholder, value)
+
+        # Ensure there's no leading or trailing slash, then join with the slug
+        url_parts = [part for part in prefix.split("/") if part] + [self.slug]
+
+        return "/".join(url_parts)

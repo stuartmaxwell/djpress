@@ -3,7 +3,6 @@
 from typing import TYPE_CHECKING
 
 from django.contrib.syndication.views import Feed
-from django.urls import reverse
 
 from djpress.conf import settings
 from djpress.models import Post
@@ -40,4 +39,4 @@ class PostFeed(Feed):
 
     def item_link(self: "PostFeed", item: Post) -> str:
         """Return the link to the post."""
-        return reverse("djpress:post_detail", args=[item.permalink])
+        return item.url

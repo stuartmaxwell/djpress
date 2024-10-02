@@ -12,9 +12,9 @@ from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBadReque
 from django.shortcuts import render
 
 from djpress.conf import settings
-from djpress.exceptions import PageNotFoundError, PostNotFoundError, SlugNotFoundError
+from djpress.exceptions import PostNotFoundError
 from djpress.models import Category, Post
-from djpress.utils import get_template_name, validate_date
+from djpress.utils import get_template_name, validate_date, validate_date_parts
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +54,7 @@ def index(
     )
 
 
-def archives_posts(
+def archive_posts(
     request: HttpRequest,
     year: str,
     month: str = "",
@@ -200,12 +200,21 @@ def author_posts(request: HttpRequest, author: str) -> HttpResponse:
     )
 
 
-def post_detail(request: HttpRequest, path: str) -> HttpResponse:
+def single_post(
+    request: HttpRequest,
+    slug: str,
+    year: str | None = None,
+    month: str | None = None,
+    day: str | None = None,
+) -> HttpResponse:
     """View for a single post.
 
     Args:
         request (HttpRequest): The request object.
-        path (str): The path to the post.
+        slug (str): The post slug.
+        year (str | None): The year.
+        month (str | None): The month.
+        day (str | None): The day.
 
     Returns:
         HttpResponse: The response.
@@ -219,25 +228,46 @@ def post_detail(request: HttpRequest, path: str) -> HttpResponse:
     ]
 
     try:
-        page: Post = Post.page_objects.get_published_page_by_path(path)
-        context: dict = {"post": page}
-        # If the page is found, use the page template
-        template_names.insert(0, "djpress/page.html")
-    except (PageNotFoundError, ValueError):
+        date_parts = validate_date_parts(year=year, month=month, day=day)
+        post = Post.post_objects.get_published_post_by_slug(slug=slug, **date_parts)
+        context: dict = {"post": post}
+    except (PostNotFoundError, ValueError) as exc:
         # A PageNotFoundError means we were able to parse the path, but the page was not found
         # A ValueError means we were not able to parse the path
-        # For either case, try to get a post
-        try:
-            post = Post.post_objects.get_published_post_by_path(path)
-            context: dict = {"post": post}
-        except (PostNotFoundError, SlugNotFoundError) as exc:
-            # A SlugNotFoundError means we were not able to parse the path
-            msg = "Post not found"
-            raise Http404(msg) from exc
+        msg = "Post not found"
+        raise Http404(msg) from exc
 
     template: str = get_template_name(templates=template_names)
     return render(
         request=request,
         context=context,
         template_name=template,
+    )
+
+
+def single_page(request: HttpRequest, path: str) -> HttpResponse:
+    """View for a single page.
+
+    Args:
+        request (HttpRequest): The request object.
+        path (str): The page path.
+    """
+    template_names: list[str] = [
+        "djpress/single.html",
+        "djpress/index.html",
+    ]
+
+    try:
+        post = Post.page_objects.get_published_page_by_path(path)
+        context: dict = {"post": post}
+    except PostNotFoundError as exc:
+        msg = "Page not found"
+        raise Http404(msg) from exc
+
+    template: str = get_template_name(templates=template_names)
+
+    return render(
+        request=request,
+        template_name=template,
+        context=context,
     )

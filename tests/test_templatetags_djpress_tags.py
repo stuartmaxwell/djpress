@@ -204,11 +204,11 @@ def test_post_title_posts(test_post1):
     assert settings.POST_PREFIX == "test-posts"
 
     # this generates a URL based on the slug only - this is prefixed with the POST_PREFIX setting
-    post_url = reverse("djpress:post_detail", args=[test_post1.slug])
+    post_url = test_post1.url
 
     # Confirm settings in settings_testing.py
     assert settings.POST_PREFIX == "test-posts"
-    expected_output = f'<a href="/test-posts{post_url}" title="{test_post1.title}">{test_post1.title}</a>'
+    expected_output = f'<a href="{post_url}" title="{test_post1.title}">{test_post1.title}</a>'
     assert djpress_tags.post_title_link(context) == expected_output
 
 
@@ -228,9 +228,9 @@ def test_post_title_link_with_prefix(test_post1):
     # Context should have both a posts and a post to simulate the for post in posts loop
     context = Context({"posts": [test_post1], "post": test_post1})
 
-    post_url = reverse("djpress:post_detail", args=[test_post1.slug])
+    post_url = test_post1.url
 
-    expected_output = f'<a href="/test-posts{post_url}" title="{test_post1.title}">{test_post1.title}</a>'
+    expected_output = f'<a href="{post_url}" title="{test_post1.title}">{test_post1.title}</a>'
     assert djpress_tags.post_title_link(context) == expected_output
 
 
@@ -262,13 +262,13 @@ def test_post_author_link(test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.AUTHOR_PATH_ENABLED is True
-    assert settings.AUTHOR_PATH == "test-url-author"
+    assert settings.AUTHOR_ENABLED is True
+    assert settings.AUTHOR_PREFIX == "test-url-author"
 
     author = test_post1.author
 
     expected_output = (
-        f'<a href="/{settings.AUTHOR_PATH}/testuser/" title="View all posts by '
+        f'<a href="/{settings.AUTHOR_PREFIX}/testuser/" title="View all posts by '
         f'{get_author_display_name(author)}"><span rel="author">'
         f"{get_author_display_name(author)}</span></a>"
     )
@@ -280,10 +280,10 @@ def test_post_author_link_author_path_disabled(test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.AUTHOR_PATH_ENABLED is True
-    assert settings.AUTHOR_PATH == "test-url-author"
+    assert settings.AUTHOR_ENABLED is True
+    assert settings.AUTHOR_PREFIX == "test-url-author"
 
-    settings.set("AUTHOR_PATH_ENABLED", False)
+    settings.set("AUTHOR_ENABLED", False)
 
     author = test_post1.author
 
@@ -291,7 +291,7 @@ def test_post_author_link_author_path_disabled(test_post1):
     assert djpress_tags.post_author_link(context) == expected_output
 
     # Set back to defaults
-    settings.set("AUTHOR_PATH_ENABLED", True)
+    settings.set("AUTHOR_ENABLED", True)
 
 
 @pytest.mark.django_db
@@ -299,13 +299,13 @@ def test_post_author_link_with_author_path_with_one_link_class(test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.AUTHOR_PATH_ENABLED is True
-    assert settings.AUTHOR_PATH == "test-url-author"
+    assert settings.AUTHOR_ENABLED is True
+    assert settings.AUTHOR_PREFIX == "test-url-author"
 
     author = test_post1.author
 
     expected_output = (
-        f'<a href="/{settings.AUTHOR_PATH}/testuser/" title="View all posts by '
+        f'<a href="/{settings.AUTHOR_PREFIX}/testuser/" title="View all posts by '
         f'{get_author_display_name(author)}" class="class1">'
         f'<span rel="author">{get_author_display_name(author)}</span></a>'
     )
@@ -317,13 +317,13 @@ def test_post_author_link_with_author_path_with_two_link_class(test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.AUTHOR_PATH_ENABLED is True
-    assert settings.AUTHOR_PATH == "test-url-author"
+    assert settings.AUTHOR_ENABLED is True
+    assert settings.AUTHOR_PREFIX == "test-url-author"
 
     author = test_post1.author
 
     expected_output = (
-        f'<a href="/{settings.AUTHOR_PATH}/testuser/" title="View all posts by '
+        f'<a href="/{settings.AUTHOR_PREFIX}/testuser/" title="View all posts by '
         f'{get_author_display_name(author)}" class="class1 class2">'
         f'<span rel="author">{get_author_display_name(author)}</span></a>'
     )
@@ -334,45 +334,45 @@ def test_post_author_link_with_author_path_with_two_link_class(test_post1):
 def test_post_category_link_without_category_path(category1):
     """Test the post_category_link template tag without the category path enabled.
 
-    If the CATEGORY_PATH_ENABLED setting is False, the template tag should just return
+    If the CATEGORY_ENABLED setting is False, the template tag should just return
     the category name, with no link."""
     # Confirm settings are set according to settings_testing.py
-    assert settings.CATEGORY_PATH_ENABLED is True
+    assert settings.CATEGORY_ENABLED is True
 
-    settings.set("CATEGORY_PATH_ENABLED", False)
-    assert settings.CATEGORY_PATH_ENABLED is False
+    settings.set("CATEGORY_ENABLED", False)
+    assert settings.CATEGORY_ENABLED is False
 
     assert djpress_tags.post_category_link(category1) == category1.title
 
     # Set back to defaults
-    settings.set("CATEGORY_PATH_ENABLED", True)
+    settings.set("CATEGORY_ENABLED", True)
 
 
 @pytest.mark.django_db
 def test_post_category_link_without_category_path_with_one_link(category1):
     """Test the post_category_link template tag without the category path enabled.
 
-    If the CATEGORY_PATH_ENABLED setting is False, the template tag should just return
+    If the CATEGORY_ENABLED setting is False, the template tag should just return
     the category name, with no link."""
     # Confirm settings are set according to settings_testing.py
-    assert settings.CATEGORY_PATH_ENABLED is True
+    assert settings.CATEGORY_ENABLED is True
 
-    settings.set("CATEGORY_PATH_ENABLED", False)
-    assert settings.CATEGORY_PATH_ENABLED is False
+    settings.set("CATEGORY_ENABLED", False)
+    assert settings.CATEGORY_ENABLED is False
 
     assert djpress_tags.post_category_link(category1, "class1") == category1.title
 
     # Set back to defaults
-    settings.set("CATEGORY_PATH_ENABLED", True)
+    settings.set("CATEGORY_ENABLED", True)
 
 
 @pytest.mark.django_db
 def test_post_category_link_with_category_path(category1):
     # Confirm settings are set according to settings_testing.py
-    assert settings.CATEGORY_PATH_ENABLED is True
-    assert settings.CATEGORY_PATH == "test-url-category"
+    assert settings.CATEGORY_ENABLED is True
+    assert settings.CATEGORY_PREFIX == "test-url-category"
 
-    expected_output = f'<a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category">{category1.title}</a>'
+    expected_output = f'<a href="/{settings.CATEGORY_PREFIX}/general/" title="View all posts in the General category">{category1.title}</a>'
 
     assert djpress_tags.post_category_link(category1) == expected_output
 
@@ -380,10 +380,10 @@ def test_post_category_link_with_category_path(category1):
 @pytest.mark.django_db
 def test_post_category_link_with_category_path_with_one_link_class(category1):
     # Confirm settings are set according to settings_testing.py
-    assert settings.CATEGORY_PATH_ENABLED is True
-    assert settings.CATEGORY_PATH == "test-url-category"
+    assert settings.CATEGORY_ENABLED is True
+    assert settings.CATEGORY_PREFIX == "test-url-category"
 
-    expected_output = f'<a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category" class="class1">{category1.title}</a>'
+    expected_output = f'<a href="/{settings.CATEGORY_PREFIX}/general/" title="View all posts in the General category" class="class1">{category1.title}</a>'
 
     assert djpress_tags.post_category_link(category1, "class1") == expected_output
 
@@ -391,10 +391,10 @@ def test_post_category_link_with_category_path_with_one_link_class(category1):
 @pytest.mark.django_db
 def test_post_category_link_with_category_path_with_two_link_classes(category1):
     # Confirm settings are set according to settings_testing.py
-    assert settings.CATEGORY_PATH_ENABLED is True
-    assert settings.CATEGORY_PATH == "test-url-category"
+    assert settings.CATEGORY_ENABLED is True
+    assert settings.CATEGORY_PREFIX == "test-url-category"
 
-    expected_output = f'<a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category" class="class1 class2">{category1.title}</a>'
+    expected_output = f'<a href="/{settings.CATEGORY_PREFIX}/general/" title="View all posts in the General category" class="class1 class2">{category1.title}</a>'
 
     assert djpress_tags.post_category_link(category1, "class1 class2") == expected_output
 
@@ -408,30 +408,30 @@ def test_post_date_no_post():
 
 @pytest.mark.django_db
 def test_post_date_with_date_archives_disabled(test_post1):
-    """djpress_tags.post_date is not impacted by the DATE_ARCHIVES_ENABLED setting."""
+    """djpress_tags.post_date is not impacted by the ARCHIVE_ENABLED setting."""
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.DATE_ARCHIVES_ENABLED is True
+    assert settings.ARCHIVE_ENABLED is True
 
-    settings.set("DATE_ARCHIVES_ENABLED", False)
-    assert settings.DATE_ARCHIVES_ENABLED is False
+    settings.set("ARCHIVE_ENABLED", False)
+    assert settings.ARCHIVE_ENABLED is False
 
     expected_output = test_post1.date.strftime("%b %-d, %Y")
 
     assert djpress_tags.post_date(context) == expected_output
 
     # Set back to defaults
-    settings.set("DATE_ARCHIVES_ENABLED", True)
+    settings.set("ARCHIVE_ENABLED", True)
 
 
 @pytest.mark.django_db
 def test_post_date_with_date_archives_enabled(test_post1):
-    """djpress_tags.post_date is not impacted by the DATE_ARCHIVES_ENABLED setting."""
+    """djpress_tags.post_date is not impacted by the ARCHIVE_ENABLED setting."""
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.DATE_ARCHIVES_ENABLED is True
+    assert settings.ARCHIVE_ENABLED is True
 
     expected_output = test_post1.date.strftime("%b %-d, %Y")
 
@@ -451,17 +451,17 @@ def test_post_date_link_with_date_archives_disabled(test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.DATE_ARCHIVES_ENABLED is True
+    assert settings.ARCHIVE_ENABLED is True
 
-    settings.set("DATE_ARCHIVES_ENABLED", False)
-    assert settings.DATE_ARCHIVES_ENABLED is False
+    settings.set("ARCHIVE_ENABLED", False)
+    assert settings.ARCHIVE_ENABLED is False
 
     expected_output = test_post1.date.strftime("%b %-d, %Y")
 
     assert djpress_tags.post_date_link(context) == expected_output
 
     # Set back to defaults
-    settings.set("DATE_ARCHIVES_ENABLED", True)
+    settings.set("ARCHIVE_ENABLED", True)
 
 
 @pytest.mark.django_db
@@ -469,7 +469,7 @@ def test_post_date_link_with_date_archives_enabled(test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.DATE_ARCHIVES_ENABLED is True
+    assert settings.ARCHIVE_ENABLED is True
 
     post_date = test_post1.date
     post_year = post_date.strftime("%Y")
@@ -496,7 +496,7 @@ def test_post_date_link_with_date_archives_enabled_with_one_link_class(
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.DATE_ARCHIVES_ENABLED is True
+    assert settings.ARCHIVE_ENABLED is True
 
     post_date = test_post1.date
     post_year = post_date.strftime("%Y")
@@ -523,7 +523,7 @@ def test_post_date_link_with_date_archives_enabled_with_two_link_classes(
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.DATE_ARCHIVES_ENABLED is True
+    assert settings.ARCHIVE_ENABLED is True
 
     post_date = test_post1.date
     post_year = post_date.strftime("%Y")
@@ -639,9 +639,9 @@ def test_post_categories(test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.CATEGORY_PATH == "test-url-category"
+    assert settings.CATEGORY_PREFIX == "test-url-category"
 
-    expected_output = f'<ul><li><a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category">General</a></li></ul>'
+    expected_output = f'<ul><li><a href="/{settings.CATEGORY_PREFIX}/general/" title="View all posts in the General category">General</a></li></ul>'
 
     assert djpress_tags.post_categories_link(context) == expected_output
 
@@ -674,9 +674,9 @@ def test_post_categories_ul(test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.CATEGORY_PATH == "test-url-category"
+    assert settings.CATEGORY_PREFIX == "test-url-category"
 
-    expected_output = f'<ul><li><a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category">General</a></li></ul>'
+    expected_output = f'<ul><li><a href="/{settings.CATEGORY_PREFIX}/general/" title="View all posts in the General category">General</a></li></ul>'
 
     assert djpress_tags.post_categories_link(context, "ul") == expected_output
 
@@ -686,9 +686,9 @@ def test_post_categories_ul_class1(test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.CATEGORY_PATH == "test-url-category"
+    assert settings.CATEGORY_PREFIX == "test-url-category"
 
-    expected_output = f'<ul><li><a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category" class="class1">General</a></li></ul>'
+    expected_output = f'<ul><li><a href="/{settings.CATEGORY_PREFIX}/general/" title="View all posts in the General category" class="class1">General</a></li></ul>'
 
     assert djpress_tags.post_categories_link(context, outer="ul", link_class="class1") == expected_output
 
@@ -698,9 +698,9 @@ def test_post_categories_ul_class1_class2(test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.CATEGORY_PATH == "test-url-category"
+    assert settings.CATEGORY_PREFIX == "test-url-category"
 
-    expected_output = f'<ul><li><a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category" class="class1 class2">General</a></li></ul>'
+    expected_output = f'<ul><li><a href="/{settings.CATEGORY_PREFIX}/general/" title="View all posts in the General category" class="class1 class2">General</a></li></ul>'
 
     assert djpress_tags.post_categories_link(context, outer="ul", link_class="class1 class2") == expected_output
 
@@ -710,9 +710,9 @@ def test_post_categories_div(test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.CATEGORY_PATH == "test-url-category"
+    assert settings.CATEGORY_PREFIX == "test-url-category"
 
-    expected_output = f'<div><a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category">General</a></div>'
+    expected_output = f'<div><a href="/{settings.CATEGORY_PREFIX}/general/" title="View all posts in the General category">General</a></div>'
 
     assert djpress_tags.post_categories_link(context, outer="div") == expected_output
 
@@ -722,9 +722,9 @@ def test_post_categories_div_class1(test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.CATEGORY_PATH == "test-url-category"
+    assert settings.CATEGORY_PREFIX == "test-url-category"
 
-    expected_output = f'<div><a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category" class="class1">General</a></div>'
+    expected_output = f'<div><a href="/{settings.CATEGORY_PREFIX}/general/" title="View all posts in the General category" class="class1">General</a></div>'
 
     assert djpress_tags.post_categories_link(context, outer="div", link_class="class1") == expected_output
 
@@ -734,9 +734,9 @@ def test_post_categories_div_class1_class2(test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.CATEGORY_PATH == "test-url-category"
+    assert settings.CATEGORY_PREFIX == "test-url-category"
 
-    expected_output = f'<div><a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category" class="class1 class2">General</a></div>'
+    expected_output = f'<div><a href="/{settings.CATEGORY_PREFIX}/general/" title="View all posts in the General category" class="class1 class2">General</a></div>'
 
     assert djpress_tags.post_categories_link(context, outer="div", link_class="class1 class2") == expected_output
 
@@ -746,9 +746,9 @@ def test_post_categories_span(test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.CATEGORY_PATH == "test-url-category"
+    assert settings.CATEGORY_PREFIX == "test-url-category"
 
-    expected_output = f'<span><a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category">General</a></span>'
+    expected_output = f'<span><a href="/{settings.CATEGORY_PREFIX}/general/" title="View all posts in the General category">General</a></span>'
 
     assert djpress_tags.post_categories_link(context, outer="span") == expected_output
 
@@ -758,9 +758,9 @@ def test_post_categories_span_class1(test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.CATEGORY_PATH == "test-url-category"
+    assert settings.CATEGORY_PREFIX == "test-url-category"
 
-    expected_output = f'<span><a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category" class="class1">General</a></span>'
+    expected_output = f'<span><a href="/{settings.CATEGORY_PREFIX}/general/" title="View all posts in the General category" class="class1">General</a></span>'
 
     assert djpress_tags.post_categories_link(context, outer="span", link_class="class1") == expected_output
 
@@ -770,9 +770,9 @@ def test_post_categories_span_class1_class2(test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.CATEGORY_PATH == "test-url-category"
+    assert settings.CATEGORY_PREFIX == "test-url-category"
 
-    expected_output = f'<span><a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category" class="class1 class2">General</a></span>'
+    expected_output = f'<span><a href="/{settings.CATEGORY_PREFIX}/general/" title="View all posts in the General category" class="class1 class2">General</a></span>'
 
     assert djpress_tags.post_categories_link(context, outer="span", link_class="class1 class2") == expected_output
 

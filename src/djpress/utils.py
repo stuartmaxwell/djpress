@@ -47,6 +47,47 @@ def get_author_display_name(user: User) -> str:
     return user.username
 
 
+def validate_date_parts(year: str | None, month: str | None, day: str | None) -> dict:
+    """Validate the date parts.
+
+    Args:
+        year (str | None): The year.
+        month (str | None): The month.
+        day (str | None): The day.
+
+    Returns:
+        dict: The validated date parts.
+
+    Raises:
+        ValueError: If the date is invalid.
+    """
+    result = {}
+
+    try:
+        if year:
+            result["year"] = int(year)
+        if month:
+            result["month"] = int(month)
+        if day:
+            result["day"] = int(day)
+
+        # If we have all parts, try to create a date
+        if "year" in result and "month" in result and "day" in result:
+            timezone.make_aware(timezone.datetime(result["year"], result["month"], result["day"]))
+        elif "year" in result and "month" in result:
+            # Validate just year and month
+            timezone.make_aware(timezone.datetime(result["year"], result["month"], 1))
+        elif "year" in result:
+            # Validate just the year
+            timezone.make_aware(timezone.datetime(result["year"], 1, 1))
+
+    except ValueError as exc:
+        msg = "Invalid date"
+        raise ValueError(msg) from exc
+
+    return result
+
+
 def validate_date(year: str, month: str, day: str) -> None:
     """Test the date values.
 

@@ -63,7 +63,7 @@ def category_link(category: Category, link_class: str = "") -> str:
         category: The category.
         link_class: The CSS class(es) for the link.
     """
-    category_url = reverse("djpress:category_posts", args=[category.slug])
+    category_url = reverse("djpress:category_posts", kwargs={"slug": category.slug})
 
     link_class_html = f' class="{link_class}"' if link_class else ""
 
@@ -83,7 +83,7 @@ def get_page_link(page: Post, link_class: str = "") -> str:
         page: The page.
         link_class: The CSS class(es) for the link.
     """
-    page_url = reverse("djpress:post_detail", args=[page.slug])
+    page_url = reverse("djpress:single_page", kwargs={"path": page.slug})
 
     link_class_html = f' class="{link_class}"' if link_class else ""
 
@@ -108,7 +108,4 @@ def post_read_more_link(
     read_more_text = read_more_text if read_more_text else settings.POST_READ_MORE_TEXT
     link_class_html = f' class="{link_class}"' if link_class else ""
 
-    return (
-        f'<p><a href="{reverse("djpress:post_detail", args=[post.permalink])}"'
-        f'{link_class_html}>{read_more_text}</a></p>'
-    )
+    return f'<p><a href="{post.url}"{link_class_html}>{read_more_text}</a></p>'

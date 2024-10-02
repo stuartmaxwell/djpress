@@ -92,7 +92,7 @@ class Category(models.Model):
     @property
     def permalink(self: "Category") -> str:
         """Return the category's permalink."""
-        if settings.CATEGORY_PATH_ENABLED and settings.CATEGORY_PATH:
-            return f"{settings.CATEGORY_PATH}/{self.slug}"
+        if settings.CATEGORY_ENABLED and settings.CATEGORY_PREFIX:
+            return f"{settings.CATEGORY_PREFIX}/{self.slug}"
 
         return f"{self.slug}"
