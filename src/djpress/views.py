@@ -5,18 +5,76 @@ that returns a single post.
 """
 
 import logging
+import re
 
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import render
 
-from djpress.conf import settings
+from djpress.conf import settings as djpress_settings
 from djpress.exceptions import PostNotFoundError
+from djpress.feeds import PostFeed
 from djpress.models import Category, Post
+from djpress.url_utils import regex_archives, regex_author, regex_category, regex_page, regex_post
 from djpress.utils import get_template_name, validate_date, validate_date_parts
 
 logger = logging.getLogger(__name__)
+
+
+def dispatcher(request: HttpRequest, route: str) -> HttpResponse | None:
+    """Dispatch the request to the appropriate view based on the route."""
+    # 1. Check for special URLs first
+    if djpress_settings.RSS_ENABLED and (route in (djpress_settings.RSS_PATH, f"{djpress_settings.RSS_PATH}/")):
+        return PostFeed()(request)
+
+    # 2. Check if it matches the single post regex
+    post_match = re.fullmatch(regex_post(), route)
+    if post_match:
+        post_groups = post_match.groupdict()
+        return single_post(request, **post_groups)
+
+    # 3. Check if it matches the archives regex
+    archives_match = re.fullmatch(regex_archives(), route)
+    if archives_match:
+        archives_groups = archives_match.groupdict()
+        return archive_posts(request, **archives_groups)
+
+    # 4. Check if it matches the category regex
+    if djpress_settings.CATEGORY_ENABLED and djpress_settings.CATEGORY_PREFIX:
+        category_match = re.fullmatch(regex_category(), route)
+        if category_match:
+            category_slug = category_match.group("slug")
+            return category_posts(request, slug=category_slug)
+
+    # 5. Check if it matches the author regex
+    if djpress_settings.AUTHOR_ENABLED and djpress_settings.AUTHOR_PREFIX:
+        author_match = re.fullmatch(regex_author(), route)
+        if author_match:
+            author_username = author_match.group("author")
+            return author_posts(request, author=author_username)
+
+    # 6. Check if it matches the page regex
+    page_match = re.fullmatch(regex_page(), route)
+    if page_match:
+        page_path = page_match.group("path")
+        return single_page(request, path=page_path)
+
+    # Raise a 404 if no match
+    msg = "No path matched your request"
+    raise Http404(msg)
+
+
+def entry(
+    request: HttpRequest,
+    path: str = "",
+) -> HttpResponse:
+    """The main entry point.
+
+    This takes a path and returns the appropriate view.
+    """
+    # Just echo the path receeived for now
+    return dispatcher(request, path)
 
 
 def index(
@@ -42,7 +100,7 @@ def index(
 
     posts = Paginator(
         Post.post_objects.get_published_posts(),
-        settings.RECENT_PUBLISHED_POSTS_COUNT,
+        djpress_settings.RECENT_PUBLISHED_POSTS_COUNT,
     )
     page_number = request.GET.get("page")
     page = posts.get_page(page_number)
@@ -109,7 +167,7 @@ def archive_posts(
             date__year=year,
         )
 
-    posts = Paginator(filtered_posts, settings.RECENT_PUBLISHED_POSTS_COUNT)
+    posts = Paginator(filtered_posts, djpress_settings.RECENT_PUBLISHED_POSTS_COUNT)
     page_number = request.GET.get("page")
     page = posts.get_page(page_number)
 
@@ -148,7 +206,7 @@ def category_posts(request: HttpRequest, slug: str) -> HttpResponse:
 
     posts = Paginator(
         Post.post_objects.get_published_posts_by_category(category),
-        settings.RECENT_PUBLISHED_POSTS_COUNT,
+        djpress_settings.RECENT_PUBLISHED_POSTS_COUNT,
     )
     page_number = request.GET.get("page")
     page = posts.get_page(page_number)
@@ -188,7 +246,7 @@ def author_posts(request: HttpRequest, author: str) -> HttpResponse:
 
     posts = Paginator(
         Post.post_objects.get_published_posts_by_author(user),
-        settings.RECENT_PUBLISHED_POSTS_COUNT,
+        djpress_settings.RECENT_PUBLISHED_POSTS_COUNT,
     )
     page_number = request.GET.get("page")
     page = posts.get_page(page_number)
@@ -260,7 +318,7 @@ def single_page(request: HttpRequest, path: str) -> HttpResponse:
     try:
         post = Post.page_objects.get_published_page_by_path(path)
         context: dict = {"post": post}
-    except PostNotFoundError as exc:
+    except (PostNotFoundError, ValueError) as exc:
         msg = "Page not found"
         raise Http404(msg) from exc
 

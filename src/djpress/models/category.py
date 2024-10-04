@@ -4,7 +4,7 @@ from django.core.cache import cache
 from django.db import IntegrityError, models, transaction
 from django.utils.text import slugify
 
-from djpress.conf import settings
+from djpress.conf import settings as djpress_settings
 
 CATEGORY_CACHE_KEY = "categories"
 
@@ -17,7 +17,7 @@ class CategoryManager(models.Manager):
 
         If CACHE_CATEGORIES is set to True, we return the cached queryset.
         """
-        if settings.CACHE_CATEGORIES:
+        if djpress_settings.CACHE_CATEGORIES:
             return self._get_cached_categories()
 
         return self.all()
@@ -92,7 +92,14 @@ class Category(models.Model):
     @property
     def permalink(self: "Category") -> str:
         """Return the category's permalink."""
-        if settings.CATEGORY_ENABLED and settings.CATEGORY_PREFIX:
-            return f"{settings.CATEGORY_PREFIX}/{self.slug}"
+        if djpress_settings.CATEGORY_ENABLED and djpress_settings.CATEGORY_PREFIX:
+            return f"{djpress_settings.CATEGORY_PREFIX}/{self.slug}"
 
         return f"{self.slug}"
+
+    @property
+    def url(self) -> str:
+        """Return the category's URL."""
+        from djpress.url_utils import get_category_url
+
+        return get_category_url(self)

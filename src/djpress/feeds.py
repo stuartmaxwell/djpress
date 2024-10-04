@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from django.contrib.syndication.views import Feed
 
-from djpress.conf import settings
+from djpress.conf import settings as djpress_settings
 from djpress.models import Post
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -14,9 +14,9 @@ if TYPE_CHECKING:  # pragma: no cover
 class PostFeed(Feed):
     """RSS feed for blog posts."""
 
-    title = settings.BLOG_TITLE
-    link = f"/{settings.RSS_PATH}/"
-    description = settings.BLOG_DESCRIPTION
+    title = djpress_settings.BLOG_TITLE
+    link = f"/{djpress_settings.RSS_PATH}/"
+    description = djpress_settings.BLOG_DESCRIPTION
 
     def items(self: "PostFeed") -> "models.QuerySet":
         """Return the most recent posts."""

@@ -1,74 +1,48 @@
 """Configuration settings for DJ Press."""
 
-from typing import Any
-
 from django.conf import settings as django_settings
-from django.core.cache import cache
 
-from djpress import app_settings as default_settings
+from djpress.app_settings import DJPRESS_SETTINGS
+
+type SettingValueType = str | int | bool | list | dict | None
 
 
-class Settings:
-    """Class to manage DJ Press settings."""
+class DJPressSettings:
+    """Class to manage DJPress settings."""
 
-    def __init__(
-        self: "Settings",
-        default_settings_module: object,
-        user_settings_module: object,
-    ) -> None:
-        """Initialize the settings object."""
-        self._default_settings = default_settings_module
-        self._user_settings = user_settings_module
+    def __getattr__(self, key: str) -> SettingValueType:
+        """Retrieve the setting in order of precedence.
 
-    def __getattr__(self: "Settings", name: str) -> Any:  # noqa: ANN401
-        """Get the value of a setting.
+        1. From Django settings (if exists)
+        2. Default from app_settings.py
 
         Args:
-            name (str): The name of the setting to get.
+            key (str): The setting to retrieve
 
         Returns:
-            Any: The value of the setting.
+            value (SettingValueType): The value of the setting
 
         Raises:
-            AttributeError: If the setting is not found.
+            AttributeError: If the setting is not defined
+            TypeError: If the setting is defined but has the wrong type
         """
-        # If the setting is found in the user settings, return it
-        if hasattr(self._user_settings, name):
-            return getattr(self._user_settings, name)
-        # If the setting is found in the default settings, return it
-        if hasattr(self._default_settings, name):
-            return getattr(self._default_settings, name)
-        # If the setting is not found in either, raise an AttributeError
-        msg = f"Setting '{name}' not found"
+        # Check if the setting is overridden in Django settings.py
+        # If so, validate the type and return the value
+        if hasattr(django_settings, "DJPRESS_SETTINGS") and key in django_settings.DJPRESS_SETTINGS:
+            value = django_settings.DJPRESS_SETTINGS[key]
+            expected_type = DJPRESS_SETTINGS[key][1]
+            if not isinstance(value, expected_type):
+                msg = f"Expected {expected_type.__name__} for {key}, got {type(value).__name__}"
+                raise TypeError(msg)
+            return value
+
+        # If no override, fall back to the default in app_settings.py
+        if key in DJPRESS_SETTINGS:
+            return DJPRESS_SETTINGS[key][0]
+
+        msg = f"Setting {key} is not defined."
         raise AttributeError(msg)
 
-    def set(self: "Settings", name: str, value: object) -> None:
-        """Set the value of a setting and invalidate the cache if necessary."""
-        if self._should_invalidate_cache():
-            cache.clear()
-        setattr(self._user_settings, name, value)
 
-    def _should_invalidate_cache(self: "Settings") -> bool:
-        """Check if cache should be invalidated based on cache settings."""
-        return self.cache_categories or self.cache_recent_published_posts
-
-    @property
-    def cache_categories(self: "Settings") -> bool:
-        """Return the value of the CACHE_CATEGORIES setting."""
-        return getattr(
-            self._user_settings,
-            "CACHE_CATEGORIES",
-            getattr(self._default_settings, "CACHE_CATEGORIES", True),
-        )
-
-    @property
-    def cache_recent_published_posts(self: "Settings") -> bool:
-        """Return the value of the CACHE_RECENT_PUBLISHED_POSTS setting."""
-        return getattr(
-            self._user_settings,
-            "CACHE_RECENT_PUBLISHED_POSTS",
-            getattr(self._default_settings, "CACHE_RECENT_PUBLISHED_POSTS", False),
-        )
-
-
-settings = Settings(default_settings, django_settings)
+# Singleton instance to use across the application
+settings = DJPressSettings()

@@ -8,18 +8,17 @@ from django.contrib.auth.models import User
 from django.template.loader import TemplateDoesNotExist, select_template
 from django.utils import timezone
 
-from djpress.conf import settings
+from djpress.conf import settings as djpress_settings
 from djpress.exceptions import SlugNotFoundError
-
-md = markdown.Markdown(
-    extensions=settings.MARKDOWN_EXTENSIONS,
-    extension_configs=settings.MARKDOWN_EXTENSION_CONFIGS,
-    output_format="html",
-)
 
 
 def render_markdown(markdown_text: str) -> str:
     """Return the Markdown text as HTML."""
+    md = markdown.Markdown(
+        extensions=djpress_settings.MARKDOWN_EXTENSIONS,
+        extension_configs=djpress_settings.MARKDOWN_EXTENSION_CONFIGS,
+        output_format="html",
+    )
     html = md.convert(markdown_text)
     md.reset()
 
@@ -183,8 +182,8 @@ def extract_parts_from_path(path: str) -> PathParts:
     # Build the regex pattern
     pattern_parts = []
 
-    post_prefix = settings.POST_PREFIX
-    post_permalink = settings.POST_PERMALINK
+    post_prefix = djpress_settings.POST_PREFIX
+    post_permalink = djpress_settings.POST_PERMALINK
 
     # Add the post prefix to the pattern, if it exists
     if post_prefix:

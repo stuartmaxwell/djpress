@@ -6,11 +6,10 @@ from typing import ClassVar
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.db import models
-from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
 
-from djpress.conf import settings
+from djpress.conf import settings as djpress_settings
 from djpress.exceptions import PageNotFoundError, PostNotFoundError
 from djpress.models import Category
 from djpress.utils import render_markdown
@@ -105,11 +104,11 @@ class PostsManager(models.Manager):
 
         If CACHE_RECENT_PUBLISHED_POSTS is set to True, we return the cached queryset.
         """
-        if settings.CACHE_RECENT_PUBLISHED_POSTS:
+        if djpress_settings.CACHE_RECENT_PUBLISHED_POSTS:
             return self._get_cached_recent_published_posts()
 
         return self.get_published_posts().prefetch_related("categories", "author")[
-            : settings.RECENT_PUBLISHED_POSTS_COUNT
+            : djpress_settings.RECENT_PUBLISHED_POSTS_COUNT
         ]
 
     def _get_cached_recent_published_posts(self: "PostsManager") -> models.QuerySet:
@@ -120,7 +119,9 @@ class PostsManager(models.Manager):
         """
         queryset = cache.get(PUBLISHED_POSTS_CACHE_KEY)
 
-        if queryset is None:
+        # Check if the cache is empty or if the length of the queryset is not equal to the number of recent posts. If
+        # the length is different it means the setting may have changed.
+        if queryset is None or len(queryset) != djpress_settings.RECENT_PUBLISHED_POSTS_COUNT:
             queryset = (
                 self.get_queryset()
                 .filter(
@@ -131,7 +132,7 @@ class PostsManager(models.Manager):
 
             timeout = self._get_cache_timeout(queryset)
 
-            queryset = queryset.filter(date__lte=timezone.now())[: settings.RECENT_PUBLISHED_POSTS_COUNT]
+            queryset = queryset.filter(date__lte=timezone.now())[: djpress_settings.RECENT_PUBLISHED_POSTS_COUNT]
             cache.set(
                 PUBLISHED_POSTS_CACHE_KEY,
                 queryset,
@@ -279,48 +280,28 @@ class Post(models.Model):
     @property
     def truncated_content_markdown(self: "Post") -> str:
         """Return the truncated content as HTML converted from Markdown."""
-        read_more_index = self.content.find(settings.TRUNCATE_TAG)
+        read_more_index = self.content.find(djpress_settings.TRUNCATE_TAG)
         truncated_content = self.content[:read_more_index] if read_more_index != -1 else self.content
         return render_markdown(truncated_content)
 
     @property
     def is_truncated(self: "Post") -> bool:
         """Return whether the content is truncated."""
-        return settings.TRUNCATE_TAG in self.content
+        return djpress_settings.TRUNCATE_TAG in self.content
 
     @property
     def url(self: "Post") -> str:
         """Return the post's URL.
 
-        To get the post's URL, we need to use the reverse function and pass in the kwargs that are currently configured
-        in the POST_PREFIX setting.
-
-        The POST_PREFIX may have one or more of the following placeholders:
-        - {{ year }}
-        - {{ month }}
-        - {{ day }}
-
         Returns:
             str: The post's URL.
         """
-        prefix = settings.POST_PREFIX
+        from djpress.url_utils import get_page_url, get_post_url
 
-        # Build the kwargs for the reverse function
-        kwargs = {"slug": self.slug}
-
-        # If the post type is a page, we just need the slug
         if self.post_type == "page":
-            return reverse("djpress:single_page", kwargs=kwargs)
+            return get_page_url(self)
 
-        # Now get the kwargs for the date parts for the post
-        if "{{ year }}" in prefix:
-            kwargs["year"] = self.date.strftime("%Y")
-        if "{{ month }}" in prefix:
-            kwargs["month"] = self.date.strftime("%m")
-        if "{{ day }}" in prefix:
-            kwargs["day"] = self.date.strftime("%d")
-
-        return reverse("djpress:single_post", kwargs=kwargs)
+        return get_post_url(self)
 
     @property
     def permalink(self: "Post") -> str:
@@ -337,7 +318,7 @@ class Post(models.Model):
         if self.post_type == "page":
             return self.slug
 
-        prefix = settings.POST_PREFIX
+        prefix = djpress_settings.POST_PREFIX
 
         # Replace placeholders in POST_PREFIX with actual values
         replacements = {
