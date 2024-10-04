@@ -21,4 +21,3 @@ DJPRESS_SETTINGS = {
     "RSS_ENABLED": (True, bool),
     "RSS_PATH": ("rss", str),
 }
-

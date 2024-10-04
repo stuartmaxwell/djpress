@@ -236,4 +236,3 @@ def get_rss_url() -> str:
         return f"{url}/"
 
     return url
-

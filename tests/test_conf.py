@@ -40,7 +40,7 @@ def test_leaky_test(settings):
         assert settings.DJPRESS_SETTINGS["MARKDOWN_EXTENSIONS"] == []
 
 
-def test_override_settings_in_django_settings(reset_djpress_settings, settings):
+def test_override_settings_in_django_settings(settings):
     """Test that settings can be overridden in Django settings.py."""
     settings.DJPRESS_SETTINGS = {
         "BLOG_TITLE": "Custom Blog Title",
@@ -53,7 +53,7 @@ def test_override_settings_in_django_settings(reset_djpress_settings, settings):
     assert djpress_settings.RECENT_PUBLISHED_POSTS_COUNT == 10
 
 
-def test_type_validation_for_overridden_settings(reset_djpress_settings, settings):
+def test_type_validation_for_overridden_settings(settings):
     """Test that settings enforce correct types."""
     # Valid setting with the correct type
     settings.DJPRESS_SETTINGS = {
@@ -79,13 +79,13 @@ def test_type_validation_for_overridden_settings(reset_djpress_settings, setting
         _ = djpress_settings.ARCHIVE_ENABLED
 
 
-def test_invalid_setting_key(reset_djpress_settings):
+def test_invalid_setting_key():
     """Test that requesting an invalid setting raises an AttributeError."""
     with pytest.raises(AttributeError):
         _ = djpress_settings.INVALID_SETTING_KEY
 
 
-def test_django_settings_not_defined_in_djpress(reset_djpress_settings, settings):
+def test_django_settings_not_defined_in_djpress(settings):
     """Test that Django settings not defined in DJPress are returned."""
     assert settings.APPEND_SLASH is True
     assert django_settings.APPEND_SLASH is True

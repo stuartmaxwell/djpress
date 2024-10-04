@@ -72,7 +72,6 @@ def test_single_page_view(client, test_page1):
 @pytest.mark.django_db
 def test_author_with_no_posts_view(client, user):
     url = get_author_url(user)
-    print(url)
     response = client.get(url)
     assert response.status_code == 200
     assert "author" in response.context

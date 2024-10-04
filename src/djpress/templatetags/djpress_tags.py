@@ -321,11 +321,7 @@ def post_category_link(category: Category, link_class: str = "") -> str:
         category: The category of the post.
         link_class: The CSS class(es) for the link.
     """
-<<<<<<< HEAD
     if not djpress_settings.CATEGORY_ENABLED:
-=======
-    if not settings.CATEGORY_ENABLED:
->>>>>>> 61b5b13 (Big changes to permalink and URL resolutions)
         return category.title
 
     return mark_safe(category_link(category, link_class))
@@ -365,11 +361,7 @@ def post_date_link(context: Context, link_class: str = "") -> str:
         return ""
     output_date = post.date
 
-<<<<<<< HEAD
     if not djpress_settings.ARCHIVE_ENABLED:
-=======
-    if not settings.ARCHIVE_ENABLED:
->>>>>>> 61b5b13 (Big changes to permalink and URL resolutions)
         return mark_safe(output_date.strftime("%b %-d, %Y"))
 
     post_year = output_date.strftime("%Y")
@@ -379,28 +371,9 @@ def post_date_link(context: Context, link_class: str = "") -> str:
     post_day_name = output_date.strftime("%-d")
     post_time = output_date.strftime("%-I:%M %p")
 
-<<<<<<< HEAD
     year_url = url_utils.get_archives_url(year=int(post_year))
     month_url = url_utils.get_archives_url(year=int(post_year), month=int(post_month))
     day_url = url_utils.get_archives_url(year=int(post_year), month=int(post_month), day=int(post_day))
-=======
-    year_url = reverse(
-        "djpress:archive_posts",
-        args=[post_year],
-    )
-    month_url = reverse(
-        "djpress:archive_posts",
-        args=[post_year, post_month],
-    )
-    day_url = reverse(
-        "djpress:archive_posts",
-        args=[
-            post_year,
-            post_month,
-            post_day,
-        ],
-    )
->>>>>>> 61b5b13 (Big changes to permalink and URL resolutions)
 
     link_class_html = f' class="{link_class}"' if link_class else ""
 

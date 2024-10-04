@@ -318,4 +318,3 @@ def single_page(request: HttpRequest, path: str) -> HttpResponse:
         template_name=template,
         context=context,
     )
-

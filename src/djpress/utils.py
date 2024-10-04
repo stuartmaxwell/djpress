@@ -99,4 +99,3 @@ def get_template_name(templates: list[str]) -> str:
         raise TemplateDoesNotExist(msg) from exc
 
     return template
-
