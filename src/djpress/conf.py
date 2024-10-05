@@ -4,7 +4,7 @@ from django.conf import settings as django_settings
 
 from djpress.app_settings import DJPRESS_SETTINGS
 
-type SettingValueType = str | int | bool | list | dict | None
+SettingValueType = str | int | bool | list | dict | None
 
 
 class DJPressSettings:
