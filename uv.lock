@@ -159,7 +159,6 @@ source = { editable = "." }
 dependencies = [
     { name = "django" },
     { name = "markdown" },
-    { name = "nox" },
     { name = "pygments" },
 ]
 
