@@ -43,6 +43,7 @@ test = [
   "pytest-django>=4.9.0",
   "coverage>=7.6.1",
   "django-debug-toolbar>=4.4.0",
+  "nox>=2024.4.15",
 ]
 
 [tool.ruff]
