@@ -83,10 +83,11 @@ def test_post2(user, category2):
 
 @pytest.fixture
 def test_long_post1(user, settings, category1):
+    truncate_tag = settings.DJPRESS_SETTINGS["TRUNCATE_TAG"]
     post = Post.post_objects.create(
         title="Test Long Post1",
         slug="test-long-post1",
-        content=f"This is the truncated content.\n\n{settings.DJPRESS_SETTINGS["TRUNCATE_TAG"]}\n\nThis is the rest of the post.",
+        content=f"This is the truncated content.\n\n{truncate_tag}\n\nThis is the rest of the post.",
         author=user,
         status="published",
         post_type="post",
