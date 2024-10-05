@@ -41,7 +41,7 @@ Issues = "https://github.com/stuartmaxwell/djpress/issues"
 test = [
   "pytest>=8.3.3",
   "pytest-django>=4.9.0",
-  "coverage>=7.6.1",
+  "pytest-coverage>=0.0",
   "django-debug-toolbar>=4.4.0",
   "nox>=2024.4.15",
 ]
