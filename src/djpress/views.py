@@ -16,53 +16,48 @@ from djpress.conf import settings as djpress_settings
 from djpress.exceptions import PostNotFoundError
 from djpress.feeds import PostFeed
 from djpress.models import Category, Post
-from djpress.url_utils import regex_archives, regex_author, regex_category, regex_page, regex_post
-from djpress.utils import get_template_name, validate_date, validate_date_parts
+from djpress.url_utils import get_path_regex
+from djpress.utils import get_template_name, validate_date_parts
 
 logger = logging.getLogger(__name__)
 
 
-def dispatcher(request: HttpRequest, route: str) -> HttpResponse | None:
-    """Dispatch the request to the appropriate view based on the route."""
+def dispatcher(request: HttpRequest, path: str) -> HttpResponse | None:
+    """Dispatch the request to the appropriate view based on the path."""
     # 1. Check for special URLs first
-    if djpress_settings.RSS_ENABLED and (route in (djpress_settings.RSS_PATH, f"{djpress_settings.RSS_PATH}/")):
+    if djpress_settings.RSS_ENABLED and (path in (djpress_settings.RSS_PATH, f"{djpress_settings.RSS_PATH}/")):
         return PostFeed()(request)
 
     # 2. Check if it matches the single post regex
-    post_match = re.fullmatch(regex_post(), route)
+    post_match = re.fullmatch(get_path_regex("post"), path)
     if post_match:
         post_groups = post_match.groupdict()
         return single_post(request, **post_groups)
 
     # 3. Check if it matches the archives regex
-    archives_match = re.fullmatch(regex_archives(), route)
+    archives_match = re.fullmatch(get_path_regex("archives"), path)
     if archives_match:
         archives_groups = archives_match.groupdict()
         return archive_posts(request, **archives_groups)
 
     # 4. Check if it matches the category regex
     if djpress_settings.CATEGORY_ENABLED and djpress_settings.CATEGORY_PREFIX:
-        category_match = re.fullmatch(regex_category(), route)
+        category_match = re.fullmatch(get_path_regex("category"), path)
         if category_match:
             category_slug = category_match.group("slug")
             return category_posts(request, slug=category_slug)
 
     # 5. Check if it matches the author regex
     if djpress_settings.AUTHOR_ENABLED and djpress_settings.AUTHOR_PREFIX:
-        author_match = re.fullmatch(regex_author(), route)
+        author_match = re.fullmatch(get_path_regex("author"), path)
         if author_match:
             author_username = author_match.group("author")
             return author_posts(request, author=author_username)
 
-    # 6. Check if it matches the page regex
-    page_match = re.fullmatch(regex_page(), route)
-    if page_match:
-        page_path = page_match.group("path")
-        return single_page(request, path=page_path)
-
-    # Raise a 404 if no match
-    msg = "No path matched your request"
-    raise Http404(msg)
+    # 6. Any other path is considered a page
+    page_match = re.fullmatch(get_path_regex("page"), path)
+    page_path = page_match.group("path")
+    return single_page(request, path=page_path)
 
 
 def entry(
@@ -141,31 +136,16 @@ def archive_posts(
     template: str = get_template_name(templates=template_names)
 
     try:
-        validate_date(year, month, day)
+        date_parts = validate_date_parts(year=year, month=month, day=day)
     except ValueError:
         msg = "Invalid date"
         return HttpResponseBadRequest(msg)
 
-    published_posts = Post.post_objects.get_published_posts()
-
-    # Django converts strings to integers when they are passed to the filter
-    if day:
-        filtered_posts = published_posts.filter(
-            date__year=year,
-            date__month=month,
-            date__day=day,
-        )
-
-    elif month:
-        filtered_posts = published_posts.filter(
-            date__year=year,
-            date__month=month,
-        )
-
-    else:
-        filtered_posts = published_posts.filter(
-            date__year=year,
-        )
+    filtered_posts = Post.post_objects.get_published_posts().filter(date__year=date_parts["year"])
+    if "month" in date_parts:
+        filtered_posts = filtered_posts.filter(date__month=date_parts["month"])
+    if "day" in date_parts:
+        filtered_posts = filtered_posts.filter(date__day=date_parts["day"])
 
     posts = Paginator(filtered_posts, djpress_settings.RECENT_PUBLISHED_POSTS_COUNT)
     page_number = request.GET.get("page")
@@ -309,6 +289,15 @@ def single_page(request: HttpRequest, path: str) -> HttpResponse:
     Args:
         request (HttpRequest): The request object.
         path (str): The page path.
+
+    Returns:
+        HttpResponse: The response.
+
+    Context:
+        post (Post): The page object.
+
+    Raises:
+        Http404: If the page is not found.
     """
     template_names: list[str] = [
         "djpress/single.html",

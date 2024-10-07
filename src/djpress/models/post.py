@@ -122,17 +122,12 @@ class PostsManager(models.Manager):
         # Check if the cache is empty or if the length of the queryset is not equal to the number of recent posts. If
         # the length is different it means the setting may have changed.
         if queryset is None or len(queryset) != djpress_settings.RECENT_PUBLISHED_POSTS_COUNT:
-            queryset = (
-                self.get_queryset()
-                .filter(
-                    status="published",
-                )
-                .prefetch_related("categories", "author")
-            )
-
+            # Get the queryset from the database for all published posts, including those in the future. Then we
+            # calculate the timeout to set, and then filter the queryset to only include the recent published posts.
+            queryset = self.get_queryset().filter(status="published").prefetch_related("categories", "author")
             timeout = self._get_cache_timeout(queryset)
-
             queryset = queryset.filter(date__lte=timezone.now())[: djpress_settings.RECENT_PUBLISHED_POSTS_COUNT]
+
             cache.set(
                 PUBLISHED_POSTS_CACHE_KEY,
                 queryset,

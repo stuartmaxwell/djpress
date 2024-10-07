@@ -81,11 +81,10 @@ def regex_archives() -> str:
     # - (?P<year>\d{4}): Required - this matches the year in the format of 4 digits.
     # - (/(?P<month>\d{2}))?: Optional - this matches the month in the format of 2 digits.
     # - (/(?P<day>\d{2}))?: Optional - this matches the day in the format of 2 digits.
-    # - $: End of the string - this ensures there's no trailing characters.
-    regex = r"(?P<year>\d{4})(/(?P<month>\d{2}))?(/(?P<day>\d{2}))?$"
+    regex = r"(?P<year>\d{4})(/(?P<month>\d{2}))?(/(?P<day>\d{2}))?"
 
     if djpress_settings.ARCHIVE_PREFIX:
-        regex = rf"{djpress_settings.ARCHIVE_PREFIX}/{regex}"
+        regex = rf"{re.escape(djpress_settings.ARCHIVE_PREFIX)}/{regex}"
 
     return regex
 
@@ -102,9 +101,7 @@ def regex_page() -> str:
     #   - ([\w-]+/)*: This matches any word character (alphanumeric or underscore) or a hyphen, followed by a slash.
     #     - [\w-]: This matches any word character (alphanumeric or underscore) or a hyphen.
     #     - +: This means "one or more" of the preceding pattern.
-    #     - $: This means "end of the string".
-    #     - /$: This matches a slash at the end of the string if APPEND_SLASH is True.
-    return r"^(?P<path>([\w-]+/)*[\w-]+)$"
+    return r"(?P<path>([\w-]+/)*[\w-]+)"
 
 
 def regex_category() -> str:
@@ -115,7 +112,7 @@ def regex_category() -> str:
     regex = r"(?P<slug>[\w-]+)"
 
     if djpress_settings.CATEGORY_PREFIX:
-        regex = rf"^{djpress_settings.CATEGORY_PREFIX}/{regex}$"
+        regex = rf"{re.escape(djpress_settings.CATEGORY_PREFIX)}/{regex}"
 
     return regex
 
@@ -128,9 +125,28 @@ def regex_author() -> str:
     regex = r"(?P<author>[\w-]+)"
 
     if djpress_settings.AUTHOR_PREFIX:
-        regex = rf"^{djpress_settings.AUTHOR_PREFIX}/{regex}$"
+        regex = rf"{re.escape(djpress_settings.AUTHOR_PREFIX)}/{regex}"
 
     return regex
+
+
+def get_path_regex(path_match: str) -> str:
+    """Return the regex for the requested match."""
+    if path_match == "post":
+        regex = regex_post()
+    if path_match == "archives":
+        regex = regex_archives()
+    if path_match == "page":
+        regex = regex_page()
+    if path_match == "category":
+        regex = regex_category()
+    if path_match == "author":
+        regex = regex_author()
+
+    if django_settings.APPEND_SLASH:
+        return f"^{regex}/$"
+
+    return f"^{regex}$"
 
 
 def get_author_url(user: User) -> str:
@@ -150,7 +166,11 @@ def get_author_url(user: User) -> str:
 def get_category_url(category: "Category") -> str:
     """Return the URL for the category."""
     url = f"/{category.permalink}"
-    return f"{url}/" if django_settings.APPEND_SLASH else url
+
+    if django_settings.APPEND_SLASH:
+        return f"{url}/"
+
+    return url
 
 
 def get_archives_url(year: int, month: int | None = None, day: int | None = None) -> str:
@@ -190,7 +210,7 @@ def get_post_url(post: Post) -> str:
     if "{{ day }}" in prefix:
         prefix = prefix.replace("{{ day }}", post.date.strftime("%d"))
 
-    url = f"/{prefix}/{post.slug}"
+    url = f"/{post.slug}" if prefix == "" else f"/{prefix}/{post.slug}"
 
     if django_settings.APPEND_SLASH:
         return f"{url}/"
@@ -199,8 +219,14 @@ def get_post_url(post: Post) -> str:
 
 
 def get_feed_url() -> str:
-    """Return the URL for the RSS feed."""
-    url = f"/{djpress_settings.RSS_PATH}/"
+    """Return the URL for the RSS feed.
+
+    If the RSS path is not set, the default is "/feed". This will raise an error if the path is not set.
+
+    Returns:
+        str: The URL for the RSS feed.
+    """
+    url = f"/{djpress_settings.RSS_PATH}"
 
     if django_settings.APPEND_SLASH:
         return f"{url}/"
