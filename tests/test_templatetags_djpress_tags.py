@@ -1115,3 +1115,9 @@ def test_page_link(test_page1):
         )
         == expected_output
     )
+
+
+def test_rss_url(settings):
+    assert settings.DJPRESS_SETTINGS["RSS_PATH"] == "test-rss"
+    expected_output = "/test-rss/"
+    assert djpress_tags.rss_url() == expected_output

@@ -12,7 +12,8 @@ from djpress.url_utils import (
     get_archives_url,
     get_page_url,
     get_post_url,
-    get_feed_url,
+    get_rss_url,
+    get_rss_url,
 )
 
 
@@ -406,21 +407,21 @@ def test_get_post_url(settings, test_post1):
     assert url == expected_url
 
 
-def test_get_feed_url(settings):
+def test_get_rss_url(settings):
     with pytest.raises(KeyError):
         assert settings.DJPRESS_SETTINGS["RSS_ENABLED"] == "True"
     assert settings.DJPRESS_SETTINGS["RSS_PATH"] == "test-rss"
     assert settings.APPEND_SLASH is True
     expected_url = "/test-rss/"
-    url = get_feed_url()
+    url = get_rss_url()
     assert url == expected_url
 
     settings.DJPRESS_SETTINGS["RSS_PATH"] = None
     with pytest.raises(TypeError):
-        url = get_feed_url()
+        url = get_rss_url()
 
     settings.DJPRESS_SETTINGS["RSS_PATH"] = "test-rss"
     settings.APPEND_SLASH = False
     expected_url = "/test-rss"
-    url = get_feed_url()
+    url = get_rss_url()
     assert url == expected_url
