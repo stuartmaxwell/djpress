@@ -7,7 +7,6 @@ from django.contrib.syndication.views import Feed
 from djpress import url_utils
 from djpress.conf import settings as djpress_settings
 from djpress.models import Post
-from djpress.url_utils import get_feed_url
 
 if TYPE_CHECKING:  # pragma: no cover
     from django.db import models
