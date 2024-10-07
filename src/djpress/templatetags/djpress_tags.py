@@ -8,6 +8,7 @@ from django.template import Context
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
+from djpress import url_utils
 from djpress.conf import settings as djpress_settings
 from djpress.exceptions import PageNotFoundError
 from djpress.models import Category, Post
@@ -17,7 +18,6 @@ from djpress.templatetags.helpers import (
     get_page_link,
     post_read_more_link,
 )
-from djpress.url_utils import get_archives_url, get_author_url
 from djpress.utils import get_author_display_name
 
 register = template.Library()
@@ -298,7 +298,7 @@ def post_author_link(context: Context, link_class: str = "") -> str:
     if not djpress_settings.AUTHOR_ENABLED:
         return f'<span rel="author">{author_display_name}</span>'
 
-    author_url = get_author_url(user=author)
+    author_url = url_utils.get_author_url(user=author)
 
     link_class_html = f' class="{link_class}"' if link_class else ""
 
@@ -371,9 +371,9 @@ def post_date_link(context: Context, link_class: str = "") -> str:
     post_day_name = output_date.strftime("%-d")
     post_time = output_date.strftime("%-I:%M %p")
 
-    year_url = get_archives_url(year=int(post_year))
-    month_url = get_archives_url(year=int(post_year), month=int(post_month))
-    day_url = get_archives_url(year=int(post_year), month=int(post_month), day=int(post_day))
+    year_url = url_utils.get_archives_url(year=int(post_year))
+    month_url = url_utils.get_archives_url(year=int(post_year), month=int(post_month))
+    day_url = url_utils.get_archives_url(year=int(post_year), month=int(post_month), day=int(post_day))
 
     link_class_html = f' class="{link_class}"' if link_class else ""
 
@@ -689,3 +689,13 @@ def page_link(
         return mark_safe(f"<div{outer_class}>{output}</div>")
 
     return mark_safe(output)
+
+
+@register.simple_tag
+def rss_url() -> str:
+    """Return the URL to the RSS feed.
+
+    Returns:
+        str: The URL to the RSS feed.
+    """
+    return url_utils.get_rss_url()

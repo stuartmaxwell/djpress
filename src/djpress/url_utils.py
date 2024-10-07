@@ -218,7 +218,7 @@ def get_post_url(post: Post) -> str:
     return url
 
 
-def get_feed_url() -> str:
+def get_rss_url() -> str:
     """Return the URL for the RSS feed.
 
     If the RSS path is not set, the default is "/feed". This will raise an error if the path is not set.

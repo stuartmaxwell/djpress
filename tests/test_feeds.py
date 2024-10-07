@@ -4,7 +4,7 @@ from django.urls import reverse
 
 from djpress.conf import settings as djpress_settings
 from djpress.models import Post
-from djpress.url_utils import get_feed_url
+from djpress.url_utils import get_rss_url
 
 
 @pytest.mark.django_db
@@ -12,7 +12,7 @@ def test_latest_posts_feed(client, user):
     Post.post_objects.create(title="Post 1", content="Content of post 1.", author=user, status="published")
     Post.post_objects.create(title="Post 2", content="Content of post 2.", author=user, status="published")
 
-    url = get_feed_url()
+    url = get_rss_url()
     print(f"URL: {url}")
     response = client.get(url)
 
@@ -45,7 +45,7 @@ def test_truncated_posts_feed(client, user):
         status="published",
     )
 
-    url = get_feed_url()
+    url = get_rss_url()
     response = client.get(url)
 
     assert response.status_code == 200

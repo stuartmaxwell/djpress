@@ -893,3 +893,23 @@ An HTML string containing a link to the specified page.
 {% page_link "about" %}
 {% page_link "contact" outer="li" outer_class="menu-item" link_class="page-link" %}
 ```
+
+## rss_url
+
+Returns the URL of the RSS feed.
+
+### Arguments
+
+None
+
+### Returns
+
+A plain text representation of the URL.
+
+### Examples
+
+```django
+<a href="{% rss_url %}">RSS Feed</a>
+
+<link rel="alternate" type="application/rss+xml" title="Latest Posts" href="{% rss_url %}">
+```
