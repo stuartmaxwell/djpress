@@ -9,7 +9,6 @@ from django.urls import reverse
 from django.utils import timezone
 
 from djpress.url_utils import get_archives_url, get_author_url, get_category_url
-from djpress.utils import validate_date
 
 
 @pytest.mark.django_db
@@ -73,6 +72,7 @@ def test_single_page_view(client, test_page1):
 @pytest.mark.django_db
 def test_author_with_no_posts_view(client, user):
     url = get_author_url(user)
+    print(url)
     response = client.get(url)
     assert response.status_code == 200
     assert "author" in response.context
@@ -95,6 +95,22 @@ def test_author_with_posts_view(client, test_post1):
 @pytest.mark.django_db
 def test_author_with_invalid_author(client, settings):
     assert settings.DJPRESS_SETTINGS["AUTHOR_PREFIX"] == "test-url-author"
+    url = "/test-url-author/non-existent-author/"
+    response = client.get(url)
+    assert response.status_code == 404
+
+
+def test_author_with_author_prefix_blank(client, settings):
+    assert settings.DJPRESS_SETTINGS["AUTHOR_PREFIX"] == "test-url-author"
+    settings.DJPRESS_SETTINGS["AUTHOR_PREFIX"] = ""
+    url = "/test-url-author/non-existent-author/"
+    response = client.get(url)
+    assert response.status_code == 404
+
+
+def test_author_with_author_enabled_false(client, settings):
+    assert settings.DJPRESS_SETTINGS["AUTHOR_ENABLED"] == True
+    settings.DJPRESS_SETTINGS["AUTHOR_ENABLED"] = False
     url = "/test-url-author/non-existent-author/"
     response = client.get(url)
     assert response.status_code == 404
@@ -131,27 +147,20 @@ def test_category_with_invalid_category(client, settings):
     assert response.status_code == 404
 
 
-def test_validate_date():
-    # Test 1 - invalid year
-    year = "0000"
-    with pytest.raises(ValueError):
-        validate_date(year, "", "")
+def test_category_with_category_prefix_blank(client, settings):
+    assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
+    settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] = ""
+    url = "/test-url-category/non-existent-category/"
+    response = client.get(url)
+    assert response.status_code == 404
 
-    # Test 2 - invalid months
-    month = "00"
-    with pytest.raises(ValueError):
-        validate_date("2024", month, "")
-    month = "13"
-    with pytest.raises(ValueError):
-        validate_date("2024", month, "")
 
-    # Test 3 - invalid days
-    day = "00"
-    with pytest.raises(ValueError):
-        validate_date("2024", "1", day)
-    day = "32"
-    with pytest.raises(ValueError):
-        validate_date("2024", "1", day)
+def test_category_with_category_enabled_false(client, settings):
+    assert settings.DJPRESS_SETTINGS["CATEGORY_ENABLED"] == True
+    settings.DJPRESS_SETTINGS["CATEGORY_ENABLED"] = False
+    url = "/test-url-category/non-existent-category/"
+    response = client.get(url)
+    assert response.status_code == 404
 
 
 @pytest.mark.django_db

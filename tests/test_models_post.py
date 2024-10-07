@@ -1,15 +1,13 @@
 import pytest
-import importlib
 
 from django.utils import timezone
 from unittest.mock import Mock
 from djpress.models import Category, Post
 from django.core.cache import cache
-from django.urls import clear_url_caches
 
 from djpress import urls as djpress_urls
 from djpress.models.post import PUBLISHED_POSTS_CACHE_KEY
-from djpress.exceptions import SlugNotFoundError, PostNotFoundError, PageNotFoundError
+from djpress.exceptions import PostNotFoundError, PageNotFoundError
 
 
 @pytest.mark.django_db
@@ -26,12 +24,9 @@ def test_post_model(test_post1, user, category1):
 
 @pytest.mark.django_db
 def test_post_methods(test_post1, test_post2, category1, category2):
-    test_post1.categories.add(category1)
-
     assert Post.post_objects.all().count() == 2
     assert Post.post_objects.get_published_post_by_slug("test-post1").title == "Test Post1"
     assert Post.post_objects.get_published_posts_by_category(category1).count() == 1
-    assert Post.post_objects.get_published_posts_by_category(category2).count() == 0
 
 
 @pytest.mark.django_db
@@ -264,46 +259,30 @@ def test_post_permalink(user, settings):
 
     # Test with no post prefix
     settings.DJPRESS_SETTINGS["POST_PREFIX"] = ""
-    # Clear the URL caches
-    clear_url_caches()
-    # Reload the URL module to reflect the changed settings
-    importlib.reload(djpress_urls)
     assert post.permalink == "test-post"
 
     # Test with text, year, month, day post prefix
     settings.DJPRESS_SETTINGS["POST_PREFIX"] = "test-posts/{{ year }}/{{ month }}/{{ day }}"
-    clear_url_caches()
-    importlib.reload(djpress_urls)
     assert post.permalink == "test-posts/2024/01/01/test-post"
 
     # Test with text, year, month post prefix
     settings.DJPRESS_SETTINGS["POST_PREFIX"] = "test-posts/{{ year }}/{{ month }}"
-    clear_url_caches()
-    importlib.reload(djpress_urls)
     assert post.permalink == "test-posts/2024/01/test-post"
 
     # Test with text, year post prefix
     settings.DJPRESS_SETTINGS["POST_PREFIX"] = "test-posts/{{ year }}"
-    clear_url_caches()
-    importlib.reload(djpress_urls)
     assert post.permalink == "test-posts/2024/test-post"
 
     # Test with year, month, day post prefix
     settings.DJPRESS_SETTINGS["POST_PREFIX"] = "{{ year }}/{{ month }}/{{ day }}"
-    clear_url_caches()
-    importlib.reload(djpress_urls)
     assert post.permalink == "2024/01/01/test-post"
 
     # Test with year, month post prefix
     settings.DJPRESS_SETTINGS["POST_PREFIX"] = "{{ year }}/{{ month }}"
-    clear_url_caches()
-    importlib.reload(djpress_urls)
     assert post.permalink == "2024/01/test-post"
 
     # Test with year post prefix
     settings.DJPRESS_SETTINGS["POST_PREFIX"] = "{{ year }}"
-    clear_url_caches()
-    importlib.reload(djpress_urls)
     assert post.permalink == "2024/test-post"
 
 
@@ -431,15 +410,44 @@ def test_get_published_page_by_path(test_page1: Post):
         Post.page_objects.get_published_page_by_path(page_path)
 
 
-@pytest.fixture
-def mock_timezone_now(monkeypatch):
-    current_time = timezone.now()
-    monkeypatch.setattr(timezone, "now", lambda: current_time)
-    return current_time
+@pytest.mark.django_db
+def test_get_cached_published_posts(settings, monkeypatch, test_post1, test_post2):
+    """Test that the get_published_pages method returns the correct pages."""
+    # Confirm settings are set according to settings_testing.py
+    assert settings.DJPRESS_SETTINGS["CACHE_RECENT_PUBLISHED_POSTS"] is False
+    assert settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"] == 3
+
+    # Turn on caching and check if the setting is correct
+    settings.DJPRESS_SETTINGS["CACHE_RECENT_PUBLISHED_POSTS"] = True
+    assert settings.DJPRESS_SETTINGS["CACHE_RECENT_PUBLISHED_POSTS"] is True
+
+    # Mock cache.set and cache.get
+    mock_cache_set = Mock()
+    mock_cache_get = Mock(return_value=None)
+    monkeypatch.setattr(cache, "set", mock_cache_set)
+    monkeypatch.setattr(cache, "get", mock_cache_get)
+
+    # First call should set the cache
+    assert list(Post.post_objects.get_recent_published_posts()) == [test_post2, test_post1]
+    assert mock_cache_set.called
+
+    # Get the arguments passed to cache.set
+    args, kwargs = mock_cache_set.call_args
+
+    # Mock cache.get to return the cached value
+    mock_cache_get.return_value = [test_post2, test_post1]
+
+    # Second call should read from the cache
+    assert list(Post.post_objects.get_recent_published_posts()) == [test_post2, test_post1]
+    assert mock_cache_get.called
+
+    # Verify that cache.get was called with the expected key
+    cache_key = args[0]  # Assuming the cache key is the first argument to cache.set
+    mock_cache_get.assert_called_with(cache_key)
 
 
 @pytest.mark.django_db
-def test_get_cached_recent_published_posts(user, settings, mock_timezone_now, monkeypatch):
+def test_get_cached_future_published_posts(user, settings, mock_timezone_now, monkeypatch):
     """Test that the def _get_cached_recent_published_posts method sets the correct timeout.
 
     This is a complicated test that involves mocking the timezone.now function and the cache.set function.
@@ -450,6 +458,7 @@ def test_get_cached_recent_published_posts(user, settings, mock_timezone_now, mo
     assert settings.DJPRESS_SETTINGS["CACHE_RECENT_PUBLISHED_POSTS"] is False
     assert settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"] == 3
 
+    # Turn on caching and check if the setting is correct
     settings.DJPRESS_SETTINGS["CACHE_RECENT_PUBLISHED_POSTS"] = True
     assert settings.DJPRESS_SETTINGS["CACHE_RECENT_PUBLISHED_POSTS"] is True
 
@@ -484,3 +493,160 @@ def test_get_cached_recent_published_posts(user, settings, mock_timezone_now, mo
     expected_timeout = 7200  # 2 hours in seconds
     actual_timeout = kwargs.get("timeout") or args[2]  # timeout might be a kwarg or the third positional arg
     assert abs(actual_timeout - expected_timeout) < 5  # Allow a small margin of error
+
+
+@pytest.fixture
+def mock_cache(monkeypatch):
+    mock_cache_get = Mock()
+    mock_cache_set = Mock()
+    monkeypatch.setattr(cache, "get", mock_cache_get)
+    monkeypatch.setattr(cache, "set", mock_cache_set)
+    return mock_cache_get, mock_cache_set
+
+
+@pytest.mark.django_db
+def test_get_recent_published_posts_cache_miss(mock_cache, settings, test_post1, test_post2, test_post3):
+    """First time calling the get_recent_published_posts method should result in a cache miss."""
+    mock_cache_get, mock_cache_set = mock_cache
+
+    # Simulate cache miss
+    mock_cache_get.return_value = None
+
+    # Enable caching
+    settings.DJPRESS_SETTINGS["CACHE_RECENT_PUBLISHED_POSTS"] = True
+
+    # Call the method
+    queryset = Post.post_objects.get_recent_published_posts()
+
+    # Verify cache.set is called
+    assert mock_cache_set.called
+    args, kwargs = mock_cache_set.call_args
+    cache_key = args[0]
+    cached_queryset = args[1]
+    timeout = kwargs["timeout"]
+
+    # Verify the queryset is correct
+    assert list(queryset) == [test_post3, test_post2, test_post1]
+    assert list(cached_queryset) == [test_post3, test_post2, test_post1]
+
+
+@pytest.mark.django_db
+def test_get_recent_published_posts_cache_hit(mock_cache, settings, test_post1, test_post2, test_post3):
+    """Test that the get_recent_published_posts method returns the correct posts from the cache."""
+    # Confirm settings are set according to settings_testing.py
+    assert settings.DJPRESS_SETTINGS["CACHE_RECENT_PUBLISHED_POSTS"] is False
+    assert settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"] == 3
+
+    mock_cache_get, mock_cache_set = mock_cache
+
+    # Simulate cache hit
+    mock_cache_get.return_value = [test_post3, test_post2, test_post1]
+
+    # Enable caching
+    settings.DJPRESS_SETTINGS["CACHE_RECENT_PUBLISHED_POSTS"] = True
+
+    # Call the method
+    cached_queryset = Post.post_objects.get_recent_published_posts()
+
+    # Verify cache.get is called
+    mock_cache_get.assert_called_with(PUBLISHED_POSTS_CACHE_KEY)
+    assert list(cached_queryset) == [test_post3, test_post2, test_post1]
+
+    new_queryset = Post.post_objects.get_recent_published_posts()
+
+    # Verify cache.set is not called again
+    assert not mock_cache_set.called
+
+
+@pytest.mark.django_db
+def test_get_recent_published_posts_cache_hit_2_posts(mock_cache, settings, test_post1, test_post2):
+    """Test that the get_recent_published_posts method returns the correct posts from the cache."""
+    # Confirm settings are set according to settings_testing.py
+    assert settings.DJPRESS_SETTINGS["CACHE_RECENT_PUBLISHED_POSTS"] is False
+    assert settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"] == 3
+
+    mock_cache_get, mock_cache_set = mock_cache
+
+    # Simulate cache hit
+    mock_cache_get.return_value = [test_post2, test_post1]
+
+    # Enable caching
+    settings.DJPRESS_SETTINGS["CACHE_RECENT_PUBLISHED_POSTS"] = True
+    settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"] = 2
+
+    # Call the method
+    cached_queryset = Post.post_objects.get_recent_published_posts()
+
+    # Verify cache.get is called
+    mock_cache_get.assert_called_with(PUBLISHED_POSTS_CACHE_KEY)
+    assert list(cached_queryset) == [test_post2, test_post1]
+
+    new_queryset = Post.post_objects.get_recent_published_posts()
+
+    # Verify cache.set is not called again
+    assert not mock_cache_set.called
+
+
+@pytest.mark.django_db
+def test_get_cached_recent_published_posts_cache_miss(mock_cache, test_post1, test_post2):
+    """Test that the _get_cached_recent_published_posts method sets the correct cache key and value."""
+    mock_cache_get, mock_cache_set = mock_cache
+
+    # Simulate cache miss
+    mock_cache_get.return_value = None
+
+    # Call the method
+    queryset = Post.post_objects._get_cached_recent_published_posts()
+
+    # Verify cache.set is called
+    assert mock_cache_set.called
+    args, kwargs = mock_cache_set.call_args
+    cache_key = args[0]
+    cached_queryset = args[1]
+    timeout = kwargs["timeout"]
+
+    # Verify the queryset is correct
+    assert list(queryset) == [test_post2, test_post1]
+    assert list(cached_queryset) == [test_post2, test_post1]
+
+
+@pytest.mark.django_db
+def test_get_cached_recent_published_posts_cache_hit(mock_cache, settings, test_post1, test_post2, test_post3):
+    assert settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"] == 3
+
+    mock_cache_get, mock_cache_set = mock_cache
+
+    # Simulate cache hit
+    mock_cache_get.return_value = [test_post3, test_post2, test_post1]
+
+    # Call the method
+    cached_queryset = Post.post_objects._get_cached_recent_published_posts()
+
+    # Verify cache.get is called
+    mock_cache_get.assert_called_with(PUBLISHED_POSTS_CACHE_KEY)
+    assert list(cached_queryset) == [test_post3, test_post2, test_post1]
+
+    # Verify cache.set is not called again
+    assert not mock_cache_set.called
+
+
+@pytest.mark.django_db
+def test_get_cached_recent_published_posts_cache_hit_2_posts(mock_cache, settings, test_post1, test_post2):
+    assert settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"] == 3
+    # Change the number of posts to 2
+    settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"] = 2
+
+    mock_cache_get, mock_cache_set = mock_cache
+
+    # Simulate cache hit
+    mock_cache_get.return_value = [test_post2, test_post1]
+
+    # Call the method
+    cached_queryset = Post.post_objects._get_cached_recent_published_posts()
+
+    # Verify cache.get is called
+    mock_cache_get.assert_called_with(PUBLISHED_POSTS_CACHE_KEY)
+    assert list(cached_queryset) == [test_post2, test_post1]
+
+    # Verify cache.set is not called again
+    assert not mock_cache_set.called

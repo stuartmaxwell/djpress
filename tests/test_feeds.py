@@ -7,17 +7,13 @@ from djpress.models import Post
 from djpress.url_utils import get_feed_url
 
 
-@pytest.fixture
-def user():
-    return User.objects.create_user(username="testuser", password="testpass")
-
-
 @pytest.mark.django_db
 def test_latest_posts_feed(client, user):
     Post.post_objects.create(title="Post 1", content="Content of post 1.", author=user, status="published")
     Post.post_objects.create(title="Post 2", content="Content of post 2.", author=user, status="published")
 
     url = get_feed_url()
+    print(f"URL: {url}")
     response = client.get(url)
 
     assert response.status_code == 200

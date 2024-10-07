@@ -1,8 +1,13 @@
 import pytest
 from copy import deepcopy
-from example.config import settings_testing
-from djpress.models import Category, Post
+
+from django.utils import timezone
 from django.contrib.auth.models import User
+
+from djpress.url_converters import SlugPathConverter
+from djpress.models import Category, Post
+
+from example.config import settings_testing
 
 # Take a static snapshot of DJPRESS_SETTINGS from settings_test.py
 CLEAN_DJPRESS_SETTINGS = deepcopy(settings_testing.DJPRESS_SETTINGS)
@@ -24,8 +29,25 @@ def reset_djpress_settings(settings):
 
 
 @pytest.fixture
+def converter():
+    return SlugPathConverter()
+
+
+@pytest.fixture
+def mock_timezone_now(monkeypatch):
+    current_time = timezone.now()
+    monkeypatch.setattr(timezone, "now", lambda: current_time)
+    return current_time
+
+
+@pytest.fixture
 def user():
-    return User.objects.create_user(username="testuser", password="testpass")
+    return User.objects.create_user(
+        username="testuser",
+        password="testpass",
+        first_name="Test",
+        last_name="User",
+    )
 
 
 @pytest.fixture
@@ -39,6 +61,12 @@ def category2():
 
 
 @pytest.fixture
+def category3():
+    category = Category.objects.create(title="Development", slug="dev")
+    return category
+
+
+@pytest.fixture
 def test_post1(user, category1):
     post = Post.objects.create(
         title="Test Post1",
@@ -48,12 +76,13 @@ def test_post1(user, category1):
         status="published",
         post_type="post",
     )
+    post.categories.set([category1])
 
     return post
 
 
 @pytest.fixture
-def test_post2(user, category1):
+def test_post2(user, category2):
     post = Post.objects.create(
         title="Test Post2",
         slug="test-post2",
@@ -62,7 +91,36 @@ def test_post2(user, category1):
         status="published",
         post_type="post",
     )
+    post.categories.set([category2])
+    return post
 
+
+@pytest.fixture
+def test_post3(user, category1):
+    post = Post.objects.create(
+        title="Test Post3",
+        slug="test-post3",
+        content="This is test post 3.",
+        author=user,
+        status="published",
+        post_type="post",
+    )
+
+    return post
+
+
+@pytest.fixture
+def test_long_post1(user, settings, category1):
+    truncate_tag = settings.DJPRESS_SETTINGS["TRUNCATE_TAG"]
+    post = Post.post_objects.create(
+        title="Test Long Post1",
+        slug="test-long-post1",
+        content=f"This is the truncated content.\n\n{truncate_tag}\n\nThis is the rest of the post.",
+        author=user,
+        status="published",
+        post_type="post",
+    )
+    post.categories.set([category1])
     return post
 
 

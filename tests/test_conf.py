@@ -1,19 +1,11 @@
 import pytest
 
 from django.conf import settings as django_settings
+from django.core.exceptions import ImproperlyConfigured
+from django.core.checks import Error
 
 from djpress.conf import settings as djpress_settings
-
-
-@pytest.fixture
-def reset_django_settings():
-    """Fixture to reset Django settings to their original state."""
-    original_djpress_settings = getattr(django_settings, "DJPRESS_SETTINGS", None)
-    yield
-    if original_djpress_settings is not None:
-        django_settings.DJPRESS_SETTINGS = original_djpress_settings
-    else:
-        delattr(django_settings, "DJPRESS_SETTINGS")
+from djpress.conf import check_djpress_settings
 
 
 def test_load_default_test_settings_example_project(settings):
@@ -48,7 +40,7 @@ def test_leaky_test(settings):
         assert settings.DJPRESS_SETTINGS["MARKDOWN_EXTENSIONS"] == []
 
 
-def test_override_settings_in_django_settings(reset_django_settings, settings):
+def test_override_settings_in_django_settings(reset_djpress_settings, settings):
     """Test that settings can be overridden in Django settings.py."""
     settings.DJPRESS_SETTINGS = {
         "BLOG_TITLE": "Custom Blog Title",
@@ -61,7 +53,7 @@ def test_override_settings_in_django_settings(reset_django_settings, settings):
     assert djpress_settings.RECENT_PUBLISHED_POSTS_COUNT == 10
 
 
-def test_type_validation_for_overridden_settings(reset_django_settings, settings):
+def test_type_validation_for_overridden_settings(reset_djpress_settings, settings):
     """Test that settings enforce correct types."""
     # Valid setting with the correct type
     settings.DJPRESS_SETTINGS = {
@@ -87,15 +79,57 @@ def test_type_validation_for_overridden_settings(reset_django_settings, settings
         _ = djpress_settings.ARCHIVE_ENABLED
 
 
-def test_invalid_setting_key(reset_django_settings):
+def test_invalid_setting_key(reset_djpress_settings):
     """Test that requesting an invalid setting raises an AttributeError."""
     with pytest.raises(AttributeError):
         _ = djpress_settings.INVALID_SETTING_KEY
 
 
-def test_django_settings_not_defined_in_djpress(reset_django_settings, settings):
+def test_django_settings_not_defined_in_djpress(reset_djpress_settings, settings):
     """Test that Django settings not defined in DJPress are returned."""
     assert settings.APPEND_SLASH is True
     assert django_settings.APPEND_SLASH is True
     with pytest.raises(AttributeError):
         djpress_settings.APPEND_SLASH
+
+
+def test_invalid_settings_rss(settings):
+    """Test that invalid settings raise an ImproperlyConfigured error."""
+    settings.DJPRESS_SETTINGS = {
+        "RSS_ENABLED": True,
+        "RSS_PATH": "",
+    }
+    errors = check_djpress_settings()
+    assert len(errors) == 1
+    assert errors[0] == Error(
+        "RSS_PATH cannot be empty if RSS_ENABLED is True.",
+        id="djpress.E001",
+    )
+
+
+def test_invalid_settings_category(settings):
+    """Test that invalid settings raise an ImproperlyConfigured error."""
+    settings.DJPRESS_SETTINGS = {
+        "CATEGORY_ENABLED": True,
+        "CATEGORY_PREFIX": "",
+    }
+    errors = check_djpress_settings()
+    assert len(errors) == 1
+    assert errors[0] == Error(
+        "CATEGORY_PREFIX cannot be empty if CATEGORY_ENABLED is True.",
+        id="djpress.E002",
+    )
+
+
+def test_invalid_settings_author(settings):
+    """Test that invalid settings raise an ImproperlyConfigured error."""
+    settings.DJPRESS_SETTINGS = {
+        "AUTHOR_ENABLED": True,
+        "AUTHOR_PREFIX": "",
+    }
+    errors = check_djpress_settings()
+    assert len(errors) == 1
+    assert errors[0] == Error(
+        "AUTHOR_PREFIX cannot be empty if AUTHOR_ENABLED is True.",
+        id="djpress.E003",
+    )

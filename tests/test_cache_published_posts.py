@@ -9,11 +9,6 @@ from djpress.models import Post
 from djpress.models.post import PUBLISHED_POSTS_CACHE_KEY
 
 
-@pytest.fixture
-def user():
-    return User.objects.create_user(username="testuser", password="testpass")
-
-
 @pytest.mark.django_db
 def test_get_cached_content(user, settings):
     # Confirm the settings in settings_testing.py

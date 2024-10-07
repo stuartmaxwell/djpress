@@ -9,16 +9,6 @@ from djpress.models import Category, Post
 
 
 @pytest.fixture
-def user():
-    return User.objects.create_user(username="testuser", password="testpass")
-
-
-@pytest.fixture
-def category1():
-    return Category.objects.create(title="Test Category1", slug="test-category1")
-
-
-@pytest.fixture
 def test_post1(user, category1):
     post = Post.objects.create(
         title="Test Post1",

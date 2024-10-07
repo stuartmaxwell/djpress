@@ -15,113 +15,6 @@ from djpress.utils import get_author_display_name
 from djpress.exceptions import PageNotFoundError
 
 
-@pytest.fixture
-def user():
-    user = User.objects.create_user(
-        username="testuser",
-        password="testpass",
-        first_name="Test",
-        last_name="User",
-    )
-    return user
-
-
-@pytest.fixture
-def category1():
-    category = Category.objects.create(
-        title="General",
-        slug="general",
-    )
-    return category
-
-
-@pytest.fixture
-def category2():
-    category = Category.objects.create(
-        title="News",
-        slug="news",
-    )
-    return category
-
-
-@pytest.fixture
-def category3():
-    category = Category.objects.create(
-        title="Development",
-        slug="dev",
-    )
-    return category
-
-
-@pytest.fixture
-def test_post1(user, category1):
-    post = Post.post_objects.create(
-        title="Test Post1",
-        slug="test-post1",
-        content="This is a test post.",
-        author=user,
-        status="published",
-        post_type="post",
-    )
-    post.categories.set([category1])
-    return post
-
-
-@pytest.fixture
-def test_post2(user, category2):
-    post = Post.post_objects.create(
-        title="Test Post2",
-        slug="test-post2",
-        content="This is a test post.",
-        author=user,
-        status="published",
-        post_type="post",
-    )
-    post.categories.set([category2])
-    return post
-
-
-@pytest.fixture
-def test_long_post1(user, settings, category1):
-    truncate_tag = settings.DJPRESS_SETTINGS["TRUNCATE_TAG"]
-    post = Post.post_objects.create(
-        title="Test Long Post1",
-        slug="test-long-post1",
-        content=f"This is the truncated content.\n\n{truncate_tag}\n\nThis is the rest of the post.",
-        author=user,
-        status="published",
-        post_type="post",
-    )
-    post.categories.set([category1])
-    return post
-
-
-@pytest.fixture
-def test_page1(user):
-    post = Post.post_objects.create(
-        title="Test Page1",
-        slug="test-page1",
-        content="This is a test page.",
-        author=user,
-        status="published",
-        post_type="page",
-    )
-    return post
-
-
-@pytest.fixture
-def test_page2(user):
-    post = Post.post_objects.create(
-        title="Test Page2",
-        slug="test-page2",
-        content="This is a test page.",
-        author=user,
-        status="published",
-        post_type="page",
-    )
-    return post
-
-
 @pytest.mark.django_db
 def test_have_posts_single_post(test_post1):
     """Return a list of posts in the context."""
@@ -356,7 +249,7 @@ def test_post_category_link_with_category_path(settings, category1):
     assert settings.DJPRESS_SETTINGS["CATEGORY_ENABLED"] is True
     assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
-    expected_output = f'<a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/general/" title="View all posts in the General category">{category1.title}</a>'
+    expected_output = f'<a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category">{category1.title}</a>'
 
     assert djpress_tags.post_category_link(category1) == expected_output
 
@@ -367,7 +260,7 @@ def test_post_category_link_with_category_path_with_one_link_class(settings, cat
     assert settings.DJPRESS_SETTINGS["CATEGORY_ENABLED"] is True
     assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
-    expected_output = f'<a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/general/" title="View all posts in the General category" class="class1">{category1.title}</a>'
+    expected_output = f'<a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="class1">{category1.title}</a>'
 
     assert djpress_tags.post_category_link(category1, "class1") == expected_output
 
@@ -378,7 +271,7 @@ def test_post_category_link_with_category_path_with_two_link_classes(settings, c
     assert settings.DJPRESS_SETTINGS["CATEGORY_ENABLED"] is True
     assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
-    expected_output = f'<a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/general/" title="View all posts in the General category" class="class1 class2">{category1.title}</a>'
+    expected_output = f'<a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="class1 class2">{category1.title}</a>'
 
     assert djpress_tags.post_category_link(category1, "class1 class2") == expected_output
 
@@ -615,7 +508,7 @@ def test_post_categories(settings, test_post1):
     # Confirm settings are set according to settings_testing.py
     assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
-    expected_output = f'<ul><li><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/general/" title="View all posts in the General category">General</a></li></ul>'
+    expected_output = f'<ul><li><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category">Test Category1</a></li></ul>'
 
     assert djpress_tags.post_categories_link(context) == expected_output
 
@@ -650,7 +543,7 @@ def test_post_categories_ul(settings, test_post1):
     # Confirm settings are set according to settings_testing.py
     assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
-    expected_output = f'<ul><li><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/general/" title="View all posts in the General category">General</a></li></ul>'
+    expected_output = f'<ul><li><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category">Test Category1</a></li></ul>'
 
     assert djpress_tags.post_categories_link(context, "ul") == expected_output
 
@@ -662,7 +555,7 @@ def test_post_categories_ul_class1(settings, test_post1):
     # Confirm settings are set according to settings_testing.py
     assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
-    expected_output = f'<ul><li><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/general/" title="View all posts in the General category" class="class1">General</a></li></ul>'
+    expected_output = f'<ul><li><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="class1">Test Category1</a></li></ul>'
 
     assert djpress_tags.post_categories_link(context, outer="ul", link_class="class1") == expected_output
 
@@ -674,7 +567,7 @@ def test_post_categories_ul_class1_class2(settings, test_post1):
     # Confirm settings are set according to settings_testing.py
     assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
-    expected_output = f'<ul><li><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/general/" title="View all posts in the General category" class="class1 class2">General</a></li></ul>'
+    expected_output = f'<ul><li><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="class1 class2">Test Category1</a></li></ul>'
 
     assert djpress_tags.post_categories_link(context, outer="ul", link_class="class1 class2") == expected_output
 
@@ -686,7 +579,7 @@ def test_post_categories_div(settings, test_post1):
     # Confirm settings are set according to settings_testing.py
     assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
-    expected_output = f'<div><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/general/" title="View all posts in the General category">General</a></div>'
+    expected_output = f'<div><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category">Test Category1</a></div>'
 
     assert djpress_tags.post_categories_link(context, outer="div") == expected_output
 
@@ -698,7 +591,7 @@ def test_post_categories_div_class1(settings, test_post1):
     # Confirm settings are set according to settings_testing.py
     assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
-    expected_output = f'<div><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/general/" title="View all posts in the General category" class="class1">General</a></div>'
+    expected_output = f'<div><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="class1">Test Category1</a></div>'
 
     assert djpress_tags.post_categories_link(context, outer="div", link_class="class1") == expected_output
 
@@ -710,7 +603,7 @@ def test_post_categories_div_class1_class2(settings, test_post1):
     # Confirm settings are set according to settings_testing.py
     assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
-    expected_output = f'<div><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/general/" title="View all posts in the General category" class="class1 class2">General</a></div>'
+    expected_output = f'<div><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="class1 class2">Test Category1</a></div>'
 
     assert djpress_tags.post_categories_link(context, outer="div", link_class="class1 class2") == expected_output
 
@@ -722,7 +615,7 @@ def test_post_categories_span(settings, test_post1):
     # Confirm settings are set according to settings_testing.py
     assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
-    expected_output = f'<span><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/general/" title="View all posts in the General category">General</a></span>'
+    expected_output = f'<span><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category">Test Category1</a></span>'
 
     assert djpress_tags.post_categories_link(context, outer="span") == expected_output
 
@@ -734,7 +627,7 @@ def test_post_categories_span_class1(settings, test_post1):
     # Confirm settings are set according to settings_testing.py
     assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
-    expected_output = f'<span><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/general/" title="View all posts in the General category" class="class1">General</a></span>'
+    expected_output = f'<span><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="class1">Test Category1</a></span>'
 
     assert djpress_tags.post_categories_link(context, outer="span", link_class="class1") == expected_output
 
@@ -746,7 +639,7 @@ def test_post_categories_span_class1_class2(settings, test_post1):
     # Confirm settings are set according to settings_testing.py
     assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
-    expected_output = f'<span><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/general/" title="View all posts in the General category" class="class1 class2">General</a></span>'
+    expected_output = f'<span><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="class1 class2">Test Category1</a></span>'
 
     assert djpress_tags.post_categories_link(context, outer="span", link_class="class1 class2") == expected_output
 
