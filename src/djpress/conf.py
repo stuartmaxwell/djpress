@@ -1,6 +1,7 @@
 """Configuration settings for DJ Press."""
 
 from django.conf import settings as django_settings
+from django.core.checks import Error, register
 
 from djpress.app_settings import DJPRESS_SETTINGS
 
@@ -46,3 +47,44 @@ class DJPressSettings:
 
 # Singleton instance to use across the application
 settings = DJPressSettings()
+
+
+@register()
+def check_djpress_settings(**_) -> None:  # noqa: ANN003
+    """Validate DJPress settings.
+
+    This runs on start up to ensure that the settings are valid.
+
+    Returns:
+        None
+
+    Raises:
+        ImproperlyConfigured: If any settings are invalid
+    """
+    errors = []
+
+    if settings.RSS_ENABLED and not settings.RSS_PATH:
+        errors.append(
+            Error(
+                "RSS_PATH cannot be empty if RSS_ENABLED is True.",
+                id="djpress.E001",
+            ),
+        )
+
+    if settings.CATEGORY_ENABLED and not settings.CATEGORY_PREFIX:
+        errors.append(
+            Error(
+                "CATEGORY_PREFIX cannot be empty if CATEGORY_ENABLED is True.",
+                id="djpress.E002",
+            ),
+        )
+
+    if settings.AUTHOR_ENABLED and not settings.AUTHOR_PREFIX:
+        errors.append(
+            Error(
+                "AUTHOR_PREFIX cannot be empty if AUTHOR_ENABLED is True.",
+                id="djpress.E003",
+            ),
+        )
+
+    return errors
