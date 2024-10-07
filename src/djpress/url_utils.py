@@ -41,11 +41,12 @@ def regex_post() -> str:
     parts = re.split(r"(\{\{.*?\}\})", prefix)
 
     for part in parts:
-        if part == "{{ year }}":
+        # Remove spaces from the part so that either {{ year }} or {{year}} will work
+        if part.replace(" ", "") == "{{year}}":
             regex_parts.append(r"(?P<year>\d{4})")
-        elif part == "{{ month }}":
+        elif part.replace(" ", "") == "{{month}}":
             regex_parts.append(r"(?P<month>\d{2})")
-        elif part == "{{ day }}":
+        elif part.replace(" ", "") == "{{day}}":
             regex_parts.append(r"(?P<day>\d{2})")
         else:
             # Escape the part, but replace escaped spaces with regular spaces
@@ -63,6 +64,29 @@ def regex_post() -> str:
         return r"(?P<slug>[\w-]+)"
 
     return rf"{regex}/(?P<slug>[\w-]+)"
+
+
+def get_post_url(post: Post) -> str:
+    """Return the URL for the post."""
+    prefix = djpress_settings.POST_PREFIX
+
+    # Remove spaces from the prefix so that either {{ year }} or {{year}} will work
+    prefix = prefix.replace(" ", "")
+
+    # Replace the placeholders in the prefix with the actual values
+    if "{{year}}" in prefix:
+        prefix = prefix.replace("{{year}}", post.date.strftime("%Y"))
+    if "{{month}}" in prefix:
+        prefix = prefix.replace("{{month}}", post.date.strftime("%m"))
+    if "{{day}}" in prefix:
+        prefix = prefix.replace("{{day}}", post.date.strftime("%d"))
+
+    url = f"/{post.slug}" if prefix == "" else f"/{prefix}/{post.slug}"
+
+    if django_settings.APPEND_SLASH:
+        return f"{url}/"
+
+    return url
 
 
 def regex_archives() -> str:
@@ -191,26 +215,6 @@ def get_archives_url(year: int, month: int | None = None, day: int | None = None
 def get_page_url(page: Post) -> str:
     """Return the URL for the page."""
     url = f"/{page.slug}"
-
-    if django_settings.APPEND_SLASH:
-        return f"{url}/"
-
-    return url
-
-
-def get_post_url(post: Post) -> str:
-    """Return the URL for the post."""
-    prefix = djpress_settings.POST_PREFIX
-
-    # Replace the placeholders in the prefix with the actual values
-    if "{{ year }}" in prefix:
-        prefix = prefix.replace("{{ year }}", post.date.strftime("%Y"))
-    if "{{ month }}" in prefix:
-        prefix = prefix.replace("{{ month }}", post.date.strftime("%m"))
-    if "{{ day }}" in prefix:
-        prefix = prefix.replace("{{ day }}", post.date.strftime("%d"))
-
-    url = f"/{post.slug}" if prefix == "" else f"/{prefix}/{post.slug}"
 
     if django_settings.APPEND_SLASH:
         return f"{url}/"
