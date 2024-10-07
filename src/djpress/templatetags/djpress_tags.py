@@ -8,7 +8,7 @@ from django.template import Context
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
-from djpress.conf import settings
+from djpress.conf import settings as djpress_settings
 from djpress.exceptions import PageNotFoundError
 from djpress.models import Category, Post
 from djpress.templatetags.helpers import (
@@ -17,6 +17,7 @@ from djpress.templatetags.helpers import (
     get_page_link,
     post_read_more_link,
 )
+from djpress.url_utils import get_archives_url, get_author_url
 from djpress.utils import get_author_display_name
 
 register = template.Library()
@@ -29,7 +30,7 @@ def blog_title() -> str:
     Returns:
         str: The blog title.
     """
-    return settings.BLOG_TITLE
+    return djpress_settings.BLOG_TITLE
 
 
 @register.simple_tag
@@ -44,7 +45,7 @@ def blog_title_link(link_class: str = "") -> str:
     """
     link_class_html = f' class="{link_class}"' if link_class else ""
 
-    output = f'<a href="{reverse("djpress:index")}"{link_class_html}>{settings.BLOG_TITLE}</a>'
+    output = f'<a href="{reverse("djpress:index")}"{link_class_html}>{djpress_settings.BLOG_TITLE}</a>'
 
     return mark_safe(output)
 
@@ -242,11 +243,9 @@ def post_title_link(context: Context, link_class: str = "") -> str:
     posts: Page | None = context.get("posts")
 
     if posts and post:
-        post_url = reverse("djpress:post_detail", args=[post.permalink])
-
         link_class_html = f' class="{link_class}"' if link_class else ""
 
-        output = f'<a href="{post_url}" title="{post.title}"{link_class_html}>{post.title}</a>'
+        output = f'<a href="{post.url}" title="{post.title}"{link_class_html}>{post.title}</a>'
 
         return mark_safe(output)
 
@@ -296,10 +295,10 @@ def post_author_link(context: Context, link_class: str = "") -> str:
     author = post.author
     author_display_name = get_author_display_name(author)
 
-    if not settings.AUTHOR_PATH_ENABLED:
+    if not djpress_settings.AUTHOR_ENABLED:
         return f'<span rel="author">{author_display_name}</span>'
 
-    author_url = reverse("djpress:author_posts", args=[author])
+    author_url = get_author_url(user=author)
 
     link_class_html = f' class="{link_class}"' if link_class else ""
 
@@ -322,7 +321,7 @@ def post_category_link(category: Category, link_class: str = "") -> str:
         category: The category of the post.
         link_class: The CSS class(es) for the link.
     """
-    if not settings.CATEGORY_PATH_ENABLED:
+    if not djpress_settings.CATEGORY_ENABLED:
         return category.title
 
     return mark_safe(category_link(category, link_class))
@@ -362,7 +361,7 @@ def post_date_link(context: Context, link_class: str = "") -> str:
         return ""
     output_date = post.date
 
-    if not settings.DATE_ARCHIVES_ENABLED:
+    if not djpress_settings.ARCHIVE_ENABLED:
         return mark_safe(output_date.strftime("%b %-d, %Y"))
 
     post_year = output_date.strftime("%Y")
@@ -372,22 +371,9 @@ def post_date_link(context: Context, link_class: str = "") -> str:
     post_day_name = output_date.strftime("%-d")
     post_time = output_date.strftime("%-I:%M %p")
 
-    year_url = reverse(
-        "djpress:archives_posts",
-        args=[post_year],
-    )
-    month_url = reverse(
-        "djpress:archives_posts",
-        args=[post_year, post_month],
-    )
-    day_url = reverse(
-        "djpress:archives_posts",
-        args=[
-            post_year,
-            post_month,
-            post_day,
-        ],
-    )
+    year_url = get_archives_url(year=int(post_year))
+    month_url = get_archives_url(year=int(post_year), month=int(post_month))
+    day_url = get_archives_url(year=int(post_year), month=int(post_month), day=int(post_day))
 
     link_class_html = f' class="{link_class}"' if link_class else ""
 

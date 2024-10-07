@@ -4,7 +4,6 @@ from django.core.paginator import Paginator
 from django.template import Context
 from django.urls import reverse
 
-from djpress.conf import settings
 from djpress.models import Category, Post
 from djpress.templatetags import djpress_tags
 from djpress.templatetags.helpers import (
@@ -14,112 +13,6 @@ from djpress.templatetags.helpers import (
 )
 from djpress.utils import get_author_display_name
 from djpress.exceptions import PageNotFoundError
-
-
-@pytest.fixture
-def user():
-    user = User.objects.create_user(
-        username="testuser",
-        password="testpass",
-        first_name="Test",
-        last_name="User",
-    )
-    return user
-
-
-@pytest.fixture
-def category1():
-    category = Category.objects.create(
-        title="General",
-        slug="general",
-    )
-    return category
-
-
-@pytest.fixture
-def category2():
-    category = Category.objects.create(
-        title="News",
-        slug="news",
-    )
-    return category
-
-
-@pytest.fixture
-def category3():
-    category = Category.objects.create(
-        title="Development",
-        slug="dev",
-    )
-    return category
-
-
-@pytest.fixture
-def test_post1(user, category1):
-    post = Post.post_objects.create(
-        title="Test Post1",
-        slug="test-post1",
-        content="This is a test post.",
-        author=user,
-        status="published",
-        post_type="post",
-    )
-    post.categories.set([category1])
-    return post
-
-
-@pytest.fixture
-def test_post2(user, category2):
-    post = Post.post_objects.create(
-        title="Test Post2",
-        slug="test-post2",
-        content="This is a test post.",
-        author=user,
-        status="published",
-        post_type="post",
-    )
-    post.categories.set([category2])
-    return post
-
-
-@pytest.fixture
-def test_long_post1(user, category1):
-    post = Post.post_objects.create(
-        title="Test Long Post1",
-        slug="test-long-post1",
-        content=f"This is the truncated content.\n\n{settings.TRUNCATE_TAG}\n\nThis is the rest of the post.",
-        author=user,
-        status="published",
-        post_type="post",
-    )
-    post.categories.set([category1])
-    return post
-
-
-@pytest.fixture
-def test_page1(user):
-    post = Post.post_objects.create(
-        title="Test Page1",
-        slug="test-page1",
-        content="This is a test page.",
-        author=user,
-        status="published",
-        post_type="page",
-    )
-    return post
-
-
-@pytest.fixture
-def test_page2(user):
-    post = Post.post_objects.create(
-        title="Test Page2",
-        slug="test-page2",
-        content="This is a test page.",
-        author=user,
-        status="published",
-        post_type="page",
-    )
-    return post
 
 
 @pytest.mark.django_db
@@ -146,23 +39,18 @@ def test_have_posts_multiple_posts(test_post1, test_long_post1):
     assert djpress_tags.have_posts(context) == [test_post1, test_long_post1]
 
 
-def test_blog_title():
+def test_blog_title(settings):
     """Test the blog_title template tag.
 
     This can be changed on the fly.
     """
-    assert settings.BLOG_TITLE == "My Test DJ Press Blog"
-    assert djpress_tags.blog_title() == settings.BLOG_TITLE
+    assert settings.DJPRESS_SETTINGS["BLOG_TITLE"] == "My Test DJ Press Blog"
+    assert djpress_tags.blog_title() == settings.DJPRESS_SETTINGS["BLOG_TITLE"]
 
     # Change the title
-    settings.set("BLOG_TITLE", "My New Blog Title")
-    assert settings.BLOG_TITLE == "My New Blog Title"
-    assert djpress_tags.blog_title() == settings.BLOG_TITLE
-
-    # Set the title back to the original
-    settings.set("BLOG_TITLE", "My Test DJ Press Blog")
-    assert settings.BLOG_TITLE == "My Test DJ Press Blog"
-    assert djpress_tags.blog_title() == settings.BLOG_TITLE
+    settings.DJPRESS_SETTINGS["BLOG_TITLE"] = "My New Blog Title"
+    assert settings.DJPRESS_SETTINGS["BLOG_TITLE"] == "My New Blog Title"
+    assert djpress_tags.blog_title() == settings.DJPRESS_SETTINGS["BLOG_TITLE"]
 
 
 @pytest.mark.django_db
@@ -193,7 +81,7 @@ def test_post_title_no_post_context():
 
 
 @pytest.mark.django_db
-def test_post_title_posts(test_post1):
+def test_post_title_posts(settings, test_post1):
     """Test the post_title_link template tag.
 
     This uses the `post.permalink` property to generate the link."""
@@ -201,14 +89,12 @@ def test_post_title_posts(test_post1):
     context = Context({"posts": [test_post1], "post": test_post1})
 
     # Confirm settings in settings_testing.py
-    assert settings.POST_PREFIX == "test-posts"
+    assert settings.DJPRESS_SETTINGS["POST_PREFIX"] == "test-posts"
 
     # this generates a URL based on the slug only - this is prefixed with the POST_PREFIX setting
-    post_url = reverse("djpress:post_detail", args=[test_post1.slug])
+    post_url = test_post1.url
 
-    # Confirm settings in settings_testing.py
-    assert settings.POST_PREFIX == "test-posts"
-    expected_output = f'<a href="/test-posts{post_url}" title="{test_post1.title}">{test_post1.title}</a>'
+    expected_output = f'<a href="{post_url}" title="{test_post1.title}">{test_post1.title}</a>'
     assert djpress_tags.post_title_link(context) == expected_output
 
 
@@ -221,16 +107,16 @@ def test_post_title_link_no_context():
 
 
 @pytest.mark.django_db
-def test_post_title_link_with_prefix(test_post1):
+def test_post_title_link_with_prefix(settings, test_post1):
     # Confirm settings in settings_testing.py
-    assert settings.POST_PREFIX == "test-posts"
+    assert settings.DJPRESS_SETTINGS["POST_PREFIX"] == "test-posts"
 
     # Context should have both a posts and a post to simulate the for post in posts loop
     context = Context({"posts": [test_post1], "post": test_post1})
 
-    post_url = reverse("djpress:post_detail", args=[test_post1.slug])
+    post_url = test_post1.url
 
-    expected_output = f'<a href="/test-posts{post_url}" title="{test_post1.title}">{test_post1.title}</a>'
+    expected_output = f'<a href="{post_url}" title="{test_post1.title}">{test_post1.title}</a>'
     assert djpress_tags.post_title_link(context) == expected_output
 
 
@@ -258,17 +144,17 @@ def test_post_author_link_no_post():
 
 
 @pytest.mark.django_db
-def test_post_author_link(test_post1):
+def test_post_author_link(settings, test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.AUTHOR_PATH_ENABLED is True
-    assert settings.AUTHOR_PATH == "test-url-author"
+    assert settings.DJPRESS_SETTINGS["AUTHOR_ENABLED"] is True
+    assert settings.DJPRESS_SETTINGS["AUTHOR_PREFIX"] == "test-url-author"
 
     author = test_post1.author
 
     expected_output = (
-        f'<a href="/{settings.AUTHOR_PATH}/testuser/" title="View all posts by '
+        f'<a href="/{settings.DJPRESS_SETTINGS["AUTHOR_PREFIX"]}/testuser/" title="View all posts by '
         f'{get_author_display_name(author)}"><span rel="author">'
         f"{get_author_display_name(author)}</span></a>"
     )
@@ -276,36 +162,33 @@ def test_post_author_link(test_post1):
 
 
 @pytest.mark.django_db
-def test_post_author_link_author_path_disabled(test_post1):
+def test_post_author_link_author_path_disabled(settings, test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.AUTHOR_PATH_ENABLED is True
-    assert settings.AUTHOR_PATH == "test-url-author"
+    assert settings.DJPRESS_SETTINGS["AUTHOR_ENABLED"] is True
+    assert settings.DJPRESS_SETTINGS["AUTHOR_PREFIX"] == "test-url-author"
 
-    settings.set("AUTHOR_PATH_ENABLED", False)
+    settings.DJPRESS_SETTINGS["AUTHOR_ENABLED"] = False
 
     author = test_post1.author
 
     expected_output = f'<span rel="author">{get_author_display_name(author)}</span>'
     assert djpress_tags.post_author_link(context) == expected_output
 
-    # Set back to defaults
-    settings.set("AUTHOR_PATH_ENABLED", True)
-
 
 @pytest.mark.django_db
-def test_post_author_link_with_author_path_with_one_link_class(test_post1):
+def test_post_author_link_with_author_path_with_one_link_class(settings, test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.AUTHOR_PATH_ENABLED is True
-    assert settings.AUTHOR_PATH == "test-url-author"
+    assert settings.DJPRESS_SETTINGS["AUTHOR_ENABLED"] is True
+    assert settings.DJPRESS_SETTINGS["AUTHOR_PREFIX"] == "test-url-author"
 
     author = test_post1.author
 
     expected_output = (
-        f'<a href="/{settings.AUTHOR_PATH}/testuser/" title="View all posts by '
+        f'<a href="/{settings.DJPRESS_SETTINGS["AUTHOR_PREFIX"]}/testuser/" title="View all posts by '
         f'{get_author_display_name(author)}" class="class1">'
         f'<span rel="author">{get_author_display_name(author)}</span></a>'
     )
@@ -313,17 +196,17 @@ def test_post_author_link_with_author_path_with_one_link_class(test_post1):
 
 
 @pytest.mark.django_db
-def test_post_author_link_with_author_path_with_two_link_class(test_post1):
+def test_post_author_link_with_author_path_with_two_link_class(settings, test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.AUTHOR_PATH_ENABLED is True
-    assert settings.AUTHOR_PATH == "test-url-author"
+    assert settings.DJPRESS_SETTINGS["AUTHOR_ENABLED"] is True
+    assert settings.DJPRESS_SETTINGS["AUTHOR_PREFIX"] == "test-url-author"
 
     author = test_post1.author
 
     expected_output = (
-        f'<a href="/{settings.AUTHOR_PATH}/testuser/" title="View all posts by '
+        f'<a href="/{settings.DJPRESS_SETTINGS["AUTHOR_PREFIX"]}/testuser/" title="View all posts by '
         f'{get_author_display_name(author)}" class="class1 class2">'
         f'<span rel="author">{get_author_display_name(author)}</span></a>'
     )
@@ -331,70 +214,64 @@ def test_post_author_link_with_author_path_with_two_link_class(test_post1):
 
 
 @pytest.mark.django_db
-def test_post_category_link_without_category_path(category1):
+def test_post_category_link_without_category_path(settings, category1):
     """Test the post_category_link template tag without the category path enabled.
 
-    If the CATEGORY_PATH_ENABLED setting is False, the template tag should just return
+    If the CATEGORY_ENABLED setting is False, the template tag should just return
     the category name, with no link."""
     # Confirm settings are set according to settings_testing.py
-    assert settings.CATEGORY_PATH_ENABLED is True
+    assert settings.DJPRESS_SETTINGS["CATEGORY_ENABLED"] is True
 
-    settings.set("CATEGORY_PATH_ENABLED", False)
-    assert settings.CATEGORY_PATH_ENABLED is False
+    settings.DJPRESS_SETTINGS["CATEGORY_ENABLED"] = False
+    assert settings.DJPRESS_SETTINGS["CATEGORY_ENABLED"] is False
 
     assert djpress_tags.post_category_link(category1) == category1.title
 
-    # Set back to defaults
-    settings.set("CATEGORY_PATH_ENABLED", True)
-
 
 @pytest.mark.django_db
-def test_post_category_link_without_category_path_with_one_link(category1):
+def test_post_category_link_without_category_path_with_one_link(settings, category1):
     """Test the post_category_link template tag without the category path enabled.
 
-    If the CATEGORY_PATH_ENABLED setting is False, the template tag should just return
+    If the CATEGORY_ENABLED setting is False, the template tag should just return
     the category name, with no link."""
     # Confirm settings are set according to settings_testing.py
-    assert settings.CATEGORY_PATH_ENABLED is True
+    assert settings.DJPRESS_SETTINGS["CATEGORY_ENABLED"] is True
 
-    settings.set("CATEGORY_PATH_ENABLED", False)
-    assert settings.CATEGORY_PATH_ENABLED is False
+    settings.DJPRESS_SETTINGS["CATEGORY_ENABLED"] = False
+    assert settings.DJPRESS_SETTINGS["CATEGORY_ENABLED"] is False
 
     assert djpress_tags.post_category_link(category1, "class1") == category1.title
 
-    # Set back to defaults
-    settings.set("CATEGORY_PATH_ENABLED", True)
-
 
 @pytest.mark.django_db
-def test_post_category_link_with_category_path(category1):
+def test_post_category_link_with_category_path(settings, category1):
     # Confirm settings are set according to settings_testing.py
-    assert settings.CATEGORY_PATH_ENABLED is True
-    assert settings.CATEGORY_PATH == "test-url-category"
+    assert settings.DJPRESS_SETTINGS["CATEGORY_ENABLED"] is True
+    assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
-    expected_output = f'<a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category">{category1.title}</a>'
+    expected_output = f'<a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category">{category1.title}</a>'
 
     assert djpress_tags.post_category_link(category1) == expected_output
 
 
 @pytest.mark.django_db
-def test_post_category_link_with_category_path_with_one_link_class(category1):
+def test_post_category_link_with_category_path_with_one_link_class(settings, category1):
     # Confirm settings are set according to settings_testing.py
-    assert settings.CATEGORY_PATH_ENABLED is True
-    assert settings.CATEGORY_PATH == "test-url-category"
+    assert settings.DJPRESS_SETTINGS["CATEGORY_ENABLED"] is True
+    assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
-    expected_output = f'<a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category" class="class1">{category1.title}</a>'
+    expected_output = f'<a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="class1">{category1.title}</a>'
 
     assert djpress_tags.post_category_link(category1, "class1") == expected_output
 
 
 @pytest.mark.django_db
-def test_post_category_link_with_category_path_with_two_link_classes(category1):
+def test_post_category_link_with_category_path_with_two_link_classes(settings, category1):
     # Confirm settings are set according to settings_testing.py
-    assert settings.CATEGORY_PATH_ENABLED is True
-    assert settings.CATEGORY_PATH == "test-url-category"
+    assert settings.DJPRESS_SETTINGS["CATEGORY_ENABLED"] is True
+    assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
-    expected_output = f'<a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category" class="class1 class2">{category1.title}</a>'
+    expected_output = f'<a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="class1 class2">{category1.title}</a>'
 
     assert djpress_tags.post_category_link(category1, "class1 class2") == expected_output
 
@@ -407,31 +284,28 @@ def test_post_date_no_post():
 
 
 @pytest.mark.django_db
-def test_post_date_with_date_archives_disabled(test_post1):
-    """djpress_tags.post_date is not impacted by the DATE_ARCHIVES_ENABLED setting."""
+def test_post_date_with_date_archives_disabled(settings, test_post1):
+    """djpress_tags.post_date is not impacted by the ARCHIVE_ENABLED setting."""
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.DATE_ARCHIVES_ENABLED is True
+    assert settings.DJPRESS_SETTINGS["ARCHIVE_ENABLED"] is True
 
-    settings.set("DATE_ARCHIVES_ENABLED", False)
-    assert settings.DATE_ARCHIVES_ENABLED is False
+    settings.DJPRESS_SETTINGS["ARCHIVE_ENABLED"] = False
+    assert settings.DJPRESS_SETTINGS["ARCHIVE_ENABLED"] is False
 
     expected_output = test_post1.date.strftime("%b %-d, %Y")
 
     assert djpress_tags.post_date(context) == expected_output
 
-    # Set back to defaults
-    settings.set("DATE_ARCHIVES_ENABLED", True)
-
 
 @pytest.mark.django_db
-def test_post_date_with_date_archives_enabled(test_post1):
-    """djpress_tags.post_date is not impacted by the DATE_ARCHIVES_ENABLED setting."""
+def test_post_date_with_date_archives_enabled(settings, test_post1):
+    """djpress_tags.post_date is not impacted by the ARCHIVE_ENABLED setting."""
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.DATE_ARCHIVES_ENABLED is True
+    assert settings.DJPRESS_SETTINGS["ARCHIVE_ENABLED"] is True
 
     expected_output = test_post1.date.strftime("%b %-d, %Y")
 
@@ -446,30 +320,27 @@ def test_post_date_link_no_post():
 
 
 @pytest.mark.django_db
-def test_post_date_link_with_date_archives_disabled(test_post1):
+def test_post_date_link_with_date_archives_disabled(settings, test_post1):
     """Should return just the date."""
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.DATE_ARCHIVES_ENABLED is True
+    assert settings.DJPRESS_SETTINGS["ARCHIVE_ENABLED"] is True
 
-    settings.set("DATE_ARCHIVES_ENABLED", False)
-    assert settings.DATE_ARCHIVES_ENABLED is False
+    settings.DJPRESS_SETTINGS["ARCHIVE_ENABLED"] = False
+    assert settings.DJPRESS_SETTINGS["ARCHIVE_ENABLED"] is False
 
     expected_output = test_post1.date.strftime("%b %-d, %Y")
 
     assert djpress_tags.post_date_link(context) == expected_output
 
-    # Set back to defaults
-    settings.set("DATE_ARCHIVES_ENABLED", True)
-
 
 @pytest.mark.django_db
-def test_post_date_link_with_date_archives_enabled(test_post1):
+def test_post_date_link_with_date_archives_enabled(settings, test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.DATE_ARCHIVES_ENABLED is True
+    assert settings.DJPRESS_SETTINGS["ARCHIVE_ENABLED"] is True
 
     post_date = test_post1.date
     post_year = post_date.strftime("%Y")
@@ -490,13 +361,11 @@ def test_post_date_link_with_date_archives_enabled(test_post1):
 
 
 @pytest.mark.django_db
-def test_post_date_link_with_date_archives_enabled_with_one_link_class(
-    test_post1,
-):
+def test_post_date_link_with_date_archives_enabled_with_one_link_class(settings, test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.DATE_ARCHIVES_ENABLED is True
+    assert settings.DJPRESS_SETTINGS["ARCHIVE_ENABLED"] is True
 
     post_date = test_post1.date
     post_year = post_date.strftime("%Y")
@@ -517,13 +386,11 @@ def test_post_date_link_with_date_archives_enabled_with_one_link_class(
 
 
 @pytest.mark.django_db
-def test_post_date_link_with_date_archives_enabled_with_two_link_classes(
-    test_post1,
-):
+def test_post_date_link_with_date_archives_enabled_with_two_link_classes(settings, test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.DATE_ARCHIVES_ENABLED is True
+    assert settings.DJPRESS_SETTINGS["ARCHIVE_ENABLED"] is True
 
     post_date = test_post1.date
     post_year = post_date.strftime("%Y")
@@ -635,13 +502,13 @@ def test_category_title_no_category():
 
 
 @pytest.mark.django_db
-def test_post_categories(test_post1):
+def test_post_categories(settings, test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.CATEGORY_PATH == "test-url-category"
+    assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
-    expected_output = f'<ul><li><a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category">General</a></li></ul>'
+    expected_output = f'<ul><li><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category">Test Category1</a></li></ul>'
 
     assert djpress_tags.post_categories_link(context) == expected_output
 
@@ -670,109 +537,109 @@ def test_post_categories_no_categories_context(test_post1):
 
 
 @pytest.mark.django_db
-def test_post_categories_ul(test_post1):
+def test_post_categories_ul(settings, test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.CATEGORY_PATH == "test-url-category"
+    assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
-    expected_output = f'<ul><li><a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category">General</a></li></ul>'
+    expected_output = f'<ul><li><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category">Test Category1</a></li></ul>'
 
     assert djpress_tags.post_categories_link(context, "ul") == expected_output
 
 
 @pytest.mark.django_db
-def test_post_categories_ul_class1(test_post1):
+def test_post_categories_ul_class1(settings, test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.CATEGORY_PATH == "test-url-category"
+    assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
-    expected_output = f'<ul><li><a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category" class="class1">General</a></li></ul>'
+    expected_output = f'<ul><li><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="class1">Test Category1</a></li></ul>'
 
     assert djpress_tags.post_categories_link(context, outer="ul", link_class="class1") == expected_output
 
 
 @pytest.mark.django_db
-def test_post_categories_ul_class1_class2(test_post1):
+def test_post_categories_ul_class1_class2(settings, test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.CATEGORY_PATH == "test-url-category"
+    assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
-    expected_output = f'<ul><li><a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category" class="class1 class2">General</a></li></ul>'
+    expected_output = f'<ul><li><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="class1 class2">Test Category1</a></li></ul>'
 
     assert djpress_tags.post_categories_link(context, outer="ul", link_class="class1 class2") == expected_output
 
 
 @pytest.mark.django_db
-def test_post_categories_div(test_post1):
+def test_post_categories_div(settings, test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.CATEGORY_PATH == "test-url-category"
+    assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
-    expected_output = f'<div><a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category">General</a></div>'
+    expected_output = f'<div><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category">Test Category1</a></div>'
 
     assert djpress_tags.post_categories_link(context, outer="div") == expected_output
 
 
 @pytest.mark.django_db
-def test_post_categories_div_class1(test_post1):
+def test_post_categories_div_class1(settings, test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.CATEGORY_PATH == "test-url-category"
+    assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
-    expected_output = f'<div><a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category" class="class1">General</a></div>'
+    expected_output = f'<div><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="class1">Test Category1</a></div>'
 
     assert djpress_tags.post_categories_link(context, outer="div", link_class="class1") == expected_output
 
 
 @pytest.mark.django_db
-def test_post_categories_div_class1_class2(test_post1):
+def test_post_categories_div_class1_class2(settings, test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.CATEGORY_PATH == "test-url-category"
+    assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
-    expected_output = f'<div><a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category" class="class1 class2">General</a></div>'
+    expected_output = f'<div><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="class1 class2">Test Category1</a></div>'
 
     assert djpress_tags.post_categories_link(context, outer="div", link_class="class1 class2") == expected_output
 
 
 @pytest.mark.django_db
-def test_post_categories_span(test_post1):
+def test_post_categories_span(settings, test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.CATEGORY_PATH == "test-url-category"
+    assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
-    expected_output = f'<span><a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category">General</a></span>'
+    expected_output = f'<span><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category">Test Category1</a></span>'
 
     assert djpress_tags.post_categories_link(context, outer="span") == expected_output
 
 
 @pytest.mark.django_db
-def test_post_categories_span_class1(test_post1):
+def test_post_categories_span_class1(settings, test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.CATEGORY_PATH == "test-url-category"
+    assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
-    expected_output = f'<span><a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category" class="class1">General</a></span>'
+    expected_output = f'<span><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="class1">Test Category1</a></span>'
 
     assert djpress_tags.post_categories_link(context, outer="span", link_class="class1") == expected_output
 
 
 @pytest.mark.django_db
-def test_post_categories_span_class1_class2(test_post1):
+def test_post_categories_span_class1_class2(settings, test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.CATEGORY_PATH == "test-url-category"
+    assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
-    expected_output = f'<span><a href="/{settings.CATEGORY_PATH}/general/" title="View all posts in the General category" class="class1 class2">General</a></span>'
+    expected_output = f'<span><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="class1 class2">Test Category1</a></span>'
 
     assert djpress_tags.post_categories_link(context, outer="span", link_class="class1 class2") == expected_output
 
@@ -843,9 +710,9 @@ def test_blog_page_title(test_post1, test_page1):
 
 
 @pytest.mark.django_db
-def test_is_paginated(test_post1, test_post2, test_long_post1):
+def test_is_paginated(settings, test_post1, test_post2, test_long_post1):
     # Confirm settings are set according to settings_testing.py
-    assert settings.RECENT_PUBLISHED_POSTS_COUNT == 3
+    assert settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"] == 3
 
     # Test case 1 - no paginator in context
     context = Context()
@@ -854,7 +721,7 @@ def test_is_paginated(test_post1, test_post2, test_long_post1):
     # Test case 2 - paginator in context
     posts = Paginator(
         Post.post_objects.get_published_posts(),
-        settings.RECENT_PUBLISHED_POSTS_COUNT,
+        settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"],
     )
     page = posts.get_page(number=None)
     context = Context({"posts": page})
@@ -869,53 +736,49 @@ def test_pagination_links_no_posts():
 
 
 @pytest.mark.django_db
-def test_get_pagination_range(test_post1, test_post2, test_long_post1):
+def test_get_pagination_range(settings, test_post1, test_post2, test_long_post1):
     # Test case 1 - 1 page, i.e. 3 posts with 3 posts per page
     # Confirm settings are set according to settings_testing.py
-    assert settings.RECENT_PUBLISHED_POSTS_COUNT == 3
+    assert settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"] == 3
     posts = Paginator(
         Post.post_objects.get_published_posts(),
-        settings.RECENT_PUBLISHED_POSTS_COUNT,
+        settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"],
     )
     page = posts.get_page(number=None)
     context = Context({"posts": page})
     assert djpress_tags.get_pagination_range(context) == range(1, 2)
 
     # Test case 2 - 2 pages, i.e. 3 posts with 2 posts per page
-    settings.set("RECENT_PUBLISHED_POSTS_COUNT", 2)
+    settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"] = 2
     posts = Paginator(
         Post.post_objects.get_published_posts(),
-        settings.RECENT_PUBLISHED_POSTS_COUNT,
+        settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"],
     )
     page = posts.get_page(number=None)
     context = Context({"posts": page})
-    assert settings.RECENT_PUBLISHED_POSTS_COUNT == 2
+    assert settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"] == 2
     assert djpress_tags.get_pagination_range(context) == range(1, 3)
 
     # Test case 3 - 3 pages, i.e. 3 posts with 1 posts per page
-    settings.set("RECENT_PUBLISHED_POSTS_COUNT", 1)
-    assert settings.RECENT_PUBLISHED_POSTS_COUNT == 1
+    settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"] = 1
+    assert settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"] == 1
     posts = Paginator(
         Post.post_objects.get_published_posts(),
-        settings.RECENT_PUBLISHED_POSTS_COUNT,
+        settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"],
     )
     page = posts.get_page(number=None)
     context = Context({"posts": page})
     assert djpress_tags.get_pagination_range(context) == range(1, 4)
 
-    # Set back to defaults
-    settings.set("RECENT_PUBLISHED_POSTS_COUNT", 3)
-    assert settings.RECENT_PUBLISHED_POSTS_COUNT == 3
-
 
 @pytest.mark.django_db
-def test_get_pagination_range_no_posts():
+def test_get_pagination_range_no_posts(settings):
     # Test case 1 - no posts
     # Confirm settings are set according to settings_testing.py
-    assert settings.RECENT_PUBLISHED_POSTS_COUNT == 3
+    assert settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"] == 3
     posts = Paginator(
         Post.post_objects.get_published_posts(),
-        settings.RECENT_PUBLISHED_POSTS_COUNT,
+        settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"],
     )
     page = posts.get_page(number=None)
     context = Context({"posts": page})
@@ -923,17 +786,17 @@ def test_get_pagination_range_no_posts():
 
 
 @pytest.mark.django_db
-def test_get_pagination_current_page(test_post1, test_post2, test_long_post1):
+def test_get_pagination_current_page(settings, test_post1, test_post2, test_long_post1):
     # Confirm settings are set according to settings_testing.py
-    assert settings.RECENT_PUBLISHED_POSTS_COUNT == 3
+    assert settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"] == 3
 
-    settings.set("RECENT_PUBLISHED_POSTS_COUNT", 1)
-    assert settings.RECENT_PUBLISHED_POSTS_COUNT == 1
+    settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"] = 1
+    assert settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"] == 1
 
     # Test case 1 - no page number
     posts = Paginator(
         Post.post_objects.get_published_posts(),
-        settings.RECENT_PUBLISHED_POSTS_COUNT,
+        settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"],
     )
     page = posts.get_page(number=None)
     context = Context({"posts": page})
@@ -954,20 +817,16 @@ def test_get_pagination_current_page(test_post1, test_post2, test_long_post1):
     context = Context({"posts": page})
     assert djpress_tags.get_pagination_current_page(context) == 3
 
-    # Set back to defaults
-    settings.set("RECENT_PUBLISHED_POSTS_COUNT", 3)
-    assert settings.RECENT_PUBLISHED_POSTS_COUNT == 3
-
 
 @pytest.mark.django_db
-def test_get_pagination_current_page_no_posts():
+def test_get_pagination_current_page_no_posts(settings):
     # Confirm settings are set according to settings_testing.py
-    assert settings.RECENT_PUBLISHED_POSTS_COUNT == 3
+    assert settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"] == 3
 
     # Test case 1 - no posts
     posts = Paginator(
         Post.post_objects.get_published_posts(),
-        settings.RECENT_PUBLISHED_POSTS_COUNT,
+        settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"],
     )
     page = posts.get_page(number=None)
     context = Context({"posts": page})
@@ -975,13 +834,13 @@ def test_get_pagination_current_page_no_posts():
 
 
 @pytest.mark.django_db
-def test_pagination_links_one_page(test_post1, test_post2, test_long_post1):
+def test_pagination_links_one_page(settings, test_post1, test_post2, test_long_post1):
     # Confirm settings are set according to settings_testing.py
-    assert settings.RECENT_PUBLISHED_POSTS_COUNT == 3
+    assert settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"] == 3
 
     posts = Paginator(
         Post.post_objects.get_published_posts(),
-        settings.RECENT_PUBLISHED_POSTS_COUNT,
+        settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"],
     )
     page = posts.get_page(number=None)
 
@@ -997,17 +856,17 @@ def test_pagination_links_one_page(test_post1, test_post2, test_long_post1):
 
 
 @pytest.mark.django_db
-def test_pagination_links_two_pages(test_post1, test_post2, test_long_post1):
+def test_pagination_links_two_pages(settings, test_post1, test_post2, test_long_post1):
     # Confirm settings are set according to settings_testing.py
-    assert settings.RECENT_PUBLISHED_POSTS_COUNT == 3
+    assert settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"] == 3
 
-    settings.set("RECENT_PUBLISHED_POSTS_COUNT", 2)
+    settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"] = 2
 
-    assert settings.RECENT_PUBLISHED_POSTS_COUNT == 2
+    assert settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"] == 2
 
     posts = Paginator(
         Post.post_objects.get_published_posts(),
-        settings.RECENT_PUBLISHED_POSTS_COUNT,
+        settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"],
     )
 
     # Test case 1 - first page with no page
@@ -1064,23 +923,19 @@ def test_pagination_links_two_pages(test_post1, test_post2, test_long_post1):
 
     assert djpress_tags.pagination_links(context) == expected_output
 
-    # Set back to defaults
-    settings.set("RECENT_PUBLISHED_POSTS_COUNT", 3)
-    assert settings.RECENT_PUBLISHED_POSTS_COUNT == 3
-
 
 @pytest.mark.django_db
-def test_pagination_links_three_pages(test_post1, test_post2, test_long_post1):
+def test_pagination_links_three_pages(settings, test_post1, test_post2, test_long_post1):
     # Confirm settings are set according to settings_testing.py
-    assert settings.RECENT_PUBLISHED_POSTS_COUNT == 3
+    assert settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"] == 3
 
-    settings.set("RECENT_PUBLISHED_POSTS_COUNT", 1)
+    settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"] = 1
 
-    assert settings.RECENT_PUBLISHED_POSTS_COUNT == 1
+    assert settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"] == 1
 
     posts = Paginator(
         Post.post_objects.get_published_posts(),
-        settings.RECENT_PUBLISHED_POSTS_COUNT,
+        settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"],
     )
 
     # Test case 1 - first page with no page number
@@ -1159,10 +1014,6 @@ def test_pagination_links_three_pages(test_post1, test_post2, test_long_post1):
     expected_output = f'<div class="pagination">{previous_output} {current_output} {next_output}</div>'
 
     assert djpress_tags.pagination_links(context) == expected_output
-
-    # Set back to defaults
-    settings.set("RECENT_PUBLISHED_POSTS_COUNT", 3)
-    assert settings.RECENT_PUBLISHED_POSTS_COUNT == 3
 
 
 @pytest.mark.django_db

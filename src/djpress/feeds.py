@@ -3,10 +3,10 @@
 from typing import TYPE_CHECKING
 
 from django.contrib.syndication.views import Feed
-from django.urls import reverse
 
-from djpress.conf import settings
+from djpress.conf import settings as djpress_settings
 from djpress.models import Post
+from djpress.url_utils import get_feed_url
 
 if TYPE_CHECKING:  # pragma: no cover
     from django.db import models
@@ -15,9 +15,9 @@ if TYPE_CHECKING:  # pragma: no cover
 class PostFeed(Feed):
     """RSS feed for blog posts."""
 
-    title = settings.BLOG_TITLE
-    link = f"/{settings.RSS_PATH}/"
-    description = settings.BLOG_DESCRIPTION
+    title = djpress_settings.BLOG_TITLE
+    link = get_feed_url()
+    description = djpress_settings.BLOG_DESCRIPTION
 
     def items(self: "PostFeed") -> "models.QuerySet":
         """Return the most recent posts."""
@@ -40,4 +40,4 @@ class PostFeed(Feed):
 
     def item_link(self: "PostFeed", item: Post) -> str:
         """Return the link to the post."""
-        return reverse("djpress:post_detail", args=[item.permalink])
+        return item.url

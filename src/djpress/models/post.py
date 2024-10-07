@@ -9,10 +9,10 @@ from django.db import models
 from django.utils import timezone
 from django.utils.text import slugify
 
-from djpress.conf import settings
+from djpress.conf import settings as djpress_settings
 from djpress.exceptions import PageNotFoundError, PostNotFoundError
 from djpress.models import Category
-from djpress.utils import extract_parts_from_path, render_markdown
+from djpress.utils import render_markdown
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +63,7 @@ class PagesManager(models.Manager):
         self: "PagesManager",
         path: str,
     ) -> "Post":
-        """Return a single published post from a path.
+        """Return a single published page from a path.
 
         For now, we'll only allow a top level path.
 
@@ -104,11 +104,11 @@ class PostsManager(models.Manager):
 
         If CACHE_RECENT_PUBLISHED_POSTS is set to True, we return the cached queryset.
         """
-        if settings.CACHE_RECENT_PUBLISHED_POSTS:
+        if djpress_settings.CACHE_RECENT_PUBLISHED_POSTS:
             return self._get_cached_recent_published_posts()
 
         return self.get_published_posts().prefetch_related("categories", "author")[
-            : settings.RECENT_PUBLISHED_POSTS_COUNT
+            : djpress_settings.RECENT_PUBLISHED_POSTS_COUNT
         ]
 
     def _get_cached_recent_published_posts(self: "PostsManager") -> models.QuerySet:
@@ -119,18 +119,15 @@ class PostsManager(models.Manager):
         """
         queryset = cache.get(PUBLISHED_POSTS_CACHE_KEY)
 
-        if queryset is None:
-            queryset = (
-                self.get_queryset()
-                .filter(
-                    status="published",
-                )
-                .prefetch_related("categories", "author")
-            )
-
+        # Check if the cache is empty or if the length of the queryset is not equal to the number of recent posts. If
+        # the length is different it means the setting may have changed.
+        if queryset is None or len(queryset) != djpress_settings.RECENT_PUBLISHED_POSTS_COUNT:
+            # Get the queryset from the database for all published posts, including those in the future. Then we
+            # calculate the timeout to set, and then filter the queryset to only include the recent published posts.
+            queryset = self.get_queryset().filter(status="published").prefetch_related("categories", "author")
             timeout = self._get_cache_timeout(queryset)
+            queryset = queryset.filter(date__lte=timezone.now())[: djpress_settings.RECENT_PUBLISHED_POSTS_COUNT]
 
-            queryset = queryset.filter(date__lte=timezone.now())[: settings.RECENT_PUBLISHED_POSTS_COUNT]
             cache.set(
                 PUBLISHED_POSTS_CACHE_KEY,
                 queryset,
@@ -165,46 +162,42 @@ class PostsManager(models.Manager):
     def get_published_post_by_slug(
         self: "PostsManager",
         slug: str,
+        year: int | None = None,
+        month: int | None = None,
+        day: int | None = None,
     ) -> "Post":
         """Return a single published post.
 
-        Must have a date less than or equal to the current date/time based on its slug.
-        """
-        # First, try to get the post from the cache
-        posts = self.get_recent_published_posts()
-        post = next((post for post in posts if post.slug == slug), None)
-
-        # If the post is not found in the cache, fetch it from the database
-        if not post:
-            try:
-                post = self.get_published_posts().get(slug=slug)
-            except Post.DoesNotExist as exc:
-                msg = "Post not found"
-                raise PostNotFoundError(msg) from exc
-
-        return post
-
-    def get_published_post_by_path(
-        self: "PostsManager",
-        path: str,
-    ) -> "Post":
-        """Return a single published post from a path.
-
-        This takes a path and extracts the parts of the path using the `djpress.utils.extract_parts_from_path` function.
-
         Args:
-            path (str): The path of the post.
+            slug (str): The post slug.
+            year (int | None): The year.
+            month (int | None): The month.
+            day (int | None): The day.
 
         Returns:
             Post: The published post.
 
         Raises:
-            SlugNotFoundError: If the path is invalid.
             PostNotFoundError: If the post is not found in the database.
         """
-        path_parts = extract_parts_from_path(path)
+        # TODO: try to get the post from the cache
 
-        return self.get_published_post_by_slug(path_parts.slug)
+        filters = {"slug": slug}
+
+        if year:
+            filters["date__year"] = year
+
+        if month:
+            filters["date__month"] = month
+
+        if day:
+            filters["date__day"] = day
+
+        try:
+            return self.get_published_posts().get(**filters)
+        except Post.DoesNotExist as exc:
+            msg = "Post not found"
+            raise PostNotFoundError(msg) from exc
 
     def get_published_posts_by_category(
         self: "PostsManager",
@@ -282,14 +275,28 @@ class Post(models.Model):
     @property
     def truncated_content_markdown(self: "Post") -> str:
         """Return the truncated content as HTML converted from Markdown."""
-        read_more_index = self.content.find(settings.TRUNCATE_TAG)
+        read_more_index = self.content.find(djpress_settings.TRUNCATE_TAG)
         truncated_content = self.content[:read_more_index] if read_more_index != -1 else self.content
         return render_markdown(truncated_content)
 
     @property
     def is_truncated(self: "Post") -> bool:
         """Return whether the content is truncated."""
-        return settings.TRUNCATE_TAG in self.content
+        return djpress_settings.TRUNCATE_TAG in self.content
+
+    @property
+    def url(self: "Post") -> str:
+        """Return the post's URL.
+
+        Returns:
+            str: The post's URL.
+        """
+        from djpress.url_utils import get_page_url, get_post_url
+
+        if self.post_type == "page":
+            return get_page_url(self)
+
+        return get_post_url(self)
 
     @property
     def permalink(self: "Post") -> str:
@@ -297,27 +304,28 @@ class Post(models.Model):
 
         The posts permalink is constructed of the following elements:
         - The post prefix - this is configured in POST_PREFIX and could be an empty
-          string or a custom string, e.g. `blog` or `posts`.
-        - The post date structure - this is configured in POST_PERMALINK and is a
-          `strftime` value, e.g. `%Y/%m/%d` or `%Y/%m`. Or it could be an empty string
-          to indicate that no date structure is used.
+          string or a custom string.
         - The post slug - this is a unique identifier for the post. TODO: should this be
           a database unique constraint, or should we handle it in software instead?
         """
-        # We start the permalink with just the slug
-        permalink = self.slug
-
         # If the post type is a page, we return just the slug
+        # TODO: needs to support parent pages
         if self.post_type == "page":
-            return permalink
+            return self.slug
 
-        # The only other post type is a post, so we don't need to check for that
-        # If there's a permalink structure defined, we add that to the permalink
-        if settings.POST_PERMALINK:
-            permalink = f"{self.date.strftime(settings.POST_PERMALINK)}/{self.slug}"
+        prefix = djpress_settings.POST_PREFIX
 
-        # If there's a post prefix defined, we add that to the permalink
-        if settings.POST_PREFIX:
-            permalink = f"{settings.POST_PREFIX}/{permalink}"
+        # Replace placeholders in POST_PREFIX with actual values
+        replacements = {
+            "{{ year }}": self.date.strftime("%Y"),
+            "{{ month }}": self.date.strftime("%m"),
+            "{{ day }}": self.date.strftime("%d"),
+        }
 
-        return permalink
+        for placeholder, value in replacements.items():
+            prefix = prefix.replace(placeholder, value)
+
+        # Ensure there's no leading or trailing slash, then join with the slug
+        url_parts = [part for part in prefix.split("/") if part] + [self.slug]
+
+        return "/".join(url_parts)

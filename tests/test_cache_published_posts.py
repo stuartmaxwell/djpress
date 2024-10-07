@@ -4,20 +4,16 @@ from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.utils import timezone
 
-from djpress.conf import settings
+from djpress.conf import settings as djpress_settings
 from djpress.models import Post
 from djpress.models.post import PUBLISHED_POSTS_CACHE_KEY
 
 
-@pytest.fixture
-def user():
-    return User.objects.create_user(username="testuser", password="testpass")
-
-
 @pytest.mark.django_db
-def test_get_cached_content(user):
+def test_get_cached_content(user, settings):
     # Confirm the settings in settings_testing.py
-    assert settings.CACHE_RECENT_PUBLISHED_POSTS is False
+    assert djpress_settings.CACHE_RECENT_PUBLISHED_POSTS is False
+    assert settings.DJPRESS_SETTINGS["CACHE_RECENT_PUBLISHED_POSTS"] is False
 
     # Create some test content
     Post.post_objects.create(
@@ -54,7 +50,7 @@ def test_get_cached_content(user):
 @pytest.mark.django_db
 def test_cache_invalidation_on_save(user):
     # Confirm the settings in settings_testing.py
-    assert settings.CACHE_RECENT_PUBLISHED_POSTS is False
+    assert djpress_settings.CACHE_RECENT_PUBLISHED_POSTS is False
 
     # Create some test content
     content = Post.post_objects.create(
@@ -95,7 +91,7 @@ def test_cache_invalidation_on_save(user):
 @pytest.mark.django_db
 def test_cache_invalidation_on_delete(user):
     # Confirm the settings in settings_testing.py
-    assert settings.CACHE_RECENT_PUBLISHED_POSTS is False
+    assert djpress_settings.CACHE_RECENT_PUBLISHED_POSTS is False
 
     # Create some test content
     content = Post.post_objects.create(
@@ -132,16 +128,16 @@ def test_cache_invalidation_on_delete(user):
 
 
 @pytest.mark.django_db
-def test_cache_get_recent_published_posts(user):
+def test_cache_get_recent_published_posts(user, settings):
     """Test that the get_recent_published_posts method returns the correct posts."""
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.CACHE_RECENT_PUBLISHED_POSTS is False
-    assert settings.RECENT_PUBLISHED_POSTS_COUNT == 3
+    assert settings.DJPRESS_SETTINGS["CACHE_RECENT_PUBLISHED_POSTS"] is False
+    assert settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"] == 3
 
     # Enable the posts cache
-    settings.set("CACHE_RECENT_PUBLISHED_POSTS", True)
-    assert settings.CACHE_RECENT_PUBLISHED_POSTS is True
+    settings.DJPRESS_SETTINGS["CACHE_RECENT_PUBLISHED_POSTS"] = True
+    assert settings.DJPRESS_SETTINGS["CACHE_RECENT_PUBLISHED_POSTS"] is True
 
     # Create some published posts
     post1 = Post.objects.create(title="Post 1", status="published", author=user)
@@ -160,37 +156,33 @@ def test_cache_get_recent_published_posts(user):
     assert list(cached_queryset) == [post3, post2, post1]
 
     # Test case 2: Limit the number of posts returned
-    settings.set("RECENT_PUBLISHED_POSTS_COUNT", 2)
-    assert settings.RECENT_PUBLISHED_POSTS_COUNT == 2
+    settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"] = 2
+    assert settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"] == 2
 
     # Call the method being tested again
-    recent_posts = Post.post_objects.get_recent_published_posts()
+    recent_posts_2 = Post.post_objects.get_recent_published_posts()
 
     # # Assert that the correct posts are returned
-    assert list(recent_posts) == [post3, post2]
-    assert post1 not in recent_posts
+    assert list(recent_posts_2) == [post3, post2]
+    assert post1 not in recent_posts_2
 
     # Check that all posts are cached
     cached_queryset = cache.get(PUBLISHED_POSTS_CACHE_KEY)
     assert cached_queryset is not None
     assert list(cached_queryset) == [post3, post2]
 
-    # Set back to defaults
-    settings.set("CACHE_RECENT_PUBLISHED_POSTS", False)
-    settings.set("RECENT_PUBLISHED_POSTS_COUNT", 3)
-
 
 @pytest.mark.django_db
-def test_cache_get_recent_published_posts_future_post(user):
+def test_cache_get_recent_published_posts_future_post(user, settings):
     """Test that the get_recent_published_posts method returns the correct posts when there are future posts."""
 
     # Confirm settings are set according to settings_testing.py
-    assert settings.CACHE_RECENT_PUBLISHED_POSTS is False
-    assert settings.RECENT_PUBLISHED_POSTS_COUNT == 3
+    assert settings.DJPRESS_SETTINGS["CACHE_RECENT_PUBLISHED_POSTS"] is False
+    assert settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"] == 3
 
     # Enable the posts cache
-    settings.set("CACHE_RECENT_PUBLISHED_POSTS", True)
-    assert settings.CACHE_RECENT_PUBLISHED_POSTS is True
+    settings.DJPRESS_SETTINGS["CACHE_RECENT_PUBLISHED_POSTS"] = True
+    assert settings.DJPRESS_SETTINGS["CACHE_RECENT_PUBLISHED_POSTS"] is True
 
     # Create some published posts
     post1 = Post.objects.create(title="Post 1", status="published", author=user)
@@ -201,7 +193,3 @@ def test_cache_get_recent_published_posts_future_post(user):
 
     # Assert that the correct posts are returned
     assert list(recent_posts) == [post2, post1]
-
-    # Set back to defaults
-    settings.set("CACHE_RECENT_PUBLISHED_POSTS", False)
-    settings.set("RECENT_PUBLISHED_POSTS_COUNT", 3)

@@ -5,18 +5,71 @@ that returns a single post.
 """
 
 import logging
+import re
 
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import render
 
-from djpress.conf import settings
-from djpress.exceptions import PageNotFoundError, PostNotFoundError, SlugNotFoundError
+from djpress.conf import settings as djpress_settings
+from djpress.exceptions import PostNotFoundError
+from djpress.feeds import PostFeed
 from djpress.models import Category, Post
-from djpress.utils import get_template_name, validate_date
+from djpress.url_utils import get_path_regex
+from djpress.utils import get_template_name, validate_date_parts
 
 logger = logging.getLogger(__name__)
+
+
+def dispatcher(request: HttpRequest, path: str) -> HttpResponse | None:
+    """Dispatch the request to the appropriate view based on the path."""
+    # 1. Check for special URLs first
+    if djpress_settings.RSS_ENABLED and (path in (djpress_settings.RSS_PATH, f"{djpress_settings.RSS_PATH}/")):
+        return PostFeed()(request)
+
+    # 2. Check if it matches the single post regex
+    post_match = re.fullmatch(get_path_regex("post"), path)
+    if post_match:
+        post_groups = post_match.groupdict()
+        return single_post(request, **post_groups)
+
+    # 3. Check if it matches the archives regex
+    archives_match = re.fullmatch(get_path_regex("archives"), path)
+    if archives_match:
+        archives_groups = archives_match.groupdict()
+        return archive_posts(request, **archives_groups)
+
+    # 4. Check if it matches the category regex
+    if djpress_settings.CATEGORY_ENABLED and djpress_settings.CATEGORY_PREFIX:
+        category_match = re.fullmatch(get_path_regex("category"), path)
+        if category_match:
+            category_slug = category_match.group("slug")
+            return category_posts(request, slug=category_slug)
+
+    # 5. Check if it matches the author regex
+    if djpress_settings.AUTHOR_ENABLED and djpress_settings.AUTHOR_PREFIX:
+        author_match = re.fullmatch(get_path_regex("author"), path)
+        if author_match:
+            author_username = author_match.group("author")
+            return author_posts(request, author=author_username)
+
+    # 6. Any other path is considered a page
+    page_match = re.fullmatch(get_path_regex("page"), path)
+    page_path = page_match.group("path")
+    return single_page(request, path=page_path)
+
+
+def entry(
+    request: HttpRequest,
+    path: str = "",
+) -> HttpResponse:
+    """The main entry point.
+
+    This takes a path and returns the appropriate view.
+    """
+    # Just echo the path receeived for now
+    return dispatcher(request, path)
 
 
 def index(
@@ -42,7 +95,7 @@ def index(
 
     posts = Paginator(
         Post.post_objects.get_published_posts(),
-        settings.RECENT_PUBLISHED_POSTS_COUNT,
+        djpress_settings.RECENT_PUBLISHED_POSTS_COUNT,
     )
     page_number = request.GET.get("page")
     page = posts.get_page(page_number)
@@ -54,7 +107,7 @@ def index(
     )
 
 
-def archives_posts(
+def archive_posts(
     request: HttpRequest,
     year: str,
     month: str = "",
@@ -83,33 +136,18 @@ def archives_posts(
     template: str = get_template_name(templates=template_names)
 
     try:
-        validate_date(year, month, day)
+        date_parts = validate_date_parts(year=year, month=month, day=day)
     except ValueError:
         msg = "Invalid date"
         return HttpResponseBadRequest(msg)
 
-    published_posts = Post.post_objects.get_published_posts()
+    filtered_posts = Post.post_objects.get_published_posts().filter(date__year=date_parts["year"])
+    if "month" in date_parts:
+        filtered_posts = filtered_posts.filter(date__month=date_parts["month"])
+    if "day" in date_parts:
+        filtered_posts = filtered_posts.filter(date__day=date_parts["day"])
 
-    # Django converts strings to integers when they are passed to the filter
-    if day:
-        filtered_posts = published_posts.filter(
-            date__year=year,
-            date__month=month,
-            date__day=day,
-        )
-
-    elif month:
-        filtered_posts = published_posts.filter(
-            date__year=year,
-            date__month=month,
-        )
-
-    else:
-        filtered_posts = published_posts.filter(
-            date__year=year,
-        )
-
-    posts = Paginator(filtered_posts, settings.RECENT_PUBLISHED_POSTS_COUNT)
+    posts = Paginator(filtered_posts, djpress_settings.RECENT_PUBLISHED_POSTS_COUNT)
     page_number = request.GET.get("page")
     page = posts.get_page(page_number)
 
@@ -148,7 +186,7 @@ def category_posts(request: HttpRequest, slug: str) -> HttpResponse:
 
     posts = Paginator(
         Post.post_objects.get_published_posts_by_category(category),
-        settings.RECENT_PUBLISHED_POSTS_COUNT,
+        djpress_settings.RECENT_PUBLISHED_POSTS_COUNT,
     )
     page_number = request.GET.get("page")
     page = posts.get_page(page_number)
@@ -188,7 +226,7 @@ def author_posts(request: HttpRequest, author: str) -> HttpResponse:
 
     posts = Paginator(
         Post.post_objects.get_published_posts_by_author(user),
-        settings.RECENT_PUBLISHED_POSTS_COUNT,
+        djpress_settings.RECENT_PUBLISHED_POSTS_COUNT,
     )
     page_number = request.GET.get("page")
     page = posts.get_page(page_number)
@@ -200,12 +238,21 @@ def author_posts(request: HttpRequest, author: str) -> HttpResponse:
     )
 
 
-def post_detail(request: HttpRequest, path: str) -> HttpResponse:
+def single_post(
+    request: HttpRequest,
+    slug: str,
+    year: str | None = None,
+    month: str | None = None,
+    day: str | None = None,
+) -> HttpResponse:
     """View for a single post.
 
     Args:
         request (HttpRequest): The request object.
-        path (str): The path to the post.
+        slug (str): The post slug.
+        year (str | None): The year.
+        month (str | None): The month.
+        day (str | None): The day.
 
     Returns:
         HttpResponse: The response.
@@ -219,25 +266,55 @@ def post_detail(request: HttpRequest, path: str) -> HttpResponse:
     ]
 
     try:
-        page: Post = Post.page_objects.get_published_page_by_path(path)
-        context: dict = {"post": page}
-        # If the page is found, use the page template
-        template_names.insert(0, "djpress/page.html")
-    except (PageNotFoundError, ValueError):
+        date_parts = validate_date_parts(year=year, month=month, day=day)
+        post = Post.post_objects.get_published_post_by_slug(slug=slug, **date_parts)
+        context: dict = {"post": post}
+    except (PostNotFoundError, ValueError) as exc:
         # A PageNotFoundError means we were able to parse the path, but the page was not found
         # A ValueError means we were not able to parse the path
-        # For either case, try to get a post
-        try:
-            post = Post.post_objects.get_published_post_by_path(path)
-            context: dict = {"post": post}
-        except (PostNotFoundError, SlugNotFoundError) as exc:
-            # A SlugNotFoundError means we were not able to parse the path
-            msg = "Post not found"
-            raise Http404(msg) from exc
+        msg = "Post not found"
+        raise Http404(msg) from exc
 
     template: str = get_template_name(templates=template_names)
     return render(
         request=request,
         context=context,
         template_name=template,
+    )
+
+
+def single_page(request: HttpRequest, path: str) -> HttpResponse:
+    """View for a single page.
+
+    Args:
+        request (HttpRequest): The request object.
+        path (str): The page path.
+
+    Returns:
+        HttpResponse: The response.
+
+    Context:
+        post (Post): The page object.
+
+    Raises:
+        Http404: If the page is not found.
+    """
+    template_names: list[str] = [
+        "djpress/single.html",
+        "djpress/index.html",
+    ]
+
+    try:
+        post = Post.page_objects.get_published_page_by_path(path)
+        context: dict = {"post": post}
+    except (PostNotFoundError, ValueError) as exc:
+        msg = "Page not found"
+        raise Http404(msg) from exc
+
+    template: str = get_template_name(templates=template_names)
+
+    return render(
+        request=request,
+        template_name=template,
+        context=context,
     )

@@ -3,8 +3,6 @@ import pytest
 from djpress.models import Category
 from django.utils.text import slugify
 
-from djpress.conf import settings
-
 
 @pytest.mark.django_db
 def test_category_model():
@@ -77,14 +75,14 @@ def test_category_slug_auto_generation():
 
 
 @pytest.mark.django_db
-def test_get_categories_cache_enabled():
+def test_get_categories_cache_enabled(settings):
     """Test that the get_categories method returns the correct categories."""
     category1 = Category.objects.create(title="Category 1")
     category2 = Category.objects.create(title="Category 2")
     category3 = Category.objects.create(title="Category 3")
 
     # Confirm the settings in settings_testing.py
-    assert settings.CACHE_CATEGORIES is True
+    assert settings.DJPRESS_SETTINGS["CACHE_CATEGORIES"] is True
 
     categories = Category.objects.get_categories()
 
@@ -92,30 +90,27 @@ def test_get_categories_cache_enabled():
 
 
 @pytest.mark.django_db
-def test_get_categories_cache_disabled():
+def test_get_categories_cache_disabled(settings):
     """Test that the get_categories method returns the correct categories."""
     category1 = Category.objects.create(title="Category 1")
     category2 = Category.objects.create(title="Category 2")
     category3 = Category.objects.create(title="Category 3")
 
     # Confirm the settings in settings_testing.py
-    assert settings.CACHE_CATEGORIES is True
+    assert settings.DJPRESS_SETTINGS["CACHE_CATEGORIES"] is True
 
-    settings.set("CACHE_CATEGORIES", False)
-    assert settings.CACHE_CATEGORIES is False
+    settings.DJPRESS_SETTINGS["CACHE_CATEGORIES"] = False
+    assert settings.DJPRESS_SETTINGS["CACHE_CATEGORIES"] is False
     categories = Category.objects.get_categories()
 
     assert list(categories) == [category1, category2, category3]
 
-    # Set back to default
-    settings.set("CACHE_CATEGORIES", True)
-
 
 @pytest.mark.django_db
-def test_get_category_by_slug_cache_enabled():
+def test_get_category_by_slug_cache_enabled(settings):
     """Test that the get_category_by_slug method returns the correct category."""
     # Confirm the settings in settings_testing.py
-    assert settings.CACHE_CATEGORIES is True
+    assert settings.DJPRESS_SETTINGS["CACHE_CATEGORIES"] is True
 
     category1 = Category.objects.create(title="Category 1", slug="category-1")
     category2 = Category.objects.create(title="Category 2", slug="category-2")
@@ -127,13 +122,13 @@ def test_get_category_by_slug_cache_enabled():
 
 
 @pytest.mark.django_db
-def test_get_category_by_slug_cache_disabled():
+def test_get_category_by_slug_cache_disabled(settings):
     """Test that the get_category_by_slug method returns the correct category."""
     # Confirm the settings in settings_testing.py
-    assert settings.CACHE_CATEGORIES is True
+    assert settings.DJPRESS_SETTINGS["CACHE_CATEGORIES"] is True
 
-    settings.set("CACHE_CATEGORIES", False)
-    assert settings.CACHE_CATEGORIES is False
+    settings.DJPRESS_SETTINGS["CACHE_CATEGORIES"] = False
+    assert settings.DJPRESS_SETTINGS["CACHE_CATEGORIES"] is False
 
     category1 = Category.objects.create(title="Category 1", slug="category-1")
     category2 = Category.objects.create(title="Category 2", slug="category-2")
@@ -143,44 +138,34 @@ def test_get_category_by_slug_cache_disabled():
     assert category == category1
     assert not category == category2
 
-    # Set back to default
-    settings.set("CACHE_CATEGORIES", True)
-
 
 @pytest.mark.django_db
-def test_get_category_by_slug_not_exists():
+def test_get_category_by_slug_not_exists(settings):
     """Test that the get_category_by_slug method returns None when the category does not exist."""
     # Confirm the settings in settings_testing.py
-    assert settings.CACHE_CATEGORIES is True
+    assert settings.DJPRESS_SETTINGS["CACHE_CATEGORIES"] is True
 
-    settings.set("CACHE_CATEGORIES", False)
-    assert settings.CACHE_CATEGORIES is False
+    settings.DJPRESS_SETTINGS["CACHE_CATEGORIES"] = False
+    assert settings.DJPRESS_SETTINGS["CACHE_CATEGORIES"] is False
 
     with pytest.raises(ValueError) as excinfo:
         _ = Category.objects.get_category_by_slug("non-existent-category")
     assert "Category not found" in str(excinfo.value)
 
-    # Set back to default
-    settings.set("CACHE_CATEGORIES", True)
-
 
 @pytest.mark.django_db
-def test_category_permalink():
+def test_category_permalink(settings):
     """Test that the permalink property returns the correct URL."""
     # Confirm the settings in settings_testing.py
-    assert settings.CACHE_CATEGORIES is True
-    assert settings.CATEGORY_PATH_ENABLED is True
-    assert settings.CATEGORY_PATH == "test-url-category"
+    assert settings.DJPRESS_SETTINGS["CACHE_CATEGORIES"] is True
+    assert settings.DJPRESS_SETTINGS["CATEGORY_ENABLED"] is True
+    assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
     category = Category.objects.create(title="Test Category", slug="test-category")
 
     assert category.permalink == "test-url-category/test-category"
 
-    settings.set("CATEGORY_PATH_ENABLED", False)
-    settings.set("CATEGORY_PATH", "")
+    settings.DJPRESS_SETTINGS["CATEGORY_ENABLED"] = False
+    settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] = ""
 
     assert category.permalink == "test-category"
-
-    # Set back to default
-    settings.set("CATEGORY_PATH_ENABLED", True)
-    settings.set("CATEGORY_PATH", "test-url-category")
