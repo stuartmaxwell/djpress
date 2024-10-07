@@ -27,6 +27,24 @@ def test_basic_year_month_day(settings):
 
 
 @pytest.mark.django_db
+def test_basic_year_month_day_no_spaces(settings):
+    settings.DJPRESS_SETTINGS["POST_PREFIX"] = "{{year}}/{{month}}/{{day}}"
+    expected_regex = r"(?P<year>\d{4})/(?P<month>\d{2})/(?P<day>\d{2})/(?P<slug>[\w-]+)"
+
+    regex = regex_post()
+    assert regex == expected_regex
+
+
+@pytest.mark.django_db
+def test_basic_year_month_day_mixed_spaces(settings):
+    settings.DJPRESS_SETTINGS["POST_PREFIX"] = "{{y e a r}}/{{m onth}}/{{day }}"
+    expected_regex = r"(?P<year>\d{4})/(?P<month>\d{2})/(?P<day>\d{2})/(?P<slug>[\w-]+)"
+
+    regex = regex_post()
+    assert regex == expected_regex
+
+
+@pytest.mark.django_db
 def test_with_static_prefix(settings):
     settings.DJPRESS_SETTINGS["POST_PREFIX"] = "posts/{{ year }}/{{ month }}"
     expected_regex = r"posts/(?P<year>\d{4})/(?P<month>\d{2})/(?P<slug>[\w-]+)"
@@ -376,6 +394,16 @@ def test_get_post_url(settings, test_post1):
     assert url == expected_url
 
     settings.DJPRESS_SETTINGS["POST_PREFIX"] = "{{ year }}/{{ month }}/{{ day }}"
+    expected_url = f'/{test_post1.date.strftime("%Y")}/{test_post1.date.strftime("%m")}/{test_post1.date.strftime("%d")}/{test_post1.slug}/'
+    url = get_post_url(test_post1)
+    assert url == expected_url
+
+    settings.DJPRESS_SETTINGS["POST_PREFIX"] = "{{year}}/{{month}}/{{day}}"
+    expected_url = f'/{test_post1.date.strftime("%Y")}/{test_post1.date.strftime("%m")}/{test_post1.date.strftime("%d")}/{test_post1.slug}/'
+    url = get_post_url(test_post1)
+    assert url == expected_url
+
+    settings.DJPRESS_SETTINGS["POST_PREFIX"] = "{{y e a r}}/{{m onth}}/{{day }}"
     expected_url = f'/{test_post1.date.strftime("%Y")}/{test_post1.date.strftime("%m")}/{test_post1.date.strftime("%d")}/{test_post1.slug}/'
     url = get_post_url(test_post1)
     assert url == expected_url
