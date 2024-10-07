@@ -18,6 +18,7 @@ from djpress.templatetags.helpers import (
     get_page_link,
     post_read_more_link,
 )
+from djpress.url_utils import get_archives_url, get_author_url
 from djpress.utils import get_author_display_name
 
 register = template.Library()
