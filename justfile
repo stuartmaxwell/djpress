@@ -70,6 +70,10 @@ cov-html:
 sync:
     uv sync --python {{python_version}} --all-extras
 
+# Sync the package
+sync-up:
+    uv sync --python {{python_version}} --all-extras --upgrade
+
 # Lock the package version
 lock:
     uv lock
