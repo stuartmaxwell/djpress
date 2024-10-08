@@ -154,7 +154,7 @@ wheels = [
 
 [[package]]
 name = "djpress"
-version = "0.9.1"
+version = "0.9.2"
 source = { editable = "." }
 dependencies = [
     { name = "django" },

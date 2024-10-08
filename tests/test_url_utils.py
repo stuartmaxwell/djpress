@@ -91,7 +91,7 @@ def test_with_regex_special_chars(settings):
 @pytest.mark.django_db
 def test_empty_prefix(settings):
     settings.DJPRESS_SETTINGS["POST_PREFIX"] = ""
-    expected_regex = "(?P<slug>[\w-]+)"
+    expected_regex = r"(?P<slug>[\w-]+)"
 
     regex = regex_post()
     assert regex == expected_regex
