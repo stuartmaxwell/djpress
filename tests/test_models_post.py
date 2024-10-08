@@ -1,4 +1,5 @@
 import pytest
+
 from django.utils import timezone
 from unittest.mock import Mock
 from djpress.models import Category, Post
