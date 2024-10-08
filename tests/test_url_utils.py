@@ -13,7 +13,6 @@ from djpress.url_utils import (
     get_page_url,
     get_post_url,
     get_rss_url,
-    get_rss_url,
 )
 
 

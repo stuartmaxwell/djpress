@@ -108,3 +108,4 @@ def post_read_more_link(
     link_class_html = f' class="{link_class}"' if link_class else ""
 
     return f'<p><a href="{post.url}"{link_class_html}>{read_more_text}</a></p>'
+
