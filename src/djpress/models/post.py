@@ -66,16 +66,37 @@ class PagesManager(models.Manager):
     ) -> "Post":
         """Return a single published page from a path.
 
-        For now, we'll only allow a top level path.
+        The path can consist of one or more pages, e.g. "about", "about/contact".
 
-        This will raise a ValueError if the path is invalid.
+        Args:
+            path (str): The path to the page.
+
+        Returns:
+            Post: The published page.
+
+        Raises:
+            PageNotFoundError: If the page cannot be found.
         """
-        # Check for a single item in the path
-        if path.count("/") > 0:
-            msg = "Invalid path"
-            raise ValueError(msg)
+        # Strip leading and trailing slashes and split the path into parts
+        path_parts = path.strip("/").split("/")
 
-        return self.get_published_page_by_slug(path)
+        current_page = None
+
+        for i, slug in enumerate(path_parts):
+            if i == 0:
+                try:
+                    current_page = self.get(slug=slug, parent__isnull=True)
+                except Post.DoesNotExist as exc:
+                    msg = "Page not found"
+                    raise PageNotFoundError(msg) from exc
+            else:
+                try:
+                    current_page = self.get(slug=slug, parent=current_page)
+                except Post.DoesNotExist as exc:
+                    msg = "Page not found"
+                    raise PageNotFoundError(msg) from exc
+
+        return current_page
 
 
 class PostsManager(models.Manager):
