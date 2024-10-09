@@ -330,18 +330,14 @@ def test_get_published_posts_by_author(user):
 
 
 @pytest.mark.django_db
-def test_page_permalink(user):
-    page = Post(
-        title="Test Page",
-        slug="test-page",
-        content="This is a test page.",
-        author=user,
-        date=timezone.now(),
-        status="published",
-        post_type="page",
-    )
+def test_page_permalink(test_page1):
+    assert test_page1.permalink == "test-page1"
 
-    assert page.permalink == "test-page"
+
+@pytest.mark.django_db
+def test_page_permalink_parent(test_page1, test_page2):
+    test_page1.parent = test_page2
+    assert test_page1.permalink == "test-page2/test-page1"
 
 
 @pytest.mark.django_db
