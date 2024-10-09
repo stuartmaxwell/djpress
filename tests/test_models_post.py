@@ -388,22 +388,105 @@ def test_get_published_pages(test_page1, test_page2):
 
 
 @pytest.mark.django_db
-def test_get_published_page_by_path(test_page1: Post):
+def test_get_published_page_by_path_top_level(test_page1):
     """Test that the get_published_page_by_path method returns the correct page."""
 
-    # Test case 1: pages can only be at the top level
-    page_path = f"test-pages/{test_page1.slug}"
-    with pytest.raises(expected_exception=ValueError):
-        Post.page_objects.get_published_page_by_path(page_path)
+    assert test_page1 == Post.page_objects.get_published_page_by_path(f"/test-page1")
+    assert test_page1 == Post.page_objects.get_published_page_by_path(f"test-page1/")
+    assert test_page1 == Post.page_objects.get_published_page_by_path(f"/test-page1/")
+    assert test_page1 == Post.page_objects.get_published_page_by_path(f"//////test-page1/////")
 
-    # Test case 2: pages at the top level
-    page_path: str = test_page1.slug
-    assert test_page1 == Post.page_objects.get_published_page_by_path(page_path)
 
-    # Test case 3: pages doesn't exist
-    page_path = "non-existent-page"
-    with pytest.raises(expected_exception=PageNotFoundError):
-        Post.page_objects.get_published_page_by_path(page_path)
+@pytest.mark.django_db
+def test_get_published_page_by_path_parent(test_page1, test_page2):
+    """Test that the get_published_page_by_path method returns the correct page."""
+    test_page1.parent = test_page2
+    test_page1.save()
+
+    assert test_page1 == Post.page_objects.get_published_page_by_path(f"/test-page2/test-page1")
+    assert test_page1 == Post.page_objects.get_published_page_by_path(f"test-page2/test-page1/")
+    assert test_page1 == Post.page_objects.get_published_page_by_path(f"/test-page2/test-page1/")
+    assert test_page1 == Post.page_objects.get_published_page_by_path(f"//////test-page2/test-page1/////")
+
+
+@pytest.mark.django_db
+def test_get_published_page_by_path_grandparent(test_page1, test_page2, test_page3):
+    """Test that the get_published_page_by_path method returns the correct page."""
+    test_page1.parent = test_page2
+    test_page1.save()
+    test_page2.parent = test_page3
+    test_page2.save()
+
+    assert test_page1 == Post.page_objects.get_published_page_by_path(f"/test-page3/test-page2/test-page1")
+    assert test_page1 == Post.page_objects.get_published_page_by_path(f"test-page3/test-page2/test-page1/")
+    assert test_page1 == Post.page_objects.get_published_page_by_path(f"/test-page3/test-page2/test-page1/")
+    assert test_page1 == Post.page_objects.get_published_page_by_path(f"//////test-page3/test-page2/test-page1/////")
+
+
+@pytest.mark.django_db
+def test_get_non_existent_page_by_path():
+    """Test that the get_published_page_by_path method raises a PageNotFoundError."""
+    with pytest.raises(PageNotFoundError):
+        Post.page_objects.get_published_page_by_path("non-existent-page")
+    with pytest.raises(PageNotFoundError):
+        Post.page_objects.get_published_page_by_path("non-existint-parent/non-existent-page")
+
+
+@pytest.mark.django_db
+def test_get_non_existent_page_by_path_with_parent(test_page1):
+    """Test that the get_published_page_by_path method raises a PageNotFoundError."""
+    with pytest.raises(PageNotFoundError):
+        Post.page_objects.get_published_page_by_path("test-page1/non-existent-page")
+
+
+@pytest.mark.django_db
+def test_get_valid_page_with_wrong_parent(test_page1, test_page2, test_page3):
+    """Test that the get_published_page_by_path method raises a PageNotFoundError."""
+    test_page1.parent = test_page2
+    test_page1.save()
+
+    assert test_page1 == Post.page_objects.get_published_page_by_path("test-page2/test-page1")
+    assert test_page2 == Post.page_objects.get_published_page_by_path("test-page2")
+    assert test_page3 == Post.page_objects.get_published_page_by_path("test-page3")
+
+    with pytest.raises(PageNotFoundError):
+        Post.page_objects.get_published_page_by_path("test-page3/test-page1")
+    with pytest.raises(PageNotFoundError):
+        Post.page_objects.get_published_page_by_path("test-page3/test-page2")
+    with pytest.raises(PageNotFoundError):
+        Post.page_objects.get_published_page_by_path("test-page3/test-page3")
+    with pytest.raises(PageNotFoundError):
+        Post.page_objects.get_published_page_by_path("test-page1/test-page1")
+    with pytest.raises(PageNotFoundError):
+        Post.page_objects.get_published_page_by_path("test-page1/test-page2")
+    with pytest.raises(PageNotFoundError):
+        Post.page_objects.get_published_page_by_path("test-page1/test-page3")
+    with pytest.raises(PageNotFoundError):
+        Post.page_objects.get_published_page_by_path("test-page2/test-page2")
+    with pytest.raises(PageNotFoundError):
+        Post.page_objects.get_published_page_by_path("test-page2/test-page3")
+    with pytest.raises(PageNotFoundError):
+        Post.page_objects.get_published_page_by_path("test-page2/test-page1/test-page3")
+
+
+@pytest.mark.django_db
+def test_get_valid_page_with_wrong_grandparent(test_page1, test_page2, test_page3):
+    """Test that the get_published_page_by_path method raises a PageNotFoundError."""
+    test_page1.parent = test_page2
+    test_page1.save()
+    test_page2.parent = test_page3
+    test_page2.save()
+
+    assert test_page1 == Post.page_objects.get_published_page_by_path("test-page3/test-page2/test-page1")
+    assert test_page2 == Post.page_objects.get_published_page_by_path("test-page3/test-page2")
+    assert test_page3 == Post.page_objects.get_published_page_by_path("test-page3")
+
+    with pytest.raises(PageNotFoundError):
+        Post.page_objects.get_published_page_by_path("test-page3/test-page1/test-page2")
+    with pytest.raises(PageNotFoundError):
+        Post.page_objects.get_published_page_by_path("test-page3/test-page2/test-page2")
+    with pytest.raises(PageNotFoundError):
+        Post.page_objects.get_published_page_by_path("test-page1/test-page2/test-page3")
 
 
 @pytest.mark.django_db
