@@ -13,7 +13,7 @@ from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBadReque
 from django.shortcuts import render
 
 from djpress.conf import settings as djpress_settings
-from djpress.exceptions import PostNotFoundError
+from djpress.exceptions import PageNotFoundError, PostNotFoundError
 from djpress.feeds import PostFeed
 from djpress.models import Category, Post
 from djpress.url_utils import get_path_regex
@@ -307,7 +307,7 @@ def single_page(request: HttpRequest, path: str) -> HttpResponse:
     try:
         post = Post.page_objects.get_published_page_by_path(path)
         context: dict = {"post": post}
-    except (PostNotFoundError, ValueError) as exc:
+    except (PageNotFoundError, ValueError) as exc:
         msg = "Page not found"
         raise Http404(msg) from exc
 
