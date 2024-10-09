@@ -337,6 +337,7 @@ def test_page_permalink(test_page1):
 @pytest.mark.django_db
 def test_page_permalink_parent(test_page1, test_page2):
     test_page1.parent = test_page2
+    test_page1.save()
     assert test_page1.permalink == "test-page2/test-page1"
 
 
