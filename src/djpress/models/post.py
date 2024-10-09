@@ -40,18 +40,6 @@ class PagesManager(models.Manager):
             date__lte=timezone.now(),
         )
 
-    def get_full_page_path(self) -> str:
-        """Return the full page path.
-
-        This is the full path to the page, including any parent pages.
-
-        Returns:
-            str: The full page path.
-        """
-        if self.parent:
-            return f"{self.parent.get_full_path()}/{self.slug}"
-        return self.slug
-
     def get_published_page_by_slug(
         self: "PagesManager",
         slug: str,
@@ -287,10 +275,37 @@ class Post(models.Model):
 
     def clean(self) -> None:
         """Custom validation for the Post model."""
-        # A page cannot be its own parent
-        if self.parent and self.pk == self.parent.pk:
-            msg = "A page cannot be its own parent."
-            raise ValidationError(msg)
+        # Check for circular references in the page hierarchy
+        self._check_circular_reference()
+
+    def _check_circular_reference(self) -> None:
+        """Check for circular references in the page hierarchy.
+
+        This is a recursive function that checks if the current page is an ancestor of itself. This is needed to ensure
+        that we don't create a circular reference in the page hierarchy. This is called in the clean method.
+
+        For example, we need to avoid the following page hierarchy from happening:
+        - Page A
+            - Page B
+                - Page C
+                    - Page A
+
+        Returns:
+            None
+
+        Raises:
+            ValidationError: If a circular reference is detected.
+        """
+        # If there's no parent, we don't need to check for circular references
+        if not self.parent:
+            return
+
+        ancestor = self.parent
+        while ancestor:
+            if ancestor.pk == self.pk:
+                msg = "Circular reference detected in page hierarchy."
+                raise ValidationError(msg)
+            ancestor = ancestor.parent
 
     @property
     def content_markdown(self: "Post") -> str:
@@ -354,3 +369,16 @@ class Post(models.Model):
         url_parts = [part for part in prefix.split("/") if part] + [self.slug]
 
         return "/".join(url_parts)
+
+    @property
+    def full_page_path(self) -> str:
+        """Return the full page path.
+
+        This is the full path to the page, including any parent pages.
+
+        Returns:
+            str: The full page path.
+        """
+        if self.parent:
+            return f"{self.parent.full_page_path}/{self.slug}"
+        return self.slug
