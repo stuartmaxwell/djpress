@@ -3,10 +3,10 @@ default:
     @just --list
 
 # Set the Python version
-python_version := "3.12"
+python_version := "3.13"
 
 # Set the uv run command
-uv := "uv run --python 3.12 --extra test"
+uv := "uv run --python 3.13 --extra test"
 
 #Set the uv command to run a tool
 uv-tool := "uv tool run"
