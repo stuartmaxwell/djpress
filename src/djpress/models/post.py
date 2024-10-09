@@ -5,6 +5,7 @@ from typing import ClassVar
 
 from django.contrib.auth.models import User
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 from django.utils.text import slugify
@@ -38,6 +39,18 @@ class PagesManager(models.Manager):
             status="published",
             date__lte=timezone.now(),
         )
+
+    def get_full_page_path(self) -> str:
+        """Return the full page path.
+
+        This is the full path to the page, including any parent pages.
+
+        Returns:
+            str: The full page path.
+        """
+        if self.parent:
+            return f"{self.parent.get_full_path()}/{self.slug}"
+        return self.slug
 
     def get_published_page_by_slug(
         self: "PagesManager",
@@ -235,14 +248,17 @@ class Post(models.Model):
     date = models.DateTimeField(default=timezone.now)
     modified_date = models.DateTimeField(auto_now=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="draft")
-    post_type = models.CharField(
-        max_length=10,
-        choices=CONTENT_TYPE_CHOICES,
-        default="post",
-    )
+    post_type = models.CharField(max_length=10, choices=CONTENT_TYPE_CHOICES, default="post")
     categories = models.ManyToManyField(Category, blank=True)
     menu_order = models.IntegerField(default=0)
-    parent = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL, related_name="children")
+    parent = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="children",
+        limit_choices_to={"post_type": "page"},
+    )
 
     # Managers
     objects = models.Manager()
@@ -266,7 +282,15 @@ class Post(models.Model):
             if not self.slug or self.slug.strip("-") == "":
                 msg = "Invalid title. Unable to generate a valid slug."
                 raise ValueError(msg)
+        self.full_clean()
         super().save(*args, **kwargs)
+
+    def clean(self) -> None:
+        """Custom validation for the Post model."""
+        # A page cannot be its own parent
+        if self.parent and self.pk == self.parent.pk:
+            msg = "A page cannot be its own parent."
+            raise ValidationError(msg)
 
     @property
     def content_markdown(self: "Post") -> str:
