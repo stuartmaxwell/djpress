@@ -146,3 +146,15 @@ def test_page2(user):
         status="published",
         post_type="page",
     )
+
+
+@pytest.fixture
+def test_page3(user):
+    return Post.objects.create(
+        title="Test Page3",
+        slug="test-page3",
+        content="This is test page 3.",
+        author=user,
+        status="published",
+        post_type="page",
+    )
