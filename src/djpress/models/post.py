@@ -348,10 +348,9 @@ class Post(models.Model):
         - The post slug - this is a unique identifier for the post. TODO: should this be
           a database unique constraint, or should we handle it in software instead?
         """
-        # If the post type is a page, we return just the slug
-        # TODO: needs to support parent pages
+        # If the post type is a page, we return the full page path
         if self.post_type == "page":
-            return self.slug
+            return self.full_page_path
 
         prefix = djpress_settings.POST_PREFIX
 
