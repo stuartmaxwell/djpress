@@ -351,9 +351,9 @@ def test_get_recent_published_posts(user, settings):
     assert settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"] == 3
 
     # Create some published posts
-    post1 = Post.objects.create(title="Post 1", status="published", author=user)
-    post2 = Post.objects.create(title="Post 2", status="published", author=user)
-    post3 = Post.objects.create(title="Post 3", status="published", author=user)
+    post1 = Post.objects.create(title="Post 1", status="published", author=user, content="Test post")
+    post2 = Post.objects.create(title="Post 2", status="published", author=user, content="Test post")
+    post3 = Post.objects.create(title="Post 3", status="published", author=user, content="Test post")
 
     # Call the method being tested
     recent_posts = Post.post_objects.get_recent_published_posts()
