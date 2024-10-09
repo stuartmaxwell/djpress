@@ -242,6 +242,7 @@ class Post(models.Model):
     )
     categories = models.ManyToManyField(Category, blank=True)
     menu_order = models.IntegerField(default=0)
+    parent = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL, related_name="children")
 
     # Managers
     objects = models.Manager()
