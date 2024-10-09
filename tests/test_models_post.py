@@ -3,6 +3,7 @@ from django.utils import timezone
 from unittest.mock import Mock
 from djpress.models import Category, Post
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
 
 from djpress import urls as djpress_urls
 from djpress.models.post import PUBLISHED_POSTS_CACHE_KEY
@@ -649,3 +650,66 @@ def test_get_cached_recent_published_posts_cache_hit_2_posts(mock_cache, setting
 
     # Verify cache.set is not called again
     assert not mock_cache_set.called
+
+
+@pytest.mark.django_db
+def test_post_clean_valid_parent(test_page1, test_page2):
+    test_page1.parent = test_page2
+    test_page1.clean()
+    assert test_page1.parent == test_page2
+
+
+@pytest.mark.django_db
+def test_post_clean_self_parent(test_page1):
+    test_page1.parent = test_page1
+    with pytest.raises(ValidationError) as exc_info:
+        test_page1.clean()
+    assert "Circular reference detected in page hierarchy." in str(exc_info.value)
+
+
+@pytest.mark.django_db
+def test_post_clean_circular_reference(test_page1, test_page2):
+    test_page1.parent = test_page2
+    test_page1.clean()
+    assert test_page1.parent == test_page2
+
+    # Create a circular reference
+    test_page2.parent = test_page1
+    with pytest.raises(ValidationError) as exc_info:
+        test_page2.clean()
+    assert "Circular reference detected in page hierarchy." in str(exc_info.value)
+
+
+@pytest.mark.django_db
+def test_post_clean_circular_reference_extra_level(test_page1, test_page2, test_page3):
+    test_page1.parent = test_page2
+    test_page1.clean()
+    assert test_page1.parent == test_page2
+
+    test_page2.parent = test_page3
+    test_page2.clean()
+    assert test_page2.parent == test_page3
+
+    # Create a circular reference
+    test_page3.parent = test_page1
+    with pytest.raises(ValidationError) as exc_info:
+        test_page3.clean()
+    assert "Circular reference detected in page hierarchy." in str(exc_info.value)
+
+
+@pytest.mark.django_db
+def test_full_page_path_no_parent(test_page1):
+    assert test_page1.full_page_path == "test-page1"
+
+
+@pytest.mark.django_db
+def test_get_full_page_path_with_parent(test_page1, test_page2):
+    test_page1.parent = test_page2
+    assert test_page1.full_page_path == "test-page2/test-page1"
+
+
+@pytest.mark.django_db
+def test_get_full_page_path_with_grandparent(test_page1, test_page2, test_page3):
+    test_page1.parent = test_page2
+    test_page2.parent = test_page3
+    assert test_page1.full_page_path == "test-page3/test-page2/test-page1"
