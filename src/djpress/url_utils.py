@@ -214,7 +214,7 @@ def get_archives_url(year: int, month: int | None = None, day: int | None = None
 
 def get_page_url(page: Post) -> str:
     """Return the URL for the page."""
-    url = f"/{page.slug}"
+    url = f"/{page.permalink}"
 
     if django_settings.APPEND_SLASH:
         return f"{url}/"

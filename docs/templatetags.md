@@ -278,7 +278,7 @@ Outputs the same comma-separated list of categories, but wrapped in a `span` tag
 
 ## blog_pages
 
-Get all blog pages as a list, wrapped in HTML that can be configured with optional arguments.
+Get all blog pages as a single-level list, wrapped in HTML that can be configured with optional arguments.
 
 ### Arguments
 
@@ -338,6 +338,76 @@ Outputs the same comma-separated list of pages, but wrapped in a `span` tag.
   <a href="/contact" class="class2">Contact me</a>
 </span>
 ```
+
+## blog_pages_list
+
+Get all published blog pages and output as a nested list to support parent pages.
+
+### Arguments
+
+- `ul_outer_class` (optional): The CSS class(es) for the outer unordered list.
+- `li_class` (optional): The CSS class(es) for the list item tags
+- `a_class` (optional): The CSS class(es) for the anchor tags.
+- `ul_child_class` (optional): The CSS class(es) for the nested unordered lists.
+
+The output from this tag is HTML which has been marked as safe.
+
+### Examples
+
+Just the tag, with no arguments.
+
+```django
+{% blog_pages %}
+```
+
+This will output the following HTML:
+
+```html
+<ul>
+  <li>
+    <a href="/about">About me</a>
+    <ul>
+      <li>
+        <a href="/about/hobbies">Hobbies</a>
+      </li>
+      <li>
+        <a href="/about/resume">My Resume</a>
+      </li>
+    </ul>
+  </li>
+  <li>
+    <a href="/contact">Contact me</a>
+  </li>
+</ul>
+```
+
+Or arguments can be used to build a Bootstrap-like navbar menu.
+
+```django
+{% blog_pages ul_outer_class="navbar-nav" li_class="nav-item" a_class="nav-link" ul_child_class="dropdown-menu" %}
+```
+
+This will output the following HTML:
+
+```html
+<ul class="navbar-nav">
+  <li class="nav-item">
+    <a href="/about" title="View the About me page" class="nav-link">About me</a>
+    <ul>
+      <li class="nav-item">
+        <a href="/about/hobbies" title="View the Hobbies page" class="nav-link">Hobbies</a>
+      </li>
+      <li class="nav-item">
+        <a href="/about/resume" title="View the My Resume page" class="nav-link">My Resume</a>
+      </li>
+    </ul>
+  </li>
+  <li class="nav-item">
+    <a href="/contact" title="View the Contact me page" class="nav-link">Contact me</a>
+  </li>
+</ul>
+```
+
 
 ## have_posts
 

@@ -5,6 +5,7 @@ from typing import ClassVar
 
 from django.contrib.auth.models import User
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 from django.utils.text import slugify
@@ -25,7 +26,7 @@ class PagesManager(models.Manager):
 
     def get_queryset(self: "PagesManager") -> models.QuerySet:
         """Return the queryset for pages."""
-        return super().get_queryset().filter(post_type="page").order_by("-date")
+        return super().get_queryset().filter(post_type="page")
 
     def get_published_pages(self: "PagesManager") -> models.QuerySet:
         """Return all published pages.
@@ -33,11 +34,11 @@ class PagesManager(models.Manager):
         For a page to be considered published, it must meet the following requirements:
         - The status must be "published".
         - The date must be less than or equal to the current date/time.
+        - All parent pages must also be published.
         """
-        return self.get_queryset().filter(
-            status="published",
-            date__lte=timezone.now(),
-        )
+        return Post.page_objects.filter(
+            pk__in=[page.pk for page in self.get_queryset().select_related("parent") if page.is_published],
+        ).order_by("menu_order", "title", "-date")
 
     def get_published_page_by_slug(
         self: "PagesManager",
@@ -65,16 +66,82 @@ class PagesManager(models.Manager):
     ) -> "Post":
         """Return a single published page from a path.
 
-        For now, we'll only allow a top level path.
+        The path can consist of one or more pages, e.g. "about", "about/contact".
 
-        This will raise a ValueError if the path is invalid.
+        Args:
+            path (str): The path to the page.
+
+        Returns:
+            Post: The published page.
+
+        Raises:
+            PageNotFoundError: If the page cannot be found.
         """
-        # Check for a single item in the path
-        if path.count("/") > 0:
-            msg = "Invalid path"
-            raise ValueError(msg)
+        # Strip leading and trailing slashes and split the path into parts
+        path_parts = path.strip("/").split("/")
 
-        return self.get_published_page_by_slug(path)
+        current_page = None
+
+        for i, slug in enumerate(path_parts):
+            if i == 0:
+                try:
+                    current_page = self.get(slug=slug, parent__isnull=True)
+                except Post.DoesNotExist as exc:
+                    msg = "Page not found"
+                    raise PageNotFoundError(msg) from exc
+            else:
+                try:
+                    current_page = self.get(slug=slug, parent=current_page)
+                except Post.DoesNotExist as exc:
+                    msg = "Page not found"
+                    raise PageNotFoundError(msg) from exc
+
+        return current_page
+
+    def get_page_tree(self) -> list[dict["Post", list[dict]]]:
+        """Return the page tree.
+
+        This returns a list of top-level pages. Each page is a dict containing the Post object and a list of children.
+
+        Used to build the page hierarchy.
+
+        ```
+        root_pages = [
+            {
+                'page': <Page object>,
+                'children': [
+                    {
+                        'page': <Child Page object>,
+                        'children': [
+                            {
+                                'page': <Grandchild Page object>,
+                                'children': []
+                            },
+                            # ... more grandchildren ...
+                        ]
+                    },
+                    # ... more children ...
+                ]
+            },
+            # ... more root pages ...
+        ]
+        ```
+
+        Returns:
+            list[dict["Post", list[dict]]]: A list of top-level pages - each page is a dict containing the Post object
+            and a list of children. Each child is a dict containing the Post object and a list of children, and so on.
+        """
+        pages = self.get_published_pages().select_related("parent")
+        page_dict = {page.id: {"page": page, "children": []} for page in pages}
+        root_pages = []
+        for page_data in page_dict.values():
+            page = page_data["page"]
+            if page.parent:
+                page_dict[page.parent.id]["children"].append(page_data)
+
+            else:
+                root_pages.append(page_data)
+        return root_pages
 
 
 class PostsManager(models.Manager):
@@ -235,13 +302,17 @@ class Post(models.Model):
     date = models.DateTimeField(default=timezone.now)
     modified_date = models.DateTimeField(auto_now=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="draft")
-    post_type = models.CharField(
-        max_length=10,
-        choices=CONTENT_TYPE_CHOICES,
-        default="post",
-    )
+    post_type = models.CharField(max_length=10, choices=CONTENT_TYPE_CHOICES, default="post")
     categories = models.ManyToManyField(Category, blank=True)
     menu_order = models.IntegerField(default=0)
+    parent = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="children",
+        limit_choices_to={"post_type": "page"},
+    )
 
     # Managers
     objects = models.Manager()
@@ -265,7 +336,42 @@ class Post(models.Model):
             if not self.slug or self.slug.strip("-") == "":
                 msg = "Invalid title. Unable to generate a valid slug."
                 raise ValueError(msg)
+        self.full_clean()
         super().save(*args, **kwargs)
+
+    def clean(self) -> None:
+        """Custom validation for the Post model."""
+        # Check for circular references in the page hierarchy
+        self._check_circular_reference()
+
+    def _check_circular_reference(self) -> None:
+        """Check for circular references in the page hierarchy.
+
+        This is a recursive function that checks if the current page is an ancestor of itself. This is needed to ensure
+        that we don't create a circular reference in the page hierarchy. This is called in the clean method.
+
+        For example, we need to avoid the following page hierarchy from happening:
+        - Page A
+            - Page B
+                - Page C
+                    - Page A
+
+        Returns:
+            None
+
+        Raises:
+            ValidationError: If a circular reference is detected.
+        """
+        # If there's no parent, we don't need to check for circular references
+        if not self.parent:
+            return
+
+        ancestor = self.parent
+        while ancestor:
+            if ancestor.pk == self.pk:
+                msg = "Circular reference detected in page hierarchy."
+                raise ValidationError(msg)
+            ancestor = ancestor.parent
 
     @property
     def content_markdown(self: "Post") -> str:
@@ -308,10 +414,9 @@ class Post(models.Model):
         - The post slug - this is a unique identifier for the post. TODO: should this be
           a database unique constraint, or should we handle it in software instead?
         """
-        # If the post type is a page, we return just the slug
-        # TODO: needs to support parent pages
+        # If the post type is a page, we return the full page path
         if self.post_type == "page":
-            return self.slug
+            return self.full_page_path
 
         prefix = djpress_settings.POST_PREFIX
 
@@ -329,3 +434,35 @@ class Post(models.Model):
         url_parts = [part for part in prefix.split("/") if part] + [self.slug]
 
         return "/".join(url_parts)
+
+    @property
+    def full_page_path(self) -> str:
+        """Return the full page path.
+
+        This is the full path to the page, including any parent pages.
+
+        Returns:
+            str: The full page path.
+        """
+        if self.parent:
+            return f"{self.parent.full_page_path}/{self.slug}"
+        return self.slug
+
+    @property
+    def is_published(self: "Post") -> bool:
+        """Return whether the post is published.
+
+        For a post to be published, it must meet the following requirements:
+        - The status must be "published".
+        - The date must be less than or equal to the current date/time.
+
+        This also checks if the parent page is published.
+
+        Returns:
+            bool: Whether the post is published.
+        """
+        if not (self.status == "published" and self.date <= timezone.now()):
+            return False
+        if self.parent:
+            return self.parent.is_published
+        return True

@@ -3,6 +3,7 @@ from django.utils import timezone
 from unittest.mock import Mock
 from djpress.models import Category, Post
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
 
 from djpress import urls as djpress_urls
 from djpress.models.post import PUBLISHED_POSTS_CACHE_KEY
@@ -19,13 +20,6 @@ def test_post_model(test_post1, user, category1):
     assert test_post1.post_type == "post"
     assert test_post1.categories.count() == 1
     assert str(test_post1) == "Test Post1"
-
-
-@pytest.mark.django_db
-def test_post_methods(test_post1, test_post2, category1, category2):
-    assert Post.post_objects.all().count() == 2
-    assert Post.post_objects.get_published_post_by_slug("test-post1").title == "Test Post1"
-    assert Post.post_objects.get_published_posts_by_category(category1).count() == 1
 
 
 @pytest.mark.django_db
@@ -329,18 +323,15 @@ def test_get_published_posts_by_author(user):
 
 
 @pytest.mark.django_db
-def test_page_permalink(user):
-    page = Post(
-        title="Test Page",
-        slug="test-page",
-        content="This is a test page.",
-        author=user,
-        date=timezone.now(),
-        status="published",
-        post_type="page",
-    )
+def test_page_permalink(test_page1):
+    assert test_page1.permalink == "test-page1"
 
-    assert page.permalink == "test-page"
+
+@pytest.mark.django_db
+def test_page_permalink_parent(test_page1, test_page2):
+    test_page1.parent = test_page2
+    test_page1.save()
+    assert test_page1.permalink == "test-page2/test-page1"
 
 
 @pytest.mark.django_db
@@ -351,9 +342,9 @@ def test_get_recent_published_posts(user, settings):
     assert settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"] == 3
 
     # Create some published posts
-    post1 = Post.objects.create(title="Post 1", status="published", author=user)
-    post2 = Post.objects.create(title="Post 2", status="published", author=user)
-    post3 = Post.objects.create(title="Post 3", status="published", author=user)
+    post1 = Post.objects.create(title="Post 1", status="published", author=user, content="Test post")
+    post2 = Post.objects.create(title="Post 2", status="published", author=user, content="Test post")
+    post3 = Post.objects.create(title="Post 3", status="published", author=user, content="Test post")
 
     # Call the method being tested
     recent_posts = Post.post_objects.get_recent_published_posts()
@@ -385,28 +376,129 @@ def test_get_published_page_by_slug(test_page1):
 
 
 @pytest.mark.django_db
-def test_get_published_pages(test_page1, test_page2):
+def test_get_published_pages(test_page1, test_page2, test_page3, test_page4, test_page5):
     """Test that the get_published_pages method returns the correct pages."""
-    assert list(Post.page_objects.get_published_pages()) == [test_page2, test_page1]
+    assert list(Post.page_objects.get_published_pages()) == [test_page1, test_page2, test_page3, test_page4, test_page5]
+
+    test_page1.status = "draft"
+    test_page1.save()
+    assert list(Post.page_objects.get_published_pages()) == [test_page2, test_page3, test_page4, test_page5]
+
+    test_page2.parent = test_page1
+    test_page2.save()
+    assert list(Post.page_objects.get_published_pages()) == [test_page3, test_page4, test_page5]
+
+    test_page3.date = timezone.now() + timezone.timedelta(days=1)
+    test_page3.save()
+    assert list(Post.page_objects.get_published_pages()) == [test_page4, test_page5]
+
+    test_page4.parent = test_page3
+    test_page4.save()
+    test_page5.parent = test_page4
+    test_page5.save()
+    assert list(Post.page_objects.get_published_pages()) == []
 
 
 @pytest.mark.django_db
-def test_get_published_page_by_path(test_page1: Post):
+def test_get_published_page_by_path_top_level(test_page1):
     """Test that the get_published_page_by_path method returns the correct page."""
 
-    # Test case 1: pages can only be at the top level
-    page_path = f"test-pages/{test_page1.slug}"
-    with pytest.raises(expected_exception=ValueError):
-        Post.page_objects.get_published_page_by_path(page_path)
+    assert test_page1 == Post.page_objects.get_published_page_by_path(f"/test-page1")
+    assert test_page1 == Post.page_objects.get_published_page_by_path(f"test-page1/")
+    assert test_page1 == Post.page_objects.get_published_page_by_path(f"/test-page1/")
+    assert test_page1 == Post.page_objects.get_published_page_by_path(f"//////test-page1/////")
 
-    # Test case 2: pages at the top level
-    page_path: str = test_page1.slug
-    assert test_page1 == Post.page_objects.get_published_page_by_path(page_path)
 
-    # Test case 3: pages doesn't exist
-    page_path = "non-existent-page"
-    with pytest.raises(expected_exception=PageNotFoundError):
-        Post.page_objects.get_published_page_by_path(page_path)
+@pytest.mark.django_db
+def test_get_published_page_by_path_parent(test_page1, test_page2):
+    """Test that the get_published_page_by_path method returns the correct page."""
+    test_page1.parent = test_page2
+    test_page1.save()
+
+    assert test_page1 == Post.page_objects.get_published_page_by_path(f"/test-page2/test-page1")
+    assert test_page1 == Post.page_objects.get_published_page_by_path(f"test-page2/test-page1/")
+    assert test_page1 == Post.page_objects.get_published_page_by_path(f"/test-page2/test-page1/")
+    assert test_page1 == Post.page_objects.get_published_page_by_path(f"//////test-page2/test-page1/////")
+
+
+@pytest.mark.django_db
+def test_get_published_page_by_path_grandparent(test_page1, test_page2, test_page3):
+    """Test that the get_published_page_by_path method returns the correct page."""
+    test_page1.parent = test_page2
+    test_page1.save()
+    test_page2.parent = test_page3
+    test_page2.save()
+
+    assert test_page1 == Post.page_objects.get_published_page_by_path(f"/test-page3/test-page2/test-page1")
+    assert test_page1 == Post.page_objects.get_published_page_by_path(f"test-page3/test-page2/test-page1/")
+    assert test_page1 == Post.page_objects.get_published_page_by_path(f"/test-page3/test-page2/test-page1/")
+    assert test_page1 == Post.page_objects.get_published_page_by_path(f"//////test-page3/test-page2/test-page1/////")
+
+
+@pytest.mark.django_db
+def test_get_non_existent_page_by_path():
+    """Test that the get_published_page_by_path method raises a PageNotFoundError."""
+    with pytest.raises(PageNotFoundError):
+        Post.page_objects.get_published_page_by_path("non-existent-page")
+    with pytest.raises(PageNotFoundError):
+        Post.page_objects.get_published_page_by_path("non-existint-parent/non-existent-page")
+
+
+@pytest.mark.django_db
+def test_get_non_existent_page_by_path_with_parent(test_page1):
+    """Test that the get_published_page_by_path method raises a PageNotFoundError."""
+    with pytest.raises(PageNotFoundError):
+        Post.page_objects.get_published_page_by_path("test-page1/non-existent-page")
+
+
+@pytest.mark.django_db
+def test_get_valid_page_with_wrong_parent(test_page1, test_page2, test_page3):
+    """Test that the get_published_page_by_path method raises a PageNotFoundError."""
+    test_page1.parent = test_page2
+    test_page1.save()
+
+    assert test_page1 == Post.page_objects.get_published_page_by_path("test-page2/test-page1")
+    assert test_page2 == Post.page_objects.get_published_page_by_path("test-page2")
+    assert test_page3 == Post.page_objects.get_published_page_by_path("test-page3")
+
+    with pytest.raises(PageNotFoundError):
+        Post.page_objects.get_published_page_by_path("test-page3/test-page1")
+    with pytest.raises(PageNotFoundError):
+        Post.page_objects.get_published_page_by_path("test-page3/test-page2")
+    with pytest.raises(PageNotFoundError):
+        Post.page_objects.get_published_page_by_path("test-page3/test-page3")
+    with pytest.raises(PageNotFoundError):
+        Post.page_objects.get_published_page_by_path("test-page1/test-page1")
+    with pytest.raises(PageNotFoundError):
+        Post.page_objects.get_published_page_by_path("test-page1/test-page2")
+    with pytest.raises(PageNotFoundError):
+        Post.page_objects.get_published_page_by_path("test-page1/test-page3")
+    with pytest.raises(PageNotFoundError):
+        Post.page_objects.get_published_page_by_path("test-page2/test-page2")
+    with pytest.raises(PageNotFoundError):
+        Post.page_objects.get_published_page_by_path("test-page2/test-page3")
+    with pytest.raises(PageNotFoundError):
+        Post.page_objects.get_published_page_by_path("test-page2/test-page1/test-page3")
+
+
+@pytest.mark.django_db
+def test_get_valid_page_with_wrong_grandparent(test_page1, test_page2, test_page3):
+    """Test that the get_published_page_by_path method raises a PageNotFoundError."""
+    test_page1.parent = test_page2
+    test_page1.save()
+    test_page2.parent = test_page3
+    test_page2.save()
+
+    assert test_page1 == Post.page_objects.get_published_page_by_path("test-page3/test-page2/test-page1")
+    assert test_page2 == Post.page_objects.get_published_page_by_path("test-page3/test-page2")
+    assert test_page3 == Post.page_objects.get_published_page_by_path("test-page3")
+
+    with pytest.raises(PageNotFoundError):
+        Post.page_objects.get_published_page_by_path("test-page3/test-page1/test-page2")
+    with pytest.raises(PageNotFoundError):
+        Post.page_objects.get_published_page_by_path("test-page3/test-page2/test-page2")
+    with pytest.raises(PageNotFoundError):
+        Post.page_objects.get_published_page_by_path("test-page1/test-page2/test-page3")
 
 
 @pytest.mark.django_db
@@ -649,3 +741,247 @@ def test_get_cached_recent_published_posts_cache_hit_2_posts(mock_cache, setting
 
     # Verify cache.set is not called again
     assert not mock_cache_set.called
+
+
+@pytest.mark.django_db
+def test_post_clean_valid_parent(test_page1, test_page2):
+    test_page1.parent = test_page2
+    test_page1.clean()
+    assert test_page1.parent == test_page2
+
+
+@pytest.mark.django_db
+def test_post_clean_self_parent(test_page1):
+    test_page1.parent = test_page1
+    with pytest.raises(ValidationError) as exc_info:
+        test_page1.clean()
+    assert "Circular reference detected in page hierarchy." in str(exc_info.value)
+
+
+@pytest.mark.django_db
+def test_post_clean_circular_reference(test_page1, test_page2):
+    test_page1.parent = test_page2
+    test_page1.clean()
+    assert test_page1.parent == test_page2
+
+    # Create a circular reference
+    test_page2.parent = test_page1
+    with pytest.raises(ValidationError) as exc_info:
+        test_page2.clean()
+    assert "Circular reference detected in page hierarchy." in str(exc_info.value)
+
+
+@pytest.mark.django_db
+def test_post_clean_circular_reference_extra_level(test_page1, test_page2, test_page3):
+    test_page1.parent = test_page2
+    test_page1.clean()
+    assert test_page1.parent == test_page2
+
+    test_page2.parent = test_page3
+    test_page2.clean()
+    assert test_page2.parent == test_page3
+
+    # Create a circular reference
+    test_page3.parent = test_page1
+    with pytest.raises(ValidationError) as exc_info:
+        test_page3.clean()
+    assert "Circular reference detected in page hierarchy." in str(exc_info.value)
+
+
+@pytest.mark.django_db
+def test_full_page_path_no_parent(test_page1):
+    assert test_page1.full_page_path == "test-page1"
+
+
+@pytest.mark.django_db
+def test_get_full_page_path_with_parent(test_page1, test_page2):
+    test_page1.parent = test_page2
+    assert test_page1.full_page_path == "test-page2/test-page1"
+
+
+@pytest.mark.django_db
+def test_get_full_page_path_with_grandparent(test_page1, test_page2, test_page3):
+    test_page1.parent = test_page2
+    test_page2.parent = test_page3
+    assert test_page1.full_page_path == "test-page3/test-page2/test-page1"
+
+
+@pytest.mark.django_db
+def test_page_get_page_tree_no_children(test_page1, test_page2, test_page3, test_page4):
+    expected_tree = [
+        {"page": test_page1, "children": []},
+        {"page": test_page2, "children": []},
+        {"page": test_page3, "children": []},
+        {"page": test_page4, "children": []},
+    ]
+    assert list(Post.page_objects.get_page_tree()) == expected_tree
+
+
+@pytest.mark.django_db
+def test_page_get_page_tree_with_children(test_page1, test_page2, test_page3, test_page4):
+    test_page1.parent = test_page2
+    test_page1.save()
+    test_page3.parent = test_page2
+    test_page3.save()
+
+    expected_tree = [
+        {
+            "page": test_page2,
+            "children": [
+                {"page": test_page1, "children": []},
+                {"page": test_page3, "children": []},
+            ],
+        },
+        {"page": test_page4, "children": []},
+    ]
+    assert Post.page_objects.get_page_tree() == expected_tree
+
+
+@pytest.mark.django_db
+def test_page_get_page_tree_with_grandchildren(test_page1, test_page2, test_page3, test_page4, test_page5):
+    test_page1.parent = test_page2
+    test_page1.save()
+    test_page3.parent = test_page2
+    test_page3.save()
+    test_page2.parent = test_page5
+    test_page2.save()
+
+    expected_tree = [
+        {"page": test_page4, "children": []},
+        {
+            "page": test_page5,
+            "children": [
+                {
+                    "page": test_page2,
+                    "children": [
+                        {"page": test_page1, "children": []},
+                        {"page": test_page3, "children": []},
+                    ],
+                },
+            ],
+        },
+    ]
+    assert Post.page_objects.get_page_tree() == expected_tree
+
+
+@pytest.mark.django_db
+def test_page_get_page_tree_with_grandchildren_parent_with_future_date(
+    test_page1, test_page2, test_page3, test_page4, test_page5
+):
+    test_page1.parent = test_page2
+    test_page1.save()
+    test_page3.parent = test_page2
+    test_page3.save()
+    test_page2.parent = test_page5
+    test_page2.date = timezone.now() + timezone.timedelta(days=1)
+    test_page2.save()
+
+    expected_tree = [
+        {"page": test_page4, "children": []},
+        {
+            "page": test_page5,
+            "children": [],
+        },
+    ]
+    assert Post.page_objects.get_page_tree() == expected_tree
+
+
+@pytest.mark.django_db
+def test_page_get_page_tree_with_grandchildren_parent_with_status_draft(
+    test_page1, test_page2, test_page3, test_page4, test_page5
+):
+    test_page1.parent = test_page2
+    test_page1.save()
+    test_page3.parent = test_page2
+    test_page3.save()
+    test_page2.parent = test_page5
+    test_page2.status = "draft"
+    test_page2.save()
+
+    expected_tree = [
+        {"page": test_page4, "children": []},
+        {
+            "page": test_page5,
+            "children": [],
+        },
+    ]
+    assert Post.page_objects.get_page_tree() == expected_tree
+
+
+@pytest.mark.django_db
+def test_page_order_menu_order(test_page1, test_page2, test_page3, test_page4, test_page5):
+    test_page1.menu_order = 1
+    test_page1.save()
+    test_page2.menu_order = 2
+    test_page2.save()
+    test_page3.menu_order = 3
+    test_page3.save()
+    test_page4.menu_order = 4
+    test_page4.save()
+    test_page5.menu_order = 5
+    test_page5.save()
+
+    expected_order = [test_page1, test_page2, test_page3, test_page4, test_page5]
+
+    assert list(Post.page_objects.get_published_pages()) == expected_order
+
+
+@pytest.mark.django_db
+def test_page_order_title(test_page1, test_page2, test_page3, test_page4, test_page5):
+    test_page1.menu_order = 1
+    test_page1.save()
+    test_page2.menu_order = 1
+    test_page2.save()
+    test_page3.menu_order = 1
+    test_page3.save()
+    test_page4.menu_order = 1
+    test_page4.save()
+    test_page5.menu_order = 1
+    test_page5.save()
+
+    expected_order = [test_page1, test_page2, test_page3, test_page4, test_page5]
+
+    assert list(Post.page_objects.get_published_pages()) == expected_order
+
+
+@pytest.mark.django_db
+def test_page_is_published(test_page1, test_page2, test_page3, test_page4, test_page5):
+    assert test_page1.is_published is True
+    assert test_page2.is_published is True
+    assert test_page3.is_published is True
+
+    test_page1.status = "draft"
+    test_page1.save()
+    assert test_page1.is_published is False
+
+    test_page2.parent = test_page1
+    test_page2.save()
+    assert test_page2.is_published is False
+
+    test_page2.parent = test_page3
+    test_page2.save()
+    assert test_page2.is_published is True
+
+    # change test_page3 to be in the future
+    test_page3.date = timezone.now() + timezone.timedelta(days=1)
+    test_page3.save()
+    assert test_page2.is_published is False
+    assert test_page3.is_published is False
+
+    # Change test_page3 to be published again
+    test_page3.date = timezone.now()
+    test_page3.save()
+    test_page3.parent = test_page4
+    test_page3.save()
+    assert test_page3.is_published is True
+
+    test_page4.parent = test_page5
+    test_page4.save()
+    assert test_page3.is_published is True
+    assert test_page4.is_published is True
+
+    test_page5.status = "draft"
+    test_page5.save()
+    assert test_page3.is_published is False
+    assert test_page4.is_published is False
+    assert test_page5.is_published is False

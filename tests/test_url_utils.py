@@ -380,6 +380,18 @@ def test_get_page_url(settings, test_page1):
 
 
 @pytest.mark.django_db
+def test_get_page_url_parent(settings, test_page1, test_page2):
+    assert settings.APPEND_SLASH is True
+    expected_url = f"/{test_page2.slug}/{test_page1.slug}/"
+
+    test_page1.parent = test_page2
+    test_page1.save()
+
+    url = get_page_url(test_page1)
+    assert url == expected_url
+
+
+@pytest.mark.django_db
 def test_get_post_url(settings, test_post1):
     assert settings.DJPRESS_SETTINGS["POST_PREFIX"] == "test-posts"
     assert settings.APPEND_SLASH is True

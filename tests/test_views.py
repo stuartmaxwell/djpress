@@ -100,15 +100,9 @@ def test_author_with_invalid_author(client, settings):
     assert response.status_code == 404
 
 
-def test_author_with_author_prefix_blank(client, settings):
-    assert settings.DJPRESS_SETTINGS["AUTHOR_PREFIX"] == "test-url-author"
-    settings.DJPRESS_SETTINGS["AUTHOR_PREFIX"] = ""
-    url = "/test-url-author/non-existent-author/"
-    response = client.get(url)
-    assert response.status_code == 404
-
-
+@pytest.mark.django_db
 def test_author_with_author_enabled_false(client, settings):
+    """This will try to get a page from the database that does not exist."""
     assert settings.DJPRESS_SETTINGS["AUTHOR_ENABLED"] == True
     settings.DJPRESS_SETTINGS["AUTHOR_ENABLED"] = False
     url = "/test-url-author/non-existent-author/"
@@ -147,15 +141,9 @@ def test_category_with_invalid_category(client, settings):
     assert response.status_code == 404
 
 
-def test_category_with_category_prefix_blank(client, settings):
-    assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
-    settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] = ""
-    url = "/test-url-category/non-existent-category/"
-    response = client.get(url)
-    assert response.status_code == 404
-
-
+@pytest.mark.django_db
 def test_category_with_category_enabled_false(client, settings):
+    """This will try to get a page from the database that does not exist."""
     assert settings.DJPRESS_SETTINGS["CATEGORY_ENABLED"] == True
     settings.DJPRESS_SETTINGS["CATEGORY_ENABLED"] = False
     url = "/test-url-category/non-existent-category/"

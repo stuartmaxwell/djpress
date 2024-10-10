@@ -12,12 +12,7 @@ from djpress import url_utils
 from djpress.conf import settings as djpress_settings
 from djpress.exceptions import PageNotFoundError
 from djpress.models import Category, Post
-from djpress.templatetags.helpers import (
-    categories_html,
-    category_link,
-    get_page_link,
-    post_read_more_link,
-)
+from djpress.templatetags import helpers
 from djpress.utils import get_author_display_name
 
 register = template.Library()
@@ -57,7 +52,7 @@ def get_pages() -> models.QuerySet[Post]:
     Returns:
         models.QuerySet[Post]: All pages.
     """
-    return Post.page_objects.get_published_pages().order_by("menu_order").order_by("title")
+    return Post.page_objects.get_published_pages()
 
 
 @register.simple_tag
@@ -67,7 +62,7 @@ def get_categories() -> models.QuerySet[Category] | None:
     Returns:
         models.QuerySet[Category]: All categories.
     """
-    return Category.objects.get_categories().order_by("menu_order").order_by("title")
+    return Category.objects.get_categories().order_by("menu_order", "title")
 
 
 @register.simple_tag
@@ -90,7 +85,64 @@ def blog_categories(
     if not categories:
         return ""
 
-    return mark_safe(categories_html(categories, outer, outer_class, link_class))
+    return mark_safe(helpers.categories_html(categories, outer, outer_class, link_class))
+
+
+@register.simple_tag
+def blog_pages_list(ul_outer_class: str = "", li_class: str = "", a_class: str = "", ul_child_class: str = "") -> str:
+    """Returns an HTML list of the blog pages.
+
+    The pages are sorted by menu order and then by title. Pages that have children have a nested list of children.
+
+    The default output with no arguments is an unordered list with no classes. CSS classes can be added to the output by
+    specifying the arguments shown below.
+
+    ```
+    <ul class="ul_outer_class">
+        <li class="li_class">
+            <a href="/page1/" class="a_class">Page 1</a>
+        </li>
+        <li class="li_class">
+            <a href="/page2/" class="a_class">Page 2</a>
+        </li>
+        <li class="li_parent_class">
+            <a href="/page3/" class="a_class">Page 3</a>
+            <ul class="ul_child_class">
+                <li class="li_class">
+                    <a href="/page3/child1/" class="a_class">Child 1</a>
+                </li>
+                <li class="li_class">
+                    <a href="/page3/child2/" class="a_class">Child 2</a>
+                </li>
+            </ul>
+        </li>
+    </ul>
+    ```
+
+    Args:
+        ul_outer_class (str): The CSS class(es) for the outer unordered list.
+        li_class (str): The CSS class(es) for the
+        a_class (str): The CSS class(es) for the anchor tags.
+        ul_child_class (str): The CSS class(es) for the nested unordered lists.
+
+    Returns:
+        str: The HTML list of the blog pages.
+    """
+    pages = Post.page_objects.get_page_tree()
+
+    output = ""
+
+    if not pages:
+        return output
+
+    if ul_outer_class:
+        ul_outer_class = f' class="{ul_outer_class}"'
+
+    output += f"<ul{ul_outer_class}>"
+    output += helpers.get_blog_pages_list(pages, li_class=li_class, a_class=a_class, ul_child_class=ul_child_class)
+    output += "</ul>"
+
+    return mark_safe(output)
 
 
 @register.simple_tag
@@ -121,20 +173,20 @@ def blog_pages(
     if outer == "ul":
         output += f"<ul{outer_class_html}>"
         for page in pages:
-            output += f"<li>{get_page_link(page=page, link_class=link_class)}</li>"
+            output += f"<li>{helpers.get_page_link(page=page, link_class=link_class)}</li>"
         output += "</ul>"
 
     if outer == "div":
         output += f"<div{outer_class_html}>"
         for page in pages:
-            output += f"{get_page_link(page=page, link_class=link_class)}, "
+            output += f"{helpers.get_page_link(page=page, link_class=link_class)}, "
         output = output[:-2]  # Remove the trailing comma and space
         output += "</div>"
 
     if outer == "span":
         output += f"<span{outer_class_html}>"
         for page in pages:
-            output += f"{get_page_link(page=page, link_class=link_class)}, "
+            output += f"{helpers.get_page_link(page=page, link_class=link_class)}, "
         output = output[:-2]  # Remove the trailing comma and space
         output += "</span>"
 
@@ -324,7 +376,7 @@ def post_category_link(category: Category, link_class: str = "") -> str:
     if not djpress_settings.CATEGORY_ENABLED:
         return category.title
 
-    return mark_safe(category_link(category, link_class))
+    return mark_safe(helpers.category_link(category, link_class))
 
 
 @register.simple_tag(takes_context=True)
@@ -422,7 +474,7 @@ def post_content(
     if posts and post:
         content = mark_safe(post.truncated_content_markdown)
         if post.is_truncated:
-            content += post_read_more_link(post, read_more_link_class, read_more_text)
+            content += helpers.post_read_more_link(post, read_more_link_class, read_more_text)
         return mark_safe(content)
 
     if post:
@@ -553,7 +605,7 @@ def post_categories_link(
     if not categories:
         return ""
 
-    return mark_safe(categories_html(categories, outer, outer_class, link_class))
+    return mark_safe(helpers.categories_html(categories, outer, outer_class, link_class))
 
 
 @register.simple_tag(takes_context=True)
@@ -677,7 +729,7 @@ def page_link(
     except PageNotFoundError:
         return ""
 
-    output = get_page_link(page, link_class=link_class)
+    output = helpers.get_page_link(page, link_class=link_class)
 
     if outer == "li":
         return mark_safe(f"<li{outer_class}>{output}</li>")
