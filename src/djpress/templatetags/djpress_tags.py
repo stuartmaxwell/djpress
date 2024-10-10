@@ -118,6 +118,15 @@ def blog_pages_list(ul_outer_class: str = "", li_class: str = "", a_class: str =
         </li>
     </ul>
     ```
+
+    Args:
+        ul_outer_class (str): The CSS class(es) for the outer unordered list.
+        li_class (str): The CSS class(es) for the
+        a_class (str): The CSS class(es) for the anchor tags.
+        ul_child_class (str): The CSS class(es) for the nested unordered lists.
+
+    Returns:
+        str: The HTML list of the blog pages.
     """
     pages = Post.page_objects.get_page_tree()
 
