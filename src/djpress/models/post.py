@@ -26,7 +26,7 @@ class PagesManager(models.Manager):
 
     def get_queryset(self: "PagesManager") -> models.QuerySet:
         """Return the queryset for pages."""
-        return super().get_queryset().filter(post_type="page").order_by("-date")
+        return super().get_queryset().filter(post_type="page")
 
     def get_published_pages(self: "PagesManager") -> models.QuerySet:
         """Return all published pages.
