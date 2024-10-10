@@ -98,6 +98,51 @@ class PagesManager(models.Manager):
 
         return current_page
 
+    def get_page_tree(self) -> list[dict["Post", list[dict]]]:
+        """Return the page tree.
+
+        This returns a list of top-level pages. Each page is a dict containing the Post object and a list of children.
+
+        Used to build the page hierarchy.
+
+        ```
+        root_pages = [
+            {
+                'page': <Page object>,
+                'children': [
+                    {
+                        'page': <Child Page object>,
+                        'children': [
+                            {
+                                'page': <Grandchild Page object>,
+                                'children': []
+                            },
+                            # ... more grandchildren ...
+                        ]
+                    },
+                    # ... more children ...
+                ]
+            },
+            # ... more root pages ...
+        ]
+        ```
+
+        Returns:
+            list[dict["Post", list[dict]]]: A list of top-level pages - each page is a dict containing the Post object
+            and a list of children. Each child is a dict containing the Post object and a list of children, and so on.
+        """
+        pages = self.get_published_pages().select_related("parent")
+        page_dict = {page.id: {"page": page, "children": []} for page in pages}
+        root_pages = []
+        for page_data in page_dict.values():
+            page = page_data["page"]
+            if page.parent:
+                page_dict[page.parent.id]["children"].append(page_data)
+
+            else:
+                root_pages.append(page_data)
+        return root_pages
+
 
 class PostsManager(models.Manager):
     """Post custom manager."""
