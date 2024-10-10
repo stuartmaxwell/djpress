@@ -662,6 +662,328 @@ def test_blog_categories_no_categories():
 
 
 @pytest.mark.django_db
+def test_blog_pages_list_no_pages():
+    assert djpress_tags.blog_pages_list() == ""
+
+
+@pytest.mark.django_db
+def test_blog_pages_list_no_children(test_page1, test_page2, test_page3):
+    expected_output = (
+        "<ul>"
+        f"<li>{get_page_link(page=test_page1)}</li>"
+        f"<li>{get_page_link(page=test_page2)}</li>"
+        f"<li>{get_page_link(page=test_page3)}</li>"
+        "</ul>"
+    )
+
+    assert djpress_tags.blog_pages_list() == expected_output
+
+
+@pytest.mark.django_db
+def test_blog_pages_list_no_children_with_classes(test_page1, test_page2, test_page3):
+    expected_output = (
+        '<ul class="ul-outer-class">'
+        f'<li class="li-class">{get_page_link(page=test_page1, link_class="a-class")}</li>'
+        f'<li class="li-class">{get_page_link(page=test_page2, link_class="a-class")}</li>'
+        f'<li class="li-class">{get_page_link(page=test_page3, link_class="a-class")}</li>'
+        "</ul>"
+    )
+
+    assert (
+        djpress_tags.blog_pages_list(
+            ul_outer_class="ul-outer-class", li_class="li-class", a_class="a-class", ul_child_class="ul-child-class"
+        )
+        == expected_output
+    )
+
+
+@pytest.mark.django_db
+def test_blog_pages_list_one_child(test_page1, test_page2, test_page3):
+    test_page2.parent = test_page1
+    test_page2.save()
+
+    expected_output = (
+        "<ul>"
+        f"<li>{get_page_link(page=test_page1)}"
+        "<ul>"
+        f"<li>{get_page_link(page=test_page2)}</li>"
+        "</ul>"
+        "</li>"
+        f"<li>{get_page_link(page=test_page3)}</li>"
+        "</ul>"
+    )
+
+    assert djpress_tags.blog_pages_list() == expected_output
+
+
+@pytest.mark.django_db
+def test_blog_pages_list_one_child_with_classes(test_page1, test_page2, test_page3):
+    test_page2.parent = test_page1
+    test_page2.save()
+
+    expected_output = (
+        '<ul class="ul-outer-class">'
+        f'<li class="li-class">{get_page_link(page=test_page1, link_class="a-class")}'
+        '<ul class="ul-child-class">'
+        f'<li class="li-class">{get_page_link(page=test_page2, link_class="a-class")}</li>'
+        "</ul>"
+        "</li>"
+        f'<li class="li-class">{get_page_link(page=test_page3, link_class="a-class")}</li>'
+        "</ul>"
+    )
+
+    assert (
+        djpress_tags.blog_pages_list(
+            ul_outer_class="ul-outer-class", li_class="li-class", a_class="a-class", ul_child_class="ul-child-class"
+        )
+        == expected_output
+    )
+
+
+@pytest.mark.django_db
+def test_blog_pages_list_two_children(test_page1, test_page2, test_page3, test_page4):
+    test_page3.parent = test_page1
+    test_page3.save()
+    test_page4.parent = test_page2
+    test_page4.save()
+
+    expected_output = (
+        "<ul>"
+        f"<li>{get_page_link(page=test_page1)}"
+        "<ul>"
+        f"<li>{get_page_link(page=test_page3)}</li>"
+        "</ul>"
+        "</li>"
+        f"<li>{get_page_link(page=test_page2)}"
+        "<ul>"
+        f"<li>{get_page_link(page=test_page4)}</li>"
+        "</ul>"
+        "</li>"
+        "</ul>"
+    )
+
+    assert djpress_tags.blog_pages_list() == expected_output
+
+
+@pytest.mark.django_db
+def test_blog_pages_list_two_children_with_classes(test_page1, test_page2, test_page3, test_page4):
+    test_page3.parent = test_page1
+    test_page3.save()
+    test_page4.parent = test_page2
+    test_page4.save()
+
+    expected_output = (
+        '<ul class="ul-outer-class">'
+        f'<li class="li-class">{get_page_link(page=test_page1, link_class="a-class")}'
+        '<ul class="ul-child-class">'
+        f'<li class="li-class">{get_page_link(page=test_page3, link_class="a-class")}</li>'
+        "</ul>"
+        "</li>"
+        f'<li class="li-class">{get_page_link(page=test_page2, link_class="a-class")}'
+        '<ul class="ul-child-class">'
+        f'<li class="li-class">{get_page_link(page=test_page4, link_class="a-class")}</li>'
+        "</ul>"
+        "</li>"
+        "</ul>"
+    )
+
+    assert (
+        djpress_tags.blog_pages_list(
+            ul_outer_class="ul-outer-class", li_class="li-class", a_class="a-class", ul_child_class="ul-child-class"
+        )
+        == expected_output
+    )
+
+
+@pytest.mark.django_db
+def test_blog_pages_list_child_grandchild(test_page1, test_page2, test_page3, test_page4):
+    test_page2.parent = test_page1
+    test_page2.save()
+    test_page3.parent = test_page2
+    test_page3.save()
+
+    expected_output = (
+        "<ul>"
+        f"<li>{get_page_link(page=test_page1)}"
+        "<ul>"
+        f"<li>{get_page_link(page=test_page2)}"
+        "<ul>"
+        f"<li>{get_page_link(page=test_page3)}</li>"
+        "</ul>"
+        "</li>"
+        "</ul>"
+        "</li>"
+        f"<li>{get_page_link(page=test_page4)}</li>"
+        "</ul>"
+    )
+
+    assert djpress_tags.blog_pages_list() == expected_output
+
+
+@pytest.mark.django_db
+def test_blog_pages_list_child_grandchild_with_classes(test_page1, test_page2, test_page3, test_page4):
+    test_page2.parent = test_page1
+    test_page2.save()
+    test_page3.parent = test_page2
+    test_page3.save()
+
+    expected_output = (
+        '<ul class="ul-outer-class">'
+        f'<li class="li-class">{get_page_link(page=test_page1, link_class="a-class")}'
+        '<ul class="ul-child-class">'
+        f'<li class="li-class">{get_page_link(page=test_page2, link_class="a-class")}'
+        '<ul class="ul-child-class">'
+        f'<li class="li-class">{get_page_link(page=test_page3, link_class="a-class")}</li>'
+        "</ul>"
+        "</li>"
+        "</ul>"
+        "</li>"
+        f'<li class="li-class">{get_page_link(page=test_page4, link_class="a-class")}</li>'
+        "</ul>"
+    )
+
+    assert (
+        djpress_tags.blog_pages_list(
+            ul_outer_class="ul-outer-class", li_class="li-class", a_class="a-class", ul_child_class="ul-child-class"
+        )
+        == expected_output
+    )
+
+
+@pytest.mark.django_db
+def test_blog_pages_list_child_greatgrandchild(test_page1, test_page2, test_page3, test_page4):
+    test_page2.parent = test_page1
+    test_page2.save()
+    test_page3.parent = test_page2
+    test_page3.save()
+    test_page4.parent = test_page3
+    test_page4.save()
+
+    expected_output = (
+        "<ul>"
+        f"<li>{get_page_link(page=test_page1)}"
+        "<ul>"
+        f"<li>{get_page_link(page=test_page2)}"
+        "<ul>"
+        f"<li>{get_page_link(page=test_page3)}"
+        "<ul>"
+        f"<li>{get_page_link(page=test_page4)}</li>"
+        "</ul>"
+        "</li>"
+        "</ul>"
+        "</li>"
+        "</ul>"
+        "</li>"
+        "</ul>"
+    )
+
+    assert djpress_tags.blog_pages_list() == expected_output
+
+
+@pytest.mark.django_db
+def test_blog_pages_list_child_greatgrandchild_with_classes(test_page1, test_page2, test_page3, test_page4):
+    test_page2.parent = test_page1
+    test_page2.save()
+    test_page3.parent = test_page2
+    test_page3.save()
+    test_page4.parent = test_page3
+    test_page4.save()
+
+    expected_output = (
+        '<ul class="ul-outer-class">'
+        f'<li class="li-class">{get_page_link(page=test_page1, link_class="a-class")}'
+        '<ul class="ul-child-class">'
+        f'<li class="li-class">{get_page_link(page=test_page2, link_class="a-class")}'
+        '<ul class="ul-child-class">'
+        f'<li class="li-class">{get_page_link(page=test_page3, link_class="a-class")}'
+        '<ul class="ul-child-class">'
+        f'<li class="li-class">{get_page_link(page=test_page4, link_class="a-class")}</li>'
+        "</ul>"
+        "</li>"
+        "</ul>"
+        "</li>"
+        "</ul>"
+        "</li>"
+        "</ul>"
+    )
+
+    assert (
+        djpress_tags.blog_pages_list(
+            ul_outer_class="ul-outer-class", li_class="li-class", a_class="a-class", ul_child_class="ul-child-class"
+        )
+        == expected_output
+    )
+
+
+@pytest.mark.django_db
+def test_blog_pages_list_child_change_order(test_page1, test_page2, test_page3, test_page4, test_page5):
+    test_page5.menu_order = 1
+    test_page5.save()
+    test_page1.menu_order = 2
+    test_page1.save()
+    test_page2.parent = test_page1
+    test_page2.save()
+    test_page3.parent = test_page2
+    test_page3.save()
+    test_page4.parent = test_page1
+    test_page4.save()
+
+    expected_output = (
+        "<ul>"
+        f"<li>{get_page_link(page=test_page5)}</li>"
+        f"<li>{get_page_link(page=test_page1)}"
+        "<ul>"
+        f"<li>{get_page_link(page=test_page2)}"
+        "<ul>"
+        f"<li>{get_page_link(page=test_page3)}</li>"
+        "</ul>"
+        "</li>"
+        f"<li>{get_page_link(page=test_page4)}</li>"
+        "</ul>"
+        "</li>"
+        "</ul>"
+    )
+
+    assert djpress_tags.blog_pages_list() == expected_output
+
+
+@pytest.mark.django_db
+def test_blog_pages_list_child_greatgreatgrandchild(test_page1, test_page2, test_page3, test_page4, test_page5):
+    test_page2.parent = test_page1
+    test_page2.save()
+    test_page3.parent = test_page2
+    test_page3.save()
+    test_page4.parent = test_page3
+    test_page4.save()
+    test_page5.parent = test_page4
+    test_page5.save()
+
+    expected_output = (
+        "<ul>"
+        f"<li>{get_page_link(page=test_page1)}"
+        "<ul>"
+        f"<li>{get_page_link(page=test_page2)}"
+        "<ul>"
+        f"<li>{get_page_link(page=test_page3)}"
+        "<ul>"
+        f"<li>{get_page_link(page=test_page4)}"
+        "<ul>"
+        f"<li>{get_page_link(page=test_page5)}</li>"
+        "</ul>"
+        "</li>"
+        "</ul>"
+        "</li>"
+        "</ul>"
+        "</li>"
+        "</ul>"
+        "</li>"
+        "</ul>"
+    )
+
+    assert djpress_tags.blog_pages_list() == expected_output
+
+
+@pytest.mark.django_db
 def test_blog_pages_no_pages():
     assert djpress_tags.blog_pages() == ""
 

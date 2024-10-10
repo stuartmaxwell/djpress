@@ -23,13 +23,6 @@ def test_post_model(test_post1, user, category1):
 
 
 @pytest.mark.django_db
-def test_post_methods(test_post1, test_post2, category1, category2):
-    assert Post.post_objects.all().count() == 2
-    assert Post.post_objects.get_published_post_by_slug("test-post1").title == "Test Post1"
-    assert Post.post_objects.get_published_posts_by_category(category1).count() == 1
-
-
-@pytest.mark.django_db
 def test_get_published_content_with_future_date(user):
     Post.post_objects.create(
         title="Past Post",
@@ -383,9 +376,27 @@ def test_get_published_page_by_slug(test_page1):
 
 
 @pytest.mark.django_db
-def test_get_published_pages(test_page1, test_page2):
+def test_get_published_pages(test_page1, test_page2, test_page3, test_page4, test_page5):
     """Test that the get_published_pages method returns the correct pages."""
-    assert list(Post.page_objects.get_published_pages()) == [test_page2, test_page1]
+    assert list(Post.page_objects.get_published_pages()) == [test_page1, test_page2, test_page3, test_page4, test_page5]
+
+    test_page1.status = "draft"
+    test_page1.save()
+    assert list(Post.page_objects.get_published_pages()) == [test_page2, test_page3, test_page4, test_page5]
+
+    test_page2.parent = test_page1
+    test_page2.save()
+    assert list(Post.page_objects.get_published_pages()) == [test_page3, test_page4, test_page5]
+
+    test_page3.date = timezone.now() + timezone.timedelta(days=1)
+    test_page3.save()
+    assert list(Post.page_objects.get_published_pages()) == [test_page4, test_page5]
+
+    test_page4.parent = test_page3
+    test_page4.save()
+    test_page5.parent = test_page4
+    test_page5.save()
+    assert list(Post.page_objects.get_published_pages()) == []
 
 
 @pytest.mark.django_db
@@ -793,3 +804,184 @@ def test_get_full_page_path_with_grandparent(test_page1, test_page2, test_page3)
     test_page1.parent = test_page2
     test_page2.parent = test_page3
     assert test_page1.full_page_path == "test-page3/test-page2/test-page1"
+
+
+@pytest.mark.django_db
+def test_page_get_page_tree_no_children(test_page1, test_page2, test_page3, test_page4):
+    expected_tree = [
+        {"page": test_page1, "children": []},
+        {"page": test_page2, "children": []},
+        {"page": test_page3, "children": []},
+        {"page": test_page4, "children": []},
+    ]
+    assert list(Post.page_objects.get_page_tree()) == expected_tree
+
+
+@pytest.mark.django_db
+def test_page_get_page_tree_with_children(test_page1, test_page2, test_page3, test_page4):
+    test_page1.parent = test_page2
+    test_page1.save()
+    test_page3.parent = test_page2
+    test_page3.save()
+
+    expected_tree = [
+        {
+            "page": test_page2,
+            "children": [
+                {"page": test_page1, "children": []},
+                {"page": test_page3, "children": []},
+            ],
+        },
+        {"page": test_page4, "children": []},
+    ]
+    assert Post.page_objects.get_page_tree() == expected_tree
+
+
+@pytest.mark.django_db
+def test_page_get_page_tree_with_grandchildren(test_page1, test_page2, test_page3, test_page4, test_page5):
+    test_page1.parent = test_page2
+    test_page1.save()
+    test_page3.parent = test_page2
+    test_page3.save()
+    test_page2.parent = test_page5
+    test_page2.save()
+
+    expected_tree = [
+        {"page": test_page4, "children": []},
+        {
+            "page": test_page5,
+            "children": [
+                {
+                    "page": test_page2,
+                    "children": [
+                        {"page": test_page1, "children": []},
+                        {"page": test_page3, "children": []},
+                    ],
+                },
+            ],
+        },
+    ]
+    assert Post.page_objects.get_page_tree() == expected_tree
+
+
+@pytest.mark.django_db
+def test_page_get_page_tree_with_grandchildren_parent_with_future_date(
+    test_page1, test_page2, test_page3, test_page4, test_page5
+):
+    test_page1.parent = test_page2
+    test_page1.save()
+    test_page3.parent = test_page2
+    test_page3.save()
+    test_page2.parent = test_page5
+    test_page2.date = timezone.now() + timezone.timedelta(days=1)
+    test_page2.save()
+
+    expected_tree = [
+        {"page": test_page4, "children": []},
+        {
+            "page": test_page5,
+            "children": [],
+        },
+    ]
+    assert Post.page_objects.get_page_tree() == expected_tree
+
+
+@pytest.mark.django_db
+def test_page_get_page_tree_with_grandchildren_parent_with_status_draft(
+    test_page1, test_page2, test_page3, test_page4, test_page5
+):
+    test_page1.parent = test_page2
+    test_page1.save()
+    test_page3.parent = test_page2
+    test_page3.save()
+    test_page2.parent = test_page5
+    test_page2.status = "draft"
+    test_page2.save()
+
+    expected_tree = [
+        {"page": test_page4, "children": []},
+        {
+            "page": test_page5,
+            "children": [],
+        },
+    ]
+    assert Post.page_objects.get_page_tree() == expected_tree
+
+
+@pytest.mark.django_db
+def test_page_order_menu_order(test_page1, test_page2, test_page3, test_page4, test_page5):
+    test_page1.menu_order = 1
+    test_page1.save()
+    test_page2.menu_order = 2
+    test_page2.save()
+    test_page3.menu_order = 3
+    test_page3.save()
+    test_page4.menu_order = 4
+    test_page4.save()
+    test_page5.menu_order = 5
+    test_page5.save()
+
+    expected_order = [test_page1, test_page2, test_page3, test_page4, test_page5]
+
+    assert list(Post.page_objects.get_published_pages()) == expected_order
+
+
+@pytest.mark.django_db
+def test_page_order_title(test_page1, test_page2, test_page3, test_page4, test_page5):
+    test_page1.menu_order = 1
+    test_page1.save()
+    test_page2.menu_order = 1
+    test_page2.save()
+    test_page3.menu_order = 1
+    test_page3.save()
+    test_page4.menu_order = 1
+    test_page4.save()
+    test_page5.menu_order = 1
+    test_page5.save()
+
+    expected_order = [test_page1, test_page2, test_page3, test_page4, test_page5]
+
+    assert list(Post.page_objects.get_published_pages()) == expected_order
+
+
+@pytest.mark.django_db
+def test_page_is_published(test_page1, test_page2, test_page3, test_page4, test_page5):
+    assert test_page1.is_published is True
+    assert test_page2.is_published is True
+    assert test_page3.is_published is True
+
+    test_page1.status = "draft"
+    test_page1.save()
+    assert test_page1.is_published is False
+
+    test_page2.parent = test_page1
+    test_page2.save()
+    assert test_page2.is_published is False
+
+    test_page2.parent = test_page3
+    test_page2.save()
+    assert test_page2.is_published is True
+
+    # change test_page3 to be in the future
+    test_page3.date = timezone.now() + timezone.timedelta(days=1)
+    test_page3.save()
+    assert test_page2.is_published is False
+    assert test_page3.is_published is False
+
+    # Change test_page3 to be published again
+    test_page3.date = timezone.now()
+    test_page3.save()
+    test_page3.parent = test_page4
+    test_page3.save()
+    assert test_page3.is_published is True
+
+    test_page4.parent = test_page5
+    test_page4.save()
+    assert test_page3.is_published is True
+    assert test_page4.is_published is True
+
+    test_page5.status = "draft"
+    test_page5.save()
+    assert test_page3.is_published is False
+    assert test_page4.is_published is False
+    assert test_page5.is_published is False
