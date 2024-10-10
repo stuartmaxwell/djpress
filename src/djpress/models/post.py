@@ -402,3 +402,22 @@ class Post(models.Model):
         if self.parent:
             return f"{self.parent.full_page_path}/{self.slug}"
         return self.slug
+
+    @property
+    def is_published(self: "Post") -> bool:
+        """Return whether the post is published.
+
+        For a post to be published, it must meet the following requirements:
+        - The status must be "published".
+        - The date must be less than or equal to the current date/time.
+
+        This also checks if the parent page is published.
+
+        Returns:
+            bool: Whether the post is published.
+        """
+        if not (self.status == "published" and self.date <= timezone.now()):
+            return False
+        if self.parent:
+            return self.parent.is_published
+        return True
