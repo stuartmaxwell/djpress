@@ -34,11 +34,11 @@ class PagesManager(models.Manager):
         For a page to be considered published, it must meet the following requirements:
         - The status must be "published".
         - The date must be less than or equal to the current date/time.
+        - All parent pages must also be published.
         """
-        return self.get_queryset().filter(
-            status="published",
-            date__lte=timezone.now(),
-        )
+        return Post.page_objects.filter(
+            pk__in=[page.pk for page in self.get_queryset().select_related("parent") if page.is_published],
+        ).order_by("menu_order", "title", "-date")
 
     def get_published_page_by_slug(
         self: "PagesManager",
