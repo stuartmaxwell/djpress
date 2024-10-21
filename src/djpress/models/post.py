@@ -158,9 +158,10 @@ class PostsManager(models.Manager):
         - The status must be "published".
         - The date must be less than or equal to the current date/time.
         """
-        return self.get_queryset().filter(
-            status="published",
-            date__lte=timezone.now(),
+        return (
+            self.get_queryset()
+            .filter(status="published", date__lte=timezone.now())
+            .prefetch_related("categories", "author")
         )
 
     def get_recent_published_posts(self: "PostsManager") -> models.QuerySet:
@@ -174,9 +175,7 @@ class PostsManager(models.Manager):
         if djpress_settings.CACHE_RECENT_PUBLISHED_POSTS:
             return self._get_cached_recent_published_posts()
 
-        return self.get_published_posts().prefetch_related("categories", "author")[
-            : djpress_settings.RECENT_PUBLISHED_POSTS_COUNT
-        ]
+        return self.get_published_posts()[: djpress_settings.RECENT_PUBLISHED_POSTS_COUNT]
 
     def _get_cached_recent_published_posts(self: "PostsManager") -> models.QuerySet:
         """Return the cached recent published posts queryset.
@@ -275,7 +274,7 @@ class PostsManager(models.Manager):
         Must have a date less than or equal to the current date/time for a specific
         category, ordered by date in descending order.
         """
-        return self.get_published_posts().filter(categories=category).prefetch_related("categories", "author")
+        return self.get_published_posts().filter(categories=category)
 
     def get_published_posts_by_author(
         self: "PostsManager",
@@ -286,7 +285,7 @@ class PostsManager(models.Manager):
         Must have a date less than or equal to the current date/time for a specific
         author, ordered by date in descending order.
         """
-        return self.get_published_posts().filter(author=author).prefetch_related("categories", "author")
+        return self.get_published_posts().filter(author=author)
 
 
 class Post(models.Model):
