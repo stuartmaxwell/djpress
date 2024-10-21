@@ -257,6 +257,21 @@ def have_posts(context: Context) -> list[Post | None] | Page:
 
 
 @register.simple_tag(takes_context=True)
+def get_recent_posts(context: Context) -> models.QuerySet[Post]:
+    """Return the recent posts.
+
+    This returns the most recent published posts, and tries to be efficient by checking if there's a `posts` object we
+    can use.
+    """
+    posts: Page | None = context.get("posts")
+
+    if isinstance(posts, Page) and posts.number == 1:
+        return posts.object_list
+
+    return Post.post_objects.get_recent_published_posts()
+
+
+@register.simple_tag(takes_context=True)
 def post_title(context: Context) -> str:
     """Return the title of a post.
 
@@ -274,19 +289,19 @@ def post_title(context: Context) -> str:
 
 
 @register.simple_tag(takes_context=True)
-def post_title_link(context: Context, link_class: str = "") -> str:
+def post_title_link(context: Context, link_class: str = "", *, force_link: bool = False) -> str:
     """Return the title link for a post.
 
-    If the post is part of a posts collection, then return the title and a link to the
-    post.
-
-    If the post is a single post, then return just the title of the post with no link.
+    If the post is part of a posts collection, then return the title and a link to the post. If the post is a single
+    post, then return just the title of the post with no link. But this behavior can be overridden by setting
+    `force_link` to `True`.
 
     Otherwise return and empty string.
 
     Args:
         context: The context.
         link_class: The CSS class(es) for the link.
+        force_link: Whether to force the link to be displayed.
 
     Returns:
         str: The title link for the post.
@@ -294,7 +309,7 @@ def post_title_link(context: Context, link_class: str = "") -> str:
     post: Post | None = context.get("post")
     posts: Page | None = context.get("posts")
 
-    if posts and post:
+    if (posts and post) or force_link:
         link_class_html = f' class="{link_class}"' if link_class else ""
 
         output = f'<a href="{post.url}" title="{post.title}"{link_class_html}>{post.title}</a>'

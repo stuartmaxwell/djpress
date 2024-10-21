@@ -107,6 +107,22 @@ def test_post_title_link_no_context():
 
 
 @pytest.mark.django_db
+def test_post_title_link_single_post(test_post1):
+    context = Context({"post": test_post1})
+    assert djpress_tags.post_title_link(context) == test_post1.title
+
+
+@pytest.mark.django_db
+def test_post_title_link_single_post_force_link(test_post1):
+    context = Context({"post": test_post1})
+
+    # this generates a URL based on the slug only - this is prefixed with the POST_PREFIX setting
+    post_url = test_post1.url
+    expected_output = f'<a href="{post_url}" title="{test_post1.title}">{test_post1.title}</a>'
+    assert djpress_tags.post_title_link(context, force_link=True) == expected_output
+
+
+@pytest.mark.django_db
 def test_post_title_link_with_prefix(settings, test_post1):
     # Confirm settings in settings_testing.py
     assert settings.DJPRESS_SETTINGS["POST_PREFIX"] == "test-posts"
@@ -1443,3 +1459,41 @@ def test_rss_url(settings):
     assert settings.DJPRESS_SETTINGS["RSS_PATH"] == "test-rss"
     expected_output = "/test-rss/"
     assert djpress_tags.rss_url() == expected_output
+
+
+@pytest.mark.django_db
+def test_get_recent_posts(settings, test_post1, test_post2, test_post3):
+    assert settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"] == 3
+    posts = Paginator(
+        Post.post_objects.get_published_posts(),
+        settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"],
+    )
+    page = posts.get_page(number=None)
+    context = Context({"posts": page})
+    tag_get_recent_posts = list(djpress_tags.get_recent_posts(context))
+    page_posts = list(page.object_list)
+    assert tag_get_recent_posts == page_posts
+
+    # Test case 2 - 2 pages, i.e. 3 posts with 2 posts per page
+    settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"] = 2
+    posts = Paginator(
+        Post.post_objects.get_published_posts(),
+        settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"],
+    )
+    page = posts.get_page(number=2)
+    context = Context({"posts": page})
+    tag_get_recent_posts = list(djpress_tags.get_recent_posts(context))
+    page_posts = list(page.object_list)
+    assert tag_get_recent_posts != page_posts
+
+    # Test case 3 - 3 pages, i.e. 3 posts with 1 posts per page
+    settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"] = 1
+    posts = Paginator(
+        Post.post_objects.get_published_posts(),
+        settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"],
+    )
+    page = posts.get_page(number=3)
+    context = Context({"posts": page})
+    tag_get_recent_posts = list(djpress_tags.get_recent_posts(context))
+    page_posts = list(page.object_list)
+    assert tag_get_recent_posts != page_posts
