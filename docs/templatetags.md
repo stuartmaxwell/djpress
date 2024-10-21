@@ -452,12 +452,14 @@ Outputs:
 
 ## post_title_link
 
-Returns the title of the current post as a link if it's part of a collection, or just the title if it's a
-single post.
+Returns the title of the current post as a link if it's part of a collection, or just the title if it's single post.
+
+The `force_link` argument can be used to always return the link, regardless if it's part of a collection or not.
 
 ### Arguments
 
 - `link_class` (optional): CSS class(es) to apply to the link.
+- `force_link` (optional, boolean): Always displays a link when true. *Note* - this is a keyword-only argument.
 
 ### Returns
 
@@ -492,6 +494,20 @@ Outputs:
 ```html
 <a href="/my-post/" class="post-title-link">My Post Title</a>
 ```
+
+Or, to force the link, even when just a single post is displayed:
+
+```django
+{% post_title_link force_link=True %}
+```
+
+Outputs:
+
+```html
+<a href="/my-post/">My Post Title</a>
+```
+
+
 
 ## post_author
 

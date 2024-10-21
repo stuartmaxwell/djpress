@@ -292,10 +292,9 @@ def post_title(context: Context) -> str:
 def post_title_link(context: Context, link_class: str = "", *, force_link: bool = False) -> str:
     """Return the title link for a post.
 
-    If the post is part of a posts collection, then return the title and a link to the
-    post.
-
-    If the post is a single post, then return just the title of the post with no link.
+    If the post is part of a posts collection, then return the title and a link to the post. If the post is a single
+    post, then return just the title of the post with no link. But this behavior can be overridden by setting
+    `force_link` to `True`.
 
     Otherwise return and empty string.
 
