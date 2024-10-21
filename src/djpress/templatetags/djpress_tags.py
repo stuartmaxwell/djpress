@@ -257,6 +257,21 @@ def have_posts(context: Context) -> list[Post | None] | Page:
 
 
 @register.simple_tag(takes_context=True)
+def get_recent_posts(context: Context) -> models.QuerySet[Post]:
+    """Return the recent posts.
+
+    This returns the most recent published posts, and tries to be efficient by checking if there's a `posts` object we
+    can use.
+    """
+    posts: Page | None = context.get("posts")
+
+    if isinstance(posts, Page) and posts.number == 1:
+        return posts.object_list
+
+    return Post.post_objects.get_recent_published_posts()
+
+
+@register.simple_tag(takes_context=True)
 def post_title(context: Context) -> str:
     """Return the title of a post.
 
