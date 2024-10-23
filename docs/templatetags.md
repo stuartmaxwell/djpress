@@ -474,6 +474,57 @@ Outputs:
 <h1>My Post Title</h1>
 ```
 
+## post_wrap
+
+This is a wrapper tag that is used to add a semantic HTML wrapper tags around a post. By default this will use an
+`<article>` tag and will add the necessary microformat tags if microformats are enabled (these are enabled by
+default.)
+
+### Arguments
+
+*Note* - keyword arguments are recommended but not required.
+
+- `tag` (optional): The HTML tag to wrap the content in, default is `<article>`.
+- `class` (optional): CSS class(es) to apply to the tag, default is blank.
+
+### Usage
+
+Basic wrapper with no additional arguments and with microformats enabled.
+
+```django
+{% post_wrap %}
+<h2>Post Title</h2>
+<p>This is my post content</p>
+{% end_post_wrap %}
+```
+
+Outputs:
+
+```django
+<article class="h-entry">
+<h2>Post Title</h2>
+<p>This is my post content</p>
+</article>
+```
+
+Wrapper with specific HTML tag, a CSS class, and with microformats enabled.
+
+```django
+{% post_wrap tag="div" class="blogpost" %}
+<h2>Post Title</h2>
+<p>This is my post content</p>
+{% end_post_wrap %}
+```
+
+Outputs:
+
+```django
+<div class="h-entry blogpost">
+<h2>Post Title</h2>
+<p>This is my post content</p>
+</div>
+```
+
 ## post_title
 
 Returns the title of the current post as a link if it's part of a collection, or just the title if it's single post.
