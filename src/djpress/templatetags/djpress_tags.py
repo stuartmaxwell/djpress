@@ -394,8 +394,12 @@ def post_author_link(context: Context, link_class: str = "") -> str:
     author = post.author
     author_display_name = get_author_display_name(author)
 
+    mf = ' class="p-author"' if djpress_settings.MICROFORMATS_ENABLED else ""
+
+    author_html = f"<span{mf}>{author_display_name}</span>"
+
     if not djpress_settings.AUTHOR_ENABLED:
-        return f'<span rel="author">{author_display_name}</span>'
+        return author_html
 
     author_url = url_utils.get_author_url(user=author)
 
@@ -404,7 +408,7 @@ def post_author_link(context: Context, link_class: str = "") -> str:
     output = (
         f'<a href="{author_url}" title="View all posts by '
         f'{author_display_name}"{link_class_html}>'
-        f'<span rel="author">{author_display_name}</span></a>'
+        f"{author_html}</a>"
     )
 
     return mark_safe(output)
