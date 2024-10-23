@@ -12,7 +12,7 @@ from djpress.url_utils import get_archives_url, get_author_url, get_category_url
 
 
 @pytest.mark.django_db
-def test_index_view(client):
+def test_index_view_no_posts(client):
     url = reverse("djpress:index")
     response = client.get(url)
     assert response.status_code == 200
@@ -22,12 +22,27 @@ def test_index_view(client):
 
 
 @pytest.mark.django_db
+def test_index_view_multiple_posts(client, test_post1, test_post2, test_post3):
+    url = "/"
+    response = client.get(url)
+    assert response.status_code == 200
+    assert "posts" in response.context
+    assert isinstance(response.context["posts"], Iterable)
+    assert (
+        f'<h2 class="p-name"><a href="/test-posts/test-post1/" title="Test Post1">Test Post1</a></h2>'
+        in response.content.decode()
+    )
+    print(response.content.decode())
+
+
+@pytest.mark.django_db
 def test_single_post_view(client, test_post1):
     url = test_post1.url
     response = client.get(url)
     assert response.status_code == 200
     assert "post" in response.context
     assert not isinstance(response.context["post"], Iterable)
+    assert f'<h1 class="p-name">{test_post1.title}</h1>' in response.content.decode()
 
 
 @pytest.mark.django_db

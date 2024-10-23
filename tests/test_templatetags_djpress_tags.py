@@ -89,7 +89,7 @@ def test_get_post_title_no_post_context():
 
 @pytest.mark.django_db
 def test_post_title_posts(settings, test_post1):
-    """Test the post_title_link template tag.
+    """Test the post_title template tag.
 
     This uses the `post.permalink` property to generate the link."""
     # Context should have both a posts and a post to simulate the for post in posts loop
@@ -102,35 +102,59 @@ def test_post_title_posts(settings, test_post1):
     post_url = test_post1.url
 
     expected_output = f'<a href="{post_url}" title="{test_post1.title}">{test_post1.title}</a>'
-    assert djpress_tags.post_title_link(context) == expected_output
+    assert djpress_tags.post_title(context) == expected_output
 
 
 @pytest.mark.django_db
-def test_post_title_link_no_context():
-    context = Context()
+def test_post_title_no_post():
+    context = Context({"post": None})
 
     expected_output = ""
-    assert djpress_tags.post_title_link(context) == expected_output
+    assert djpress_tags.post_title(context) == expected_output
 
 
 @pytest.mark.django_db
-def test_post_title_link_single_post(test_post1):
+def test_post_title_single_post(test_post1):
     context = Context({"post": test_post1})
-    assert djpress_tags.post_title_link(context) == test_post1.title
+    expected_output = test_post1.title
+    assert djpress_tags.post_title(context) == expected_output
 
 
 @pytest.mark.django_db
-def test_post_title_link_single_post_force_link(test_post1):
+def test_post_title_single_post_force_link(test_post1):
     context = Context({"post": test_post1})
 
     # this generates a URL based on the slug only - this is prefixed with the POST_PREFIX setting
     post_url = test_post1.url
     expected_output = f'<a href="{post_url}" title="{test_post1.title}">{test_post1.title}</a>'
-    assert djpress_tags.post_title_link(context, force_link=True) == expected_output
+    assert djpress_tags.post_title(context, force_link=True) == expected_output
 
 
 @pytest.mark.django_db
-def test_post_title_link_with_prefix(settings, test_post1):
+def test_post_title_with_valid_tag(settings, test_post1):
+    context = Context({"post": test_post1})
+
+    # Microformats are enabled by default
+    expected_output = f'<h1 class="p-name">{test_post1.title}</h1>'
+    assert djpress_tags.post_title(context, outer_tag="h1") == expected_output
+
+    # Disable microformats
+    settings.DJPRESS_SETTINGS["MICROFORMATS_ENABLED"] = False
+
+    expected_output = f"<h1>{test_post1.title}</h1>"
+    assert djpress_tags.post_title(context, outer_tag="h1") == expected_output
+
+
+@pytest.mark.django_db
+def test_post_title_with_invalid_tag(test_post1):
+    context = Context({"post": test_post1})
+
+    expected_output = test_post1.title
+    assert djpress_tags.post_title(context, outer_tag="ul") == expected_output
+
+
+@pytest.mark.django_db
+def test_post_title_with_prefix(settings, test_post1):
     # Confirm settings in settings_testing.py
     assert settings.DJPRESS_SETTINGS["POST_PREFIX"] == "test-posts"
 
@@ -140,7 +164,7 @@ def test_post_title_link_with_prefix(settings, test_post1):
     post_url = test_post1.url
 
     expected_output = f'<a href="{post_url}" title="{test_post1.title}">{test_post1.title}</a>'
-    assert djpress_tags.post_title_link(context) == expected_output
+    assert djpress_tags.post_title(context) == expected_output
 
 
 @pytest.mark.django_db
