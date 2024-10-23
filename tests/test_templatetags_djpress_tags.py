@@ -1,7 +1,7 @@
 import pytest
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
-from django.template import Context
+from django.template import Context, Template
 from django.urls import reverse
 
 from djpress.models import Category, Post
@@ -1543,3 +1543,124 @@ def test_get_recent_posts(settings, test_post1, test_post2, test_post3):
     tag_get_recent_posts = list(djpress_tags.get_recent_posts(context))
     page_posts = list(page.object_list)
     assert tag_get_recent_posts != page_posts
+
+
+@pytest.mark.django_db
+def test_blog_post_wrapper_single_post_no_tag(settings):
+    """Creates an article by default."""
+    template_text = "{% load djpress_tags %}{% blog_post %}<p>This is test post 1.</p>{% end_blog_post %}"
+    context = Context({})
+
+    template = Template(template_text)
+    expected_output = '<article class="h-entry"><p>This is test post 1.</p></article>'
+    assert template.render(context) == expected_output
+
+    # Disable microformats
+    settings.DJPRESS_SETTINGS["MICROFORMATS_ENABLED"] = False
+
+    template = Template(template_text)
+    expected_output = "<article><p>This is test post 1.</p></article>"
+    assert template.render(context) == expected_output
+
+
+@pytest.mark.django_db
+def test_blog_post_wrapper_single_post_with_valid_tag(settings):
+    """Create a div instead."""
+    template_text = "{% load djpress_tags %}{% blog_post tag='div' %}<p>This is test post 1.</p>{% end_blog_post %}"
+    context = Context({})
+
+    template = Template(template_text)
+    expected_output = '<div class="h-entry"><p>This is test post 1.</p></div>'
+    assert template.render(context) == expected_output
+
+    # Disable microformats
+    settings.DJPRESS_SETTINGS["MICROFORMATS_ENABLED"] = False
+
+    template = Template(template_text)
+    expected_output = "<div><p>This is test post 1.</p></div>"
+    assert template.render(context) == expected_output
+
+
+@pytest.mark.django_db
+def test_blog_post_wrapper_single_post_with_valid_tag_double_quotes(settings):
+    """Create a div instead."""
+    template_text = '{% load djpress_tags %}{% blog_post tag="div" %}<p>This is test post 1.</p>{% end_blog_post %}'
+    context = Context({})
+
+    template = Template(template_text)
+    expected_output = '<div class="h-entry"><p>This is test post 1.</p></div>'
+    assert template.render(context) == expected_output
+
+    # Disable microformats
+    settings.DJPRESS_SETTINGS["MICROFORMATS_ENABLED"] = False
+
+    template = Template(template_text)
+    expected_output = "<div><p>This is test post 1.</p></div>"
+    assert template.render(context) == expected_output
+
+
+@pytest.mark.django_db
+def test_blog_post_wrapper_single_post_with_invalid_tag():
+    """Just returns the content."""
+    template_text = "{% load djpress_tags %}{% blog_post tag='foobar' %}<p>This is test post 1.</p>{% end_blog_post %}"
+    context = Context({})
+
+    template = Template(template_text)
+    expected_output = "<p>This is test post 1.</p>"
+    assert template.render(context) == expected_output
+
+
+@pytest.mark.django_db
+def test_blog_post_wrapper_single_post_with_valid_tag_arg_only():
+    """Just returns the content."""
+    template_text = "{% load djpress_tags %}{% blog_post 'article' %}<p>This is test post 1.</p>{% end_blog_post %}"
+    context = Context({})
+
+    template = Template(template_text)
+    expected_output = '<article class="h-entry"><p>This is test post 1.</p></article>'
+    assert template.render(context) == expected_output
+
+
+@pytest.mark.django_db
+def test_blog_post_wrapper_single_post_with_invalid_tag_arg_only():
+    """Just returns the content."""
+    template_text = "{% load djpress_tags %}{% blog_post 'foobar' %}<p>This is test post 1.</p>{% end_blog_post %}"
+    context = Context({})
+
+    template = Template(template_text)
+    expected_output = "<p>This is test post 1.</p>"
+    assert template.render(context) == expected_output
+
+
+@pytest.mark.django_db
+def test_blog_post_wrapper_single_post_with_class(settings):
+    template_text = (
+        "{% load djpress_tags %}{% blog_post class='blog-post' %}<p>This is test post 1.</p>{% end_blog_post %}"
+    )
+    context = Context({})
+
+    template = Template(template_text)
+    expected_output = '<article class="h-entry blog-post"><p>This is test post 1.</p></article>'
+    assert template.render(context) == expected_output
+
+    # Disable microformats
+    settings.DJPRESS_SETTINGS["MICROFORMATS_ENABLED"] = False
+    template = Template(template_text)
+    expected_output = '<article class="blog-post"><p>This is test post 1.</p></article>'
+    assert template.render(context) == expected_output
+
+
+@pytest.mark.django_db
+def test_blog_post_wrapper_single_post_with_tag_and_class(settings):
+    template_text = "{% load djpress_tags %}{% blog_post tag='div' class='blog-post' %}<p>This is test post 1.</p>{% end_blog_post %}"
+    context = Context({})
+
+    template = Template(template_text)
+    expected_output = '<div class="h-entry blog-post"><p>This is test post 1.</p></div>'
+    assert template.render(context) == expected_output
+
+    # Disable microformats
+    settings.DJPRESS_SETTINGS["MICROFORMATS_ENABLED"] = False
+    template = Template(template_text)
+    expected_output = '<div class="blog-post"><p>This is test post 1.</p></div>'
+    assert template.render(context) == expected_output
