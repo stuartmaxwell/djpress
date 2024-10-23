@@ -76,15 +76,15 @@ def test_get_categories(category1, category2, category3):
 
 
 @pytest.mark.django_db
-def test_post_title_single_post(test_post1):
+def test_get_post_title_single_post(test_post1):
     context = Context({"post": test_post1})
-    assert djpress_tags.post_title(context) == test_post1.title
+    assert djpress_tags.get_post_title(context) == test_post1.title
 
 
-def test_post_title_no_post_context():
+def test_get_post_title_no_post_context():
     context = Context({"foo": "bar"})
-    assert djpress_tags.post_title(context) == ""
-    assert type(djpress_tags.post_title(context)) == str
+    assert djpress_tags.get_post_title(context) == ""
+    assert type(djpress_tags.get_post_title(context)) == str
 
 
 @pytest.mark.django_db

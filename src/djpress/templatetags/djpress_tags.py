@@ -285,8 +285,10 @@ def have_posts(context: Context) -> list[Post | None] | Page:
 
 
 @register.simple_tag(takes_context=True)
-def post_title(context: Context) -> str:
+def get_post_title(context: Context) -> str:
     """Return the title of a post.
+
+    This is just the title of the post from the current context with no further HTML.
 
     Args:
         context: The context.
@@ -302,17 +304,21 @@ def post_title(context: Context) -> str:
 
 
 @register.simple_tag(takes_context=True)
-def post_title_link(context: Context, link_class: str = "", *, force_link: bool = False) -> str:
+def post_title(context: Context, *, outer_tag: str = "", link_class: str = "", force_link: bool = False) -> str:
     """Return the title link for a post.
 
     If the post is part of a posts collection, then return the title and a link to the post. If the post is a single
     post, then return just the title of the post with no link. But this behavior can be overridden by setting
     `force_link` to `True`.
 
-    Otherwise return and empty string.
+    Otherwise return an empty string.
+
+    The outer tag can be any of the following: "h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "span". If the outer tag
+    is not one of these, then the title will be returned with no outer tag.
 
     Args:
         context: The context.
+        outer_tag: The outer HTML tag for the title.
         link_class: The CSS class(es) for the link.
         force_link: Whether to force the link to be displayed.
 
@@ -322,17 +328,27 @@ def post_title_link(context: Context, link_class: str = "", *, force_link: bool 
     post: Post | None = context.get("post")
     posts: Page | None = context.get("posts")
 
-    if (posts and post) or force_link:
+    # If there's no post in the context, return an empty string.
+    if not post:
+        return ""
+
+    # Get the title of the post
+    output = post.title
+
+    # If there's a posts in the context, or if the link is forced, then we need to display the link.
+    if posts or force_link:
         link_class_html = f' class="{link_class}"' if link_class else ""
 
-        output = f'<a href="{post.url}" title="{post.title}"{link_class_html}>{post.title}</a>'
+        output = f'<a href="{post.url}" title="{output}"{link_class_html}>{output}</a>'
 
-        return mark_safe(output)
+    # If the outer tag is one of the allowed tags, then wrap the output in the outer tag.
+    if outer_tag in ["h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "span"]:
+        # If Microformats are enabled, use p-name with the outer tag.
+        mf = ' class="p-name"' if djpress_settings.MICROFORMATS_ENABLED else ""
 
-    if post:
-        return post_title(context)
+        output = f"<{outer_tag}{mf}>{output}</{outer_tag}>"
 
-    return ""
+    return mark_safe(output)
 
 
 @register.simple_tag(takes_context=True)

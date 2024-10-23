@@ -474,7 +474,7 @@ Outputs:
 <h1>My Post Title</h1>
 ```
 
-## post_title_link
+## post_title
 
 Returns the title of the current post as a link if it's part of a collection, or just the title if it's single post.
 
@@ -492,7 +492,7 @@ A string containing just the post title, or HTML text that has been marked as sa
 ### Examples
 
 ```django
-{% post_title_link %}
+{% post_title %}
 ```
 
 If a single post, this outputs:
@@ -510,7 +510,7 @@ Or, if part of a collection of posts:
 With the `link_class` argument:
 
 ```django
-{% post_title_link link_class="post-title-link" %}
+{% post_title link_class="post-title-link" %}
 ```
 
 Outputs:
@@ -522,7 +522,7 @@ Outputs:
 Or, to force the link, even when just a single post is displayed:
 
 ```django
-{% post_title_link force_link=True %}
+{% post_title force_link=True %}
 ```
 
 Outputs:
