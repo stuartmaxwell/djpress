@@ -202,7 +202,16 @@ def test_post_author_link(settings, test_post1):
 
     expected_output = (
         f'<a href="/{settings.DJPRESS_SETTINGS["AUTHOR_PREFIX"]}/testuser/" title="View all posts by '
-        f'{get_author_display_name(author)}"><span rel="author">'
+        f'{get_author_display_name(author)}"><span class="p-author">'
+        f"{get_author_display_name(author)}</span></a>"
+    )
+    assert djpress_tags.post_author_link(context) == expected_output
+
+    # Disable microformats
+    settings.DJPRESS_SETTINGS["MICROFORMATS_ENABLED"] = False
+    expected_output = (
+        f'<a href="/{settings.DJPRESS_SETTINGS["AUTHOR_PREFIX"]}/testuser/" title="View all posts by '
+        f'{get_author_display_name(author)}"><span>'
         f"{get_author_display_name(author)}</span></a>"
     )
     assert djpress_tags.post_author_link(context) == expected_output
@@ -220,7 +229,7 @@ def test_post_author_link_author_path_disabled(settings, test_post1):
 
     author = test_post1.author
 
-    expected_output = f'<span rel="author">{get_author_display_name(author)}</span>'
+    expected_output = f'<span class="p-author">{get_author_display_name(author)}</span>'
     assert djpress_tags.post_author_link(context) == expected_output
 
 
@@ -237,7 +246,7 @@ def test_post_author_link_with_author_path_with_one_link_class(settings, test_po
     expected_output = (
         f'<a href="/{settings.DJPRESS_SETTINGS["AUTHOR_PREFIX"]}/testuser/" title="View all posts by '
         f'{get_author_display_name(author)}" class="class1">'
-        f'<span rel="author">{get_author_display_name(author)}</span></a>'
+        f'<span class="p-author">{get_author_display_name(author)}</span></a>'
     )
     assert djpress_tags.post_author_link(context, "class1") == expected_output
 
@@ -255,7 +264,7 @@ def test_post_author_link_with_author_path_with_two_link_class(settings, test_po
     expected_output = (
         f'<a href="/{settings.DJPRESS_SETTINGS["AUTHOR_PREFIX"]}/testuser/" title="View all posts by '
         f'{get_author_display_name(author)}" class="class1 class2">'
-        f'<span rel="author">{get_author_display_name(author)}</span></a>'
+        f'<span class="p-author">{get_author_display_name(author)}</span></a>'
     )
     assert djpress_tags.post_author_link(context, "class1 class2") == expected_output
 
