@@ -454,18 +454,18 @@ A list containing a single Post object, a Page object of posts, or an empty list
 {% endfor %}
 ```
 
-## post_title
+## get_post_title
 
-Returns the title of the current post.
+Returns the title of the current post as a plain string.
 
 ### Returns
 
-A string containing the post title.
+A string containing the post title or empty if there's no post in the context.
 
 ### Examples
 
 ```django
-<h1>{% post_title %}</h1>
+<h1>{% get_post_title %}</h1>
 ```
 
 Outputs:
@@ -482,8 +482,11 @@ The `force_link` argument can be used to always return the link, regardless if i
 
 ### Arguments
 
+*Note* - these are keyword-only arguments.
+
+- `outer_tag` (optional): The outer HTML tag to wrap the title in.
 - `link_class` (optional): CSS class(es) to apply to the link.
-- `force_link` (optional, boolean): Always displays a link when true. *Note* - this is a keyword-only argument.
+- `force_link` (optional, boolean): Always displays a link when true.
 
 ### Returns
 
@@ -531,7 +534,20 @@ Outputs:
 <a href="/my-post/">My Post Title</a>
 ```
 
+To wrap the title in an HTML tag, use the `outer_tag` attribute. If microformats are enabled (these are enabled by
+default), then a class is added to the outer tag. The outer tag must be one of the following types:
+"h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "span".
+If anything else is used, or if the outer_tag attribute is ommitted, then no outer tag is added.
 
+```django
+{% post_title outer_tag="h2" %}
+```
+
+Outputs:
+
+```html
+<h2 class="p-name"><a href="/my-post/">My Post Title</a></h2>
+```
 
 ## post_author
 
@@ -660,6 +676,9 @@ Returns the content of the current post, either full or truncated with a "read m
 
 ### Arguments
 
+*Note* - these are keyword-only arguments.
+
+- `outer_tag` (optional):
 - `read_more_link_class` (optional): CSS class(es) to apply to the "read more" link.
 - `read_more_text` (optional): Custom text for the "read more" link.
 
@@ -680,7 +699,7 @@ If the post is on a detail page, this will output the full content. But if the p
 <p><a href="/post-title/">Read more...</a></p>
 ```
 
-With the optional arguments:
+With the optional arguments to control the read more function:
 
 ```django
 {% post_content read_more_link_class="read-more" read_more_text="Continue reading..." %}
@@ -691,6 +710,22 @@ Outputs:
 ```html
 <p>This is the start of the post content.</p>
 <p><a href="/post-title/" class="read-more">Continue reading...</a></p>
+```
+
+To wrap the content in an HTML tag, use the `outer_tag` attribute. Note that if microformats are enabled (these are
+enabled by default), then `e-content` will be added to the outer tag class.
+
+```django
+{% post_content outer_tag="section" %}
+```
+
+Outputs:
+
+```html
+<section class="e-content">
+<p>This is the start of the post content.</p>
+<p><a href="/post-title/" class="read-more">Continue reading...</a></p>
+</section>
 ```
 
 ## category_title
