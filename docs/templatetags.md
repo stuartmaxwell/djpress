@@ -6,6 +6,30 @@ To use any of the following tags, you must load the `djpress_tags` in your templ
 {% load djpress_tags %}
 ```
 
+## get_posts
+
+Return all published posts as a queryset.
+
+### Returns
+
+A queryset of all published posts.
+
+### Examples
+
+This is useful for building an index page with all posts:
+
+```django
+{% get_posts as all_posts %}
+
+{% for post in all_posts %}
+
+<ul>
+<li>{{ post.title }}</li>
+</ul>
+
+{% endfor %}
+```
+
 ## blog_title
 
 Returns the blog title as configured in the settings with the `BLOG_TITLE` variable. If no blog title has been configured, this will return the default title: "My DJ Press Blog".
@@ -430,18 +454,18 @@ A list containing a single Post object, a Page object of posts, or an empty list
 {% endfor %}
 ```
 
-## post_title
+## get_post_title
 
-Returns the title of the current post.
+Returns the title of the current post as a plain string.
 
 ### Returns
 
-A string containing the post title.
+A string containing the post title or empty if there's no post in the context.
 
 ### Examples
 
 ```django
-<h1>{% post_title %}</h1>
+<h1>{% get_post_title %}</h1>
 ```
 
 Outputs:
@@ -450,7 +474,58 @@ Outputs:
 <h1>My Post Title</h1>
 ```
 
-## post_title_link
+## post_wrap
+
+This is a wrapper tag that is used to add a semantic HTML wrapper tags around a post. By default this will use an
+`<article>` tag and will add the necessary microformat tags if microformats are enabled (these are enabled by
+default.)
+
+### Arguments
+
+*Note* - keyword arguments are recommended but not required.
+
+- `tag` (optional): The HTML tag to wrap the content in, default is `<article>`.
+- `class` (optional): CSS class(es) to apply to the tag, default is blank.
+
+### Usage
+
+Basic wrapper with no additional arguments and with microformats enabled.
+
+```django
+{% post_wrap %}
+<h2>Post Title</h2>
+<p>This is my post content</p>
+{% end_post_wrap %}
+```
+
+Outputs:
+
+```django
+<article class="h-entry">
+<h2>Post Title</h2>
+<p>This is my post content</p>
+</article>
+```
+
+Wrapper with specific HTML tag, a CSS class, and with microformats enabled.
+
+```django
+{% post_wrap tag="div" class="blogpost" %}
+<h2>Post Title</h2>
+<p>This is my post content</p>
+{% end_post_wrap %}
+```
+
+Outputs:
+
+```django
+<div class="h-entry blogpost">
+<h2>Post Title</h2>
+<p>This is my post content</p>
+</div>
+```
+
+## post_title
 
 Returns the title of the current post as a link if it's part of a collection, or just the title if it's single post.
 
@@ -458,8 +533,11 @@ The `force_link` argument can be used to always return the link, regardless if i
 
 ### Arguments
 
+*Note* - these are keyword-only arguments.
+
+- `outer_tag` (optional): The outer HTML tag to wrap the title in.
 - `link_class` (optional): CSS class(es) to apply to the link.
-- `force_link` (optional, boolean): Always displays a link when true. *Note* - this is a keyword-only argument.
+- `force_link` (optional, boolean): Always displays a link when true.
 
 ### Returns
 
@@ -468,7 +546,7 @@ A string containing just the post title, or HTML text that has been marked as sa
 ### Examples
 
 ```django
-{% post_title_link %}
+{% post_title %}
 ```
 
 If a single post, this outputs:
@@ -486,7 +564,7 @@ Or, if part of a collection of posts:
 With the `link_class` argument:
 
 ```django
-{% post_title_link link_class="post-title-link" %}
+{% post_title link_class="post-title-link" %}
 ```
 
 Outputs:
@@ -498,7 +576,7 @@ Outputs:
 Or, to force the link, even when just a single post is displayed:
 
 ```django
-{% post_title_link force_link=True %}
+{% post_title force_link=True %}
 ```
 
 Outputs:
@@ -507,9 +585,22 @@ Outputs:
 <a href="/my-post/">My Post Title</a>
 ```
 
+To wrap the title in an HTML tag, use the `outer_tag` attribute. If microformats are enabled (these are enabled by
+default), then a class is added to the outer tag. The outer tag must be one of the following types:
+"h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "span".
+If anything else is used, or if the outer_tag attribute is ommitted, then no outer tag is added.
 
+```django
+{% post_title outer_tag="h2" %}
+```
 
-## post_author
+Outputs:
+
+```html
+<h2 class="p-name"><a href="/my-post/">My Post Title</a></h2>
+```
+
+## get_post_author
 
 Returns the display name of the post's author.
 
@@ -520,16 +611,16 @@ String containing the author's display name.
 ### Examples
 
 ```django
-<p>Written by {% post_author %}</p>
+<p>Written by {% get_post_author %}</p>
 ```
 
 Outputs:
 
 ```html
-<p>Written by Post Author</p>
+<p>Written by Sam Doe</p>
 ```
 
-## post_author_link
+## post_author
 
 Get the author's display name, wrapped in a span tag, with a link to their author page.
 
@@ -544,7 +635,7 @@ HTML text containing the author's name, marked as safe.
 ### Examples
 
 ```django
-<p>By {% post_author_link %}</p>
+<p>By {% post_author %}</p>
 ```
 
 Outputs:
@@ -556,7 +647,7 @@ Outputs:
 With the `link_class` argument:
 
 ```django
-<p>By {% post_author_link link_class="author-link" %}</p>
+<p>By {% post_author link_class="author-link" %}</p>
 ```
 
 Outputs:
@@ -586,7 +677,7 @@ HTML text containing a link to the category.
 {% endfor %}
 ```
 
-## post_date
+## get_post_date
 
 Get the date of the current post.
 
@@ -597,7 +688,7 @@ A string containing the post's date formatted as "MMM D, YYYY".
 ### Examples
 
 ```django
-<p>Published on {% post_date %}</p>
+<p>Published on {% get_post_date %}</p>
 ```
 
 Outputs:
@@ -606,7 +697,7 @@ Outputs:
 <p>Published on Jun 5, 2024</p>
 ```
 
-## post_date_link
+## post_date
 
 Returns the post's date as a set of links to date-based archives, if enabled.
 
@@ -621,7 +712,7 @@ An HTML string containing links to date-based archives, or just the formatted da
 ### Examples
 
 ```django
-<p>Posted on {% post_date_link link_class="date-link" %}</p>
+<p>Posted on {% post_date link_class="date-link" %}</p>
 ```
 
 Outputs:
@@ -636,6 +727,9 @@ Returns the content of the current post, either full or truncated with a "read m
 
 ### Arguments
 
+*Note* - these are keyword-only arguments.
+
+- `outer_tag` (optional):
 - `read_more_link_class` (optional): CSS class(es) to apply to the "read more" link.
 - `read_more_text` (optional): Custom text for the "read more" link.
 
@@ -656,7 +750,7 @@ If the post is on a detail page, this will output the full content. But if the p
 <p><a href="/post-title/">Read more...</a></p>
 ```
 
-With the optional arguments:
+With the optional arguments to control the read more function:
 
 ```django
 {% post_content read_more_link_class="read-more" read_more_text="Continue reading..." %}
@@ -667,6 +761,22 @@ Outputs:
 ```html
 <p>This is the start of the post content.</p>
 <p><a href="/post-title/" class="read-more">Continue reading...</a></p>
+```
+
+To wrap the content in an HTML tag, use the `outer_tag` attribute. Note that if microformats are enabled (these are
+enabled by default), then `e-content` will be added to the outer tag class.
+
+```django
+{% post_content outer_tag="section" %}
+```
+
+Outputs:
+
+```html
+<section class="e-content">
+<p>This is the start of the post content.</p>
+<p><a href="/post-title/" class="read-more">Continue reading...</a></p>
+</section>
 ```
 
 ## category_title
@@ -763,7 +873,7 @@ Outputs:
 <h1 class="author-title">Posts that 'Sam Jones' wrote</h1>
 ```
 
-## post_categories_link
+## post_categories
 
 Returns a list of links to the categories of the current post.
 
@@ -782,7 +892,7 @@ An HTML string containing a list of category links for the current post.
 Just the tag with no arguments:
 
 ```django
-{% post_categories_link %}
+{% post_categories %}
 ```
 
 Outputs:
@@ -798,7 +908,7 @@ Outputs:
 The tag with all options provided as arguments and using a `div` for the outer tag:
 
 ```django
-{% post_categories_link outer="div" outer_class="post-categories" link_class="category-link" %}
+{% post_categories outer="div" outer_class="post-categories" link_class="category-link" %}
 ```
 
 Outputs the following HTML:
@@ -812,7 +922,7 @@ Outputs the following HTML:
 The tag with a `span` for the outer tag:
 
 ```django
-{% post_categories_link outer="span" %}
+{% post_categories outer="span" %}
 ```
 
 Outputs the following HTML:

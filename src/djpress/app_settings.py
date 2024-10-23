@@ -20,4 +20,5 @@ DJPRESS_SETTINGS = {
     "AUTHOR_PREFIX": ("author", str),
     "RSS_ENABLED": (True, bool),
     "RSS_PATH": ("rss", str),
+    "MICROFORMATS_ENABLED": (True, bool),
 }

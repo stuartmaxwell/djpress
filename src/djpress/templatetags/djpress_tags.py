@@ -18,6 +18,54 @@ from djpress.utils import get_author_display_name
 register = template.Library()
 
 
+# Tags starting with `get_` are used to get data from the database.
+
+
+@register.simple_tag(takes_context=True)
+def get_recent_posts(context: Context) -> models.QuerySet[Post]:
+    """Return the recent posts.
+
+    This returns the most recent published posts, and tries to be efficient by checking if there's a `posts` object we
+    can use.
+    """
+    posts: Page | None = context.get("posts")
+
+    if isinstance(posts, Page) and posts.number == 1:
+        return posts.object_list
+
+    return Post.post_objects.get_recent_published_posts()
+
+
+@register.simple_tag
+def get_posts() -> models.QuerySet[Post]:
+    """Return all published posts as a queryset.
+
+    Returns:
+        models.QuerySet[Post]: All posts.
+    """
+    return Post.post_objects.get_published_posts()
+
+
+@register.simple_tag
+def get_pages() -> models.QuerySet[Post]:
+    """Return all published pages as a queryset.
+
+    Returns:
+        models.QuerySet[Post]: All pages.
+    """
+    return Post.page_objects.get_published_pages()
+
+
+@register.simple_tag
+def get_categories() -> models.QuerySet[Category] | None:
+    """Return all categories as a queryset.
+
+    Returns:
+        models.QuerySet[Category]: All categories.
+    """
+    return Category.objects.get_categories().order_by("menu_order", "title")
+
+
 @register.simple_tag
 def blog_title() -> str:
     """Return the blog title.
@@ -43,26 +91,6 @@ def blog_title_link(link_class: str = "") -> str:
     output = f'<a href="{reverse("djpress:index")}"{link_class_html}>{djpress_settings.BLOG_TITLE}</a>'
 
     return mark_safe(output)
-
-
-@register.simple_tag
-def get_pages() -> models.QuerySet[Post]:
-    """Return all pages as a queryset.
-
-    Returns:
-        models.QuerySet[Post]: All pages.
-    """
-    return Post.page_objects.get_published_pages()
-
-
-@register.simple_tag
-def get_categories() -> models.QuerySet[Category] | None:
-    """Return all categories as a queryset.
-
-    Returns:
-        models.QuerySet[Category]: All categories.
-    """
-    return Category.objects.get_categories().order_by("menu_order", "title")
 
 
 @register.simple_tag
@@ -257,23 +285,10 @@ def have_posts(context: Context) -> list[Post | None] | Page:
 
 
 @register.simple_tag(takes_context=True)
-def get_recent_posts(context: Context) -> models.QuerySet[Post]:
-    """Return the recent posts.
-
-    This returns the most recent published posts, and tries to be efficient by checking if there's a `posts` object we
-    can use.
-    """
-    posts: Page | None = context.get("posts")
-
-    if isinstance(posts, Page) and posts.number == 1:
-        return posts.object_list
-
-    return Post.post_objects.get_recent_published_posts()
-
-
-@register.simple_tag(takes_context=True)
-def post_title(context: Context) -> str:
+def get_post_title(context: Context) -> str:
     """Return the title of a post.
+
+    This is just the title of the post from the current context with no further HTML.
 
     Args:
         context: The context.
@@ -289,17 +304,24 @@ def post_title(context: Context) -> str:
 
 
 @register.simple_tag(takes_context=True)
-def post_title_link(context: Context, link_class: str = "", *, force_link: bool = False) -> str:
+def post_title(context: Context, *, outer_tag: str = "", link_class: str = "", force_link: bool = False) -> str:
     """Return the title link for a post.
 
     If the post is part of a posts collection, then return the title and a link to the post. If the post is a single
     post, then return just the title of the post with no link. But this behavior can be overridden by setting
     `force_link` to `True`.
 
-    Otherwise return and empty string.
+    The outer tag can be any of the following: "h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "span". If the outer tag
+    is not one of these, then the title will be returned with no outer tag.
+
+    If the outer tag is one of the allowed tags, and if Microformats are enabled, then the outer tag will have the class
+    "p-name".
+
+    Otherwise return an empty string.
 
     Args:
         context: The context.
+        outer_tag: The outer HTML tag for the title.
         link_class: The CSS class(es) for the link.
         force_link: Whether to force the link to be displayed.
 
@@ -309,21 +331,44 @@ def post_title_link(context: Context, link_class: str = "", *, force_link: bool 
     post: Post | None = context.get("post")
     posts: Page | None = context.get("posts")
 
-    if (posts and post) or force_link:
-        link_class_html = f' class="{link_class}"' if link_class else ""
+    # If there's no post in the context, return an empty string.
+    if not post:
+        return ""
 
-        output = f'<a href="{post.url}" title="{post.title}"{link_class_html}>{post.title}</a>'
+    # Get the title of the post
+    output = post.title
 
-        return mark_safe(output)
+    # If there's a posts in the context, or if the link is forced, then we need to display the link.
+    if posts or force_link:
+        # Build the classes for the link
+        link_classes = ""
 
-    if post:
-        return post_title(context)
+        # Add p-category if microformats are enabled
+        if djpress_settings.MICROFORMATS_ENABLED:
+            link_classes += "u-url "
 
-    return ""
+        # Add the user-defined link class
+        link_classes += link_class
+
+        # Trim any trailing spaces
+        link_classes = link_classes.strip()
+
+        link_class_html = f' class="{link_classes}"' if link_classes else ""
+
+        output = f'<a href="{post.url}" title="{output}"{link_class_html}>{output}</a>'
+
+    # If the outer tag is one of the allowed tags, then wrap the output in the outer tag.
+    if outer_tag in ["h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "span"]:
+        # If Microformats are enabled, use p-name with the outer tag.
+        mf = ' class="p-name"' if djpress_settings.MICROFORMATS_ENABLED else ""
+
+        output = f"<{outer_tag}{mf}>{output}</{outer_tag}>"
+
+    return mark_safe(output)
 
 
 @register.simple_tag(takes_context=True)
-def post_author(context: Context) -> str:
+def get_post_author(context: Context) -> str:
     """Return the author display name.
 
     Tries to display the first name and last name if available, otherwise falls back to
@@ -345,7 +390,7 @@ def post_author(context: Context) -> str:
 
 
 @register.simple_tag(takes_context=True)
-def post_author_link(context: Context, link_class: str = "") -> str:
+def post_author(context: Context, link_class: str = "") -> str:
     """Return the author link for a post.
 
     Args:
@@ -362,8 +407,12 @@ def post_author_link(context: Context, link_class: str = "") -> str:
     author = post.author
     author_display_name = get_author_display_name(author)
 
+    mf = ' class="p-author"' if djpress_settings.MICROFORMATS_ENABLED else ""
+
+    author_html = f"<span{mf}>{author_display_name}</span>"
+
     if not djpress_settings.AUTHOR_ENABLED:
-        return f'<span rel="author">{author_display_name}</span>'
+        return author_html
 
     author_url = url_utils.get_author_url(user=author)
 
@@ -372,7 +421,7 @@ def post_author_link(context: Context, link_class: str = "") -> str:
     output = (
         f'<a href="{author_url}" title="View all posts by '
         f'{author_display_name}"{link_class_html}>'
-        f'<span rel="author">{author_display_name}</span></a>'
+        f"{author_html}</a>"
     )
 
     return mark_safe(output)
@@ -395,7 +444,7 @@ def post_category_link(category: Category, link_class: str = "") -> str:
 
 
 @register.simple_tag(takes_context=True)
-def post_date(context: Context) -> str:
+def get_post_date(context: Context) -> str:
     """Return the date of a post.
 
     Args:
@@ -413,7 +462,7 @@ def post_date(context: Context) -> str:
 
 
 @register.simple_tag(takes_context=True)
-def post_date_link(context: Context, link_class: str = "") -> str:
+def post_date(context: Context, link_class: str = "") -> str:
     """Return the date link for a post.
 
     Args:
@@ -454,12 +503,18 @@ def post_date_link(context: Context, link_class: str = "") -> str:
         f"{post_time}."
     )
 
+    # If Microformats are enabled, use dt-published with the date.
+    if djpress_settings.MICROFORMATS_ENABLED:
+        output = f'<time class="dt-published" datetime="{output_date.isoformat()}">{output}</time>'
+
     return mark_safe(output)
 
 
 @register.simple_tag(takes_context=True)
 def post_content(
     context: Context,
+    *,
+    outer_tag: str = "",
     read_more_link_class: str = "",
     read_more_text: str = "",
 ) -> str:
@@ -468,12 +523,18 @@ def post_content(
     If the post is part of a posts collection, then we return the truncated content of
     the post with the read more link.
 
-    If the post is a single post, then return the full content of the post.
+    If the post is a single post, return the full content of the post.
 
-    Otherwise return and empty string.
+    The outer tag can be any one of the following: "section", "div", "article", "p", "span". If the outer tag is not one
+    of these, then the content will be returned with no outer tag.
+
+    If there's an outer tag, and if microformats are enabled, then the outer tag will have the class "e-content".
+
+    If there's no post, return an empty string.
 
     Args:
         context: The context.
+        outer_tag: The outer HTML tag for the content.
         read_more_link_class: The CSS class(es) for the read more link.
         read_more_text: The text for the read more link.
 
@@ -484,18 +545,26 @@ def post_content(
     post: Post | None = context.get("post")
     posts: Page | None = context.get("posts")
 
-    content: str = ""
+    # If there's no post, return an empty string.
+    if not post:
+        return ""
 
-    if posts and post:
-        content = mark_safe(post.truncated_content_markdown)
+    # If there's a posts in the context, then we need to display the truncated content.
+    if posts:
+        content = post.truncated_content_markdown
         if post.is_truncated:
             content += helpers.post_read_more_link(post, read_more_link_class, read_more_text)
-        return mark_safe(content)
+    else:
+        content = post.content_markdown
 
-    if post:
-        return mark_safe(post.content_markdown)
+    # If the outer tag is one of the allowed tags, then wrap the output in the outer tag.
+    if outer_tag in ["section", "div", "article", "p", "span"]:
+        # If Microformats are enabled, use e-content with the outer tag.
+        mf = ' class="e-content"' if djpress_settings.MICROFORMATS_ENABLED else ""
 
-    return content
+        content = f"<{outer_tag}{mf}>{content}</{outer_tag}>"
+
+    return mark_safe(content)
 
 
 @register.simple_tag(takes_context=True)
@@ -593,7 +662,7 @@ def author_name(
 
 
 @register.simple_tag(takes_context=True)
-def post_categories_link(
+def post_categories(
     context: Context,
     outer: str = "ul",
     outer_class: str = "",
@@ -766,3 +835,36 @@ def rss_url() -> str:
         str: The URL to the RSS feed.
     """
     return url_utils.get_rss_url()
+
+
+@register.tag(name="post_wrap")
+def post_wrapper_tag(parser: template.base.Parser, token: template.base.Token) -> helpers.BlogPostWrapper:
+    """Parse the blog post wrapper tag.
+
+    This is a template tag that wraps the blog post content in a configurable HTML tag with a CSS class.
+
+    Example usage:
+        {% post_wrap "article" "post" %}<p>Post content</p>{% end_post_wrap %}
+
+    Args:
+        parser: The template parser.
+        token: The template token.
+
+    Returns:
+        BlogPostWrapper: The blog post wrapper tag.
+    """
+    params = token.split_contents()[1:]  # skip the tag name
+
+    tag, css_class = helpers.parse_post_wrapper_params(params)
+
+    # If microformats are enabled, add the h-entry class before the css class
+    if djpress_settings.MICROFORMATS_ENABLED:
+        css_class = f"h-entry {css_class}" if css_class else "h-entry"
+
+    if css_class:
+        css_class = f' class="{css_class}"'
+
+    nodelist = parser.parse(("end_post_wrap",))
+    parser.delete_first_token()
+
+    return helpers.BlogPostWrapper(nodelist, tag, css_class)

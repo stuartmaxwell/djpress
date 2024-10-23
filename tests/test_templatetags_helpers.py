@@ -8,6 +8,7 @@ from djpress.templatetags.helpers import (
     categories_html,
     category_link,
     post_read_more_link,
+    parse_post_wrapper_params,
 )
 
 
@@ -24,9 +25,9 @@ def test_categories_html(category1, category2, category3):
     link_class = "category"
     expected_output = (
         '<ul class="categories">'
-        f'<li><a href="/{settings.CATEGORY_PREFIX}/{category1.slug}/" title="View all posts in the {category1.title} category" class="{link_class}">{category1.title}</a></li>'
-        f'<li><a href="/{settings.CATEGORY_PREFIX}/{category2.slug}/" title="View all posts in the {category2.title} category" class="{link_class}">{category2.title}</a></li>'
-        f'<li><a href="/{settings.CATEGORY_PREFIX}/{category3.slug}/" title="View all posts in the {category3.title} category" class="{link_class}">{category3.title}</a></li>'
+        f'<li><a href="/{settings.CATEGORY_PREFIX}/{category1.slug}/" title="View all posts in the {category1.title} category" class="p-category {link_class}">{category1.title}</a></li>'
+        f'<li><a href="/{settings.CATEGORY_PREFIX}/{category2.slug}/" title="View all posts in the {category2.title} category" class="p-category {link_class}">{category2.title}</a></li>'
+        f'<li><a href="/{settings.CATEGORY_PREFIX}/{category3.slug}/" title="View all posts in the {category3.title} category" class="p-category {link_class}">{category3.title}</a></li>'
         "</ul>"
     )
     assert categories_html(categories, outer=outer, outer_class=outer_class, link_class=link_class) == expected_output
@@ -37,9 +38,9 @@ def test_categories_html(category1, category2, category3):
     link_class = ""
     expected_output = (
         "<ul>"
-        f'<li><a href="/{settings.CATEGORY_PREFIX}/{category1.slug}/" title="View all posts in the {category1.title} category">{category1.title}</a></li>'
-        f'<li><a href="/{settings.CATEGORY_PREFIX}/{category2.slug}/" title="View all posts in the {category2.title} category">{category2.title}</a></li>'
-        f'<li><a href="/{settings.CATEGORY_PREFIX}/{category3.slug}/" title="View all posts in the {category3.title} category">{category3.title}</a></li>'
+        f'<li><a href="/{settings.CATEGORY_PREFIX}/{category1.slug}/" title="View all posts in the {category1.title} category" class="p-category">{category1.title}</a></li>'
+        f'<li><a href="/{settings.CATEGORY_PREFIX}/{category2.slug}/" title="View all posts in the {category2.title} category" class="p-category">{category2.title}</a></li>'
+        f'<li><a href="/{settings.CATEGORY_PREFIX}/{category3.slug}/" title="View all posts in the {category3.title} category" class="p-category">{category3.title}</a></li>'
         "</ul>"
     )
     assert categories_html(categories, outer=outer, outer_class=outer_class, link_class=link_class) == expected_output
@@ -50,9 +51,9 @@ def test_categories_html(category1, category2, category3):
     link_class = "category"
     expected_output = (
         '<div class="categories">'
-        f'<a href="/{settings.CATEGORY_PREFIX}/{category1.slug}/" title="View all posts in the {category1.title} category" class="{link_class}">{category1.title}</a>, '
-        f'<a href="/{settings.CATEGORY_PREFIX}/{category2.slug}/" title="View all posts in the {category2.title} category" class="{link_class}">{category2.title}</a>, '
-        f'<a href="/{settings.CATEGORY_PREFIX}/{category3.slug}/" title="View all posts in the {category3.title} category" class="{link_class}">{category3.title}</a>'
+        f'<a href="/{settings.CATEGORY_PREFIX}/{category1.slug}/" title="View all posts in the {category1.title} category" class="p-category {link_class}">{category1.title}</a>, '
+        f'<a href="/{settings.CATEGORY_PREFIX}/{category2.slug}/" title="View all posts in the {category2.title} category" class="p-category {link_class}">{category2.title}</a>, '
+        f'<a href="/{settings.CATEGORY_PREFIX}/{category3.slug}/" title="View all posts in the {category3.title} category" class="p-category {link_class}">{category3.title}</a>'
         "</div>"
     )
     assert categories_html(categories, outer=outer, outer_class=outer_class, link_class=link_class) == expected_output
@@ -63,9 +64,9 @@ def test_categories_html(category1, category2, category3):
     link_class = ""
     expected_output = (
         "<div>"
-        f'<a href="/{settings.CATEGORY_PREFIX}/{category1.slug}/" title="View all posts in the {category1.title} category">{category1.title}</a>, '
-        f'<a href="/{settings.CATEGORY_PREFIX}/{category2.slug}/" title="View all posts in the {category2.title} category">{category2.title}</a>, '
-        f'<a href="/{settings.CATEGORY_PREFIX}/{category3.slug}/" title="View all posts in the {category3.title} category">{category3.title}</a>'
+        f'<a href="/{settings.CATEGORY_PREFIX}/{category1.slug}/" title="View all posts in the {category1.title} category" class="p-category">{category1.title}</a>, '
+        f'<a href="/{settings.CATEGORY_PREFIX}/{category2.slug}/" title="View all posts in the {category2.title} category" class="p-category">{category2.title}</a>, '
+        f'<a href="/{settings.CATEGORY_PREFIX}/{category3.slug}/" title="View all posts in the {category3.title} category" class="p-category">{category3.title}</a>'
         "</div>"
     )
     assert categories_html(categories, outer=outer, outer_class=outer_class, link_class=link_class) == expected_output
@@ -76,9 +77,9 @@ def test_categories_html(category1, category2, category3):
     link_class = "category"
     expected_output = (
         '<span class="categories">'
-        f'<a href="/{settings.CATEGORY_PREFIX}/{category1.slug}/" title="View all posts in the {category1.title} category" class="{link_class}">{category1.title}</a>, '
-        f'<a href="/{settings.CATEGORY_PREFIX}/{category2.slug}/" title="View all posts in the {category2.title} category" class="{link_class}">{category2.title}</a>, '
-        f'<a href="/{settings.CATEGORY_PREFIX}/{category3.slug}/" title="View all posts in the {category3.title} category" class="{link_class}">{category3.title}</a>'
+        f'<a href="/{settings.CATEGORY_PREFIX}/{category1.slug}/" title="View all posts in the {category1.title} category" class="p-category {link_class}">{category1.title}</a>, '
+        f'<a href="/{settings.CATEGORY_PREFIX}/{category2.slug}/" title="View all posts in the {category2.title} category" class="p-category {link_class}">{category2.title}</a>, '
+        f'<a href="/{settings.CATEGORY_PREFIX}/{category3.slug}/" title="View all posts in the {category3.title} category" class="p-category {link_class}">{category3.title}</a>'
         "</span>"
     )
     assert categories_html(categories, outer=outer, outer_class=outer_class, link_class=link_class) == expected_output
@@ -89,9 +90,9 @@ def test_categories_html(category1, category2, category3):
     link_class = ""
     expected_output = (
         "<span>"
-        f'<a href="/{settings.CATEGORY_PREFIX}/{category1.slug}/" title="View all posts in the {category1.title} category">{category1.title}</a>, '
-        f'<a href="/{settings.CATEGORY_PREFIX}/{category2.slug}/" title="View all posts in the {category2.title} category">{category2.title}</a>, '
-        f'<a href="/{settings.CATEGORY_PREFIX}/{category3.slug}/" title="View all posts in the {category3.title} category">{category3.title}</a>'
+        f'<a href="/{settings.CATEGORY_PREFIX}/{category1.slug}/" title="View all posts in the {category1.title} category" class="p-category">{category1.title}</a>, '
+        f'<a href="/{settings.CATEGORY_PREFIX}/{category2.slug}/" title="View all posts in the {category2.title} category" class="p-category">{category2.title}</a>, '
+        f'<a href="/{settings.CATEGORY_PREFIX}/{category3.slug}/" title="View all posts in the {category3.title} category" class="p-category">{category3.title}</a>'
         "</span>"
     )
     assert categories_html(categories, outer=outer, outer_class=outer_class, link_class=link_class) == expected_output
@@ -103,12 +104,12 @@ def testcategory_link(category1):
 
     # Test case 1 - no link class
     link_class = ""
-    expected_output = f'<a href="/{settings.CATEGORY_PREFIX}/{category1.slug}/" title="View all posts in the {category1.title} category">{category1.title}</a>'
+    expected_output = f'<a href="/{settings.CATEGORY_PREFIX}/{category1.slug}/" title="View all posts in the {category1.title} category" class="p-category">{category1.title}</a>'
     assert category_link(category1, link_class) == expected_output
 
     # Test case 2 - with link class
     link_class = "category-class"
-    expected_output = f'<a href="/{settings.CATEGORY_PREFIX}/{category1.slug}/" title="View all posts in the {category1.title} category" class="{link_class}">{category1.title}</a>'
+    expected_output = f'<a href="/{settings.CATEGORY_PREFIX}/{category1.slug}/" title="View all posts in the {category1.title} category" class="p-category {link_class}">{category1.title}</a>'
     assert category_link(category1, link_class) == expected_output
 
 
@@ -128,3 +129,35 @@ def test_post_read_more_link(test_post1):
     read_more_text = "Continue reading"
     expected_output = f'<p><a href="{test_post1.url}" class="{link_class}">{read_more_text}</a></p>'
     assert post_read_more_link(test_post1, link_class, read_more_text) == expected_output
+
+
+def test_parse_post_wrapper_params():
+    # Test case 1
+    params = ['tag="div"', 'class="blog-post"']
+    expected_output = ("div", "blog-post")
+    assert parse_post_wrapper_params(params) == expected_output
+
+    # Test case 2
+    params = ['class="blog-post"']
+    expected_output = ("", "blog-post")
+    assert parse_post_wrapper_params(params) == expected_output
+
+    # Test case 3
+    params = ['"div"', '"blog-post"']
+    expected_output = ("div", "blog-post")
+    assert parse_post_wrapper_params(params) == expected_output
+
+    # Test case 4
+    params = ['"blog-post"']
+    expected_output = ("blog-post", "")
+    assert parse_post_wrapper_params(params) == expected_output
+
+    # Test case 5
+    params = ['""', '"blog-post"']
+    expected_output = ("", "blog-post")
+    assert parse_post_wrapper_params(params) == expected_output
+
+    # Test case 6
+    params = ['tag="div"', 'class="blog-post"', 'extra="extra"']
+    expected_output = ("div", "blog-post")
+    assert parse_post_wrapper_params(params) == expected_output

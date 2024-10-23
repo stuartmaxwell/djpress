@@ -1,7 +1,7 @@
 import pytest
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
-from django.template import Context
+from django.template import Context, Template
 from django.urls import reverse
 
 from djpress.models import Category, Post
@@ -13,6 +13,13 @@ from djpress.templatetags.helpers import (
 )
 from djpress.utils import get_author_display_name
 from djpress.exceptions import PageNotFoundError
+
+
+@pytest.mark.django_db
+def test_get_posts(test_post1, test_long_post1, test_post2, test_post3):
+    posts = Post.objects.all().order_by("-date")
+
+    assert list(djpress_tags.get_posts()) == list(posts)
 
 
 @pytest.mark.django_db
@@ -69,20 +76,20 @@ def test_get_categories(category1, category2, category3):
 
 
 @pytest.mark.django_db
-def test_post_title_single_post(test_post1):
+def test_get_post_title_single_post(test_post1):
     context = Context({"post": test_post1})
-    assert djpress_tags.post_title(context) == test_post1.title
+    assert djpress_tags.get_post_title(context) == test_post1.title
 
 
-def test_post_title_no_post_context():
+def test_get_post_title_no_post_context():
     context = Context({"foo": "bar"})
-    assert djpress_tags.post_title(context) == ""
-    assert type(djpress_tags.post_title(context)) == str
+    assert djpress_tags.get_post_title(context) == ""
+    assert type(djpress_tags.get_post_title(context)) == str
 
 
 @pytest.mark.django_db
 def test_post_title_posts(settings, test_post1):
-    """Test the post_title_link template tag.
+    """Test the post_title template tag.
 
     This uses the `post.permalink` property to generate the link."""
     # Context should have both a posts and a post to simulate the for post in posts loop
@@ -94,36 +101,65 @@ def test_post_title_posts(settings, test_post1):
     # this generates a URL based on the slug only - this is prefixed with the POST_PREFIX setting
     post_url = test_post1.url
 
+    expected_output = f'<a href="{post_url}" title="{test_post1.title}" class="u-url">{test_post1.title}</a>'
+    assert djpress_tags.post_title(context) == expected_output
+
+    # disable microformats
+    settings.DJPRESS_SETTINGS["MICROFORMATS_ENABLED"] = False
     expected_output = f'<a href="{post_url}" title="{test_post1.title}">{test_post1.title}</a>'
-    assert djpress_tags.post_title_link(context) == expected_output
+    assert djpress_tags.post_title(context) == expected_output
 
 
 @pytest.mark.django_db
-def test_post_title_link_no_context():
-    context = Context()
+def test_post_title_no_post():
+    context = Context({"post": None})
 
     expected_output = ""
-    assert djpress_tags.post_title_link(context) == expected_output
+    assert djpress_tags.post_title(context) == expected_output
 
 
 @pytest.mark.django_db
-def test_post_title_link_single_post(test_post1):
+def test_post_title_single_post(test_post1):
     context = Context({"post": test_post1})
-    assert djpress_tags.post_title_link(context) == test_post1.title
+    expected_output = test_post1.title
+    assert djpress_tags.post_title(context) == expected_output
 
 
 @pytest.mark.django_db
-def test_post_title_link_single_post_force_link(test_post1):
+def test_post_title_single_post_force_link(test_post1):
     context = Context({"post": test_post1})
 
     # this generates a URL based on the slug only - this is prefixed with the POST_PREFIX setting
     post_url = test_post1.url
-    expected_output = f'<a href="{post_url}" title="{test_post1.title}">{test_post1.title}</a>'
-    assert djpress_tags.post_title_link(context, force_link=True) == expected_output
+    expected_output = f'<a href="{post_url}" title="{test_post1.title}" class="u-url">{test_post1.title}</a>'
+    assert djpress_tags.post_title(context, force_link=True) == expected_output
 
 
 @pytest.mark.django_db
-def test_post_title_link_with_prefix(settings, test_post1):
+def test_post_title_with_valid_tag(settings, test_post1):
+    context = Context({"post": test_post1})
+
+    # Microformats are enabled by default
+    expected_output = f'<h1 class="p-name">{test_post1.title}</h1>'
+    assert djpress_tags.post_title(context, outer_tag="h1") == expected_output
+
+    # Disable microformats
+    settings.DJPRESS_SETTINGS["MICROFORMATS_ENABLED"] = False
+
+    expected_output = f"<h1>{test_post1.title}</h1>"
+    assert djpress_tags.post_title(context, outer_tag="h1") == expected_output
+
+
+@pytest.mark.django_db
+def test_post_title_with_invalid_tag(test_post1):
+    context = Context({"post": test_post1})
+
+    expected_output = test_post1.title
+    assert djpress_tags.post_title(context, outer_tag="ul") == expected_output
+
+
+@pytest.mark.django_db
+def test_post_title_with_prefix(settings, test_post1):
     # Confirm settings in settings_testing.py
     assert settings.DJPRESS_SETTINGS["POST_PREFIX"] == "test-posts"
 
@@ -132,17 +168,24 @@ def test_post_title_link_with_prefix(settings, test_post1):
 
     post_url = test_post1.url
 
-    expected_output = f'<a href="{post_url}" title="{test_post1.title}">{test_post1.title}</a>'
-    assert djpress_tags.post_title_link(context) == expected_output
+    expected_output = f'<a href="{post_url}" title="{test_post1.title}" class="u-url">{test_post1.title}</a>'
+    assert djpress_tags.post_title(context) == expected_output
 
 
 @pytest.mark.django_db
-def test_post_author(test_post1):
+def test_get_post_author(test_post1):
     context = Context({"post": test_post1})
 
     author = test_post1.author
     output = get_author_display_name(author)
-    assert djpress_tags.post_author(context) == output
+    assert djpress_tags.get_post_author(context) == output
+
+
+def test_get_post_author_no_post():
+    context = Context({"foo": "bar"})
+
+    assert djpress_tags.get_post_author(context) == ""
+    assert type(djpress_tags.get_post_author(context)) == str
 
 
 def test_post_author_no_post():
@@ -152,15 +195,8 @@ def test_post_author_no_post():
     assert type(djpress_tags.post_author(context)) == str
 
 
-def test_post_author_link_no_post():
-    context = Context({"foo": "bar"})
-
-    assert djpress_tags.post_author_link(context) == ""
-    assert type(djpress_tags.post_author_link(context)) == str
-
-
 @pytest.mark.django_db
-def test_post_author_link(settings, test_post1):
+def test_post_author(settings, test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
@@ -171,14 +207,23 @@ def test_post_author_link(settings, test_post1):
 
     expected_output = (
         f'<a href="/{settings.DJPRESS_SETTINGS["AUTHOR_PREFIX"]}/testuser/" title="View all posts by '
-        f'{get_author_display_name(author)}"><span rel="author">'
+        f'{get_author_display_name(author)}"><span class="p-author">'
         f"{get_author_display_name(author)}</span></a>"
     )
-    assert djpress_tags.post_author_link(context) == expected_output
+    assert djpress_tags.post_author(context) == expected_output
+
+    # Disable microformats
+    settings.DJPRESS_SETTINGS["MICROFORMATS_ENABLED"] = False
+    expected_output = (
+        f'<a href="/{settings.DJPRESS_SETTINGS["AUTHOR_PREFIX"]}/testuser/" title="View all posts by '
+        f'{get_author_display_name(author)}"><span>'
+        f"{get_author_display_name(author)}</span></a>"
+    )
+    assert djpress_tags.post_author(context) == expected_output
 
 
 @pytest.mark.django_db
-def test_post_author_link_author_path_disabled(settings, test_post1):
+def test_post_author_author_path_disabled(settings, test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
@@ -189,12 +234,12 @@ def test_post_author_link_author_path_disabled(settings, test_post1):
 
     author = test_post1.author
 
-    expected_output = f'<span rel="author">{get_author_display_name(author)}</span>'
-    assert djpress_tags.post_author_link(context) == expected_output
+    expected_output = f'<span class="p-author">{get_author_display_name(author)}</span>'
+    assert djpress_tags.post_author(context) == expected_output
 
 
 @pytest.mark.django_db
-def test_post_author_link_with_author_path_with_one_link_class(settings, test_post1):
+def test_post_author_with_author_path_with_one_link_class(settings, test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
@@ -206,13 +251,13 @@ def test_post_author_link_with_author_path_with_one_link_class(settings, test_po
     expected_output = (
         f'<a href="/{settings.DJPRESS_SETTINGS["AUTHOR_PREFIX"]}/testuser/" title="View all posts by '
         f'{get_author_display_name(author)}" class="class1">'
-        f'<span rel="author">{get_author_display_name(author)}</span></a>'
+        f'<span class="p-author">{get_author_display_name(author)}</span></a>'
     )
-    assert djpress_tags.post_author_link(context, "class1") == expected_output
+    assert djpress_tags.post_author(context, "class1") == expected_output
 
 
 @pytest.mark.django_db
-def test_post_author_link_with_author_path_with_two_link_class(settings, test_post1):
+def test_post_author_with_author_path_with_two_link_class(settings, test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
@@ -224,9 +269,9 @@ def test_post_author_link_with_author_path_with_two_link_class(settings, test_po
     expected_output = (
         f'<a href="/{settings.DJPRESS_SETTINGS["AUTHOR_PREFIX"]}/testuser/" title="View all posts by '
         f'{get_author_display_name(author)}" class="class1 class2">'
-        f'<span rel="author">{get_author_display_name(author)}</span></a>'
+        f'<span class="p-author">{get_author_display_name(author)}</span></a>'
     )
-    assert djpress_tags.post_author_link(context, "class1 class2") == expected_output
+    assert djpress_tags.post_author(context, "class1 class2") == expected_output
 
 
 @pytest.mark.django_db
@@ -265,8 +310,13 @@ def test_post_category_link_with_category_path(settings, category1):
     assert settings.DJPRESS_SETTINGS["CATEGORY_ENABLED"] is True
     assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
-    expected_output = f'<a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category">{category1.title}</a>'
+    expected_output = f'<a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="p-category">{category1.title}</a>'
+    assert djpress_tags.post_category_link(category1) == expected_output
 
+    # disable microformats
+    settings.DJPRESS_SETTINGS["MICROFORMATS_ENABLED"] = False
+
+    expected_output = f'<a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category">{category1.title}</a>'
     assert djpress_tags.post_category_link(category1) == expected_output
 
 
@@ -276,8 +326,13 @@ def test_post_category_link_with_category_path_with_one_link_class(settings, cat
     assert settings.DJPRESS_SETTINGS["CATEGORY_ENABLED"] is True
     assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
-    expected_output = f'<a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="class1">{category1.title}</a>'
+    expected_output = f'<a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="p-category class1">{category1.title}</a>'
+    assert djpress_tags.post_category_link(category1, "class1") == expected_output
 
+    # disable microformats
+    settings.DJPRESS_SETTINGS["MICROFORMATS_ENABLED"] = False
+
+    expected_output = f'<a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="class1">{category1.title}</a>'
     assert djpress_tags.post_category_link(category1, "class1") == expected_output
 
 
@@ -287,9 +342,45 @@ def test_post_category_link_with_category_path_with_two_link_classes(settings, c
     assert settings.DJPRESS_SETTINGS["CATEGORY_ENABLED"] is True
     assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
-    expected_output = f'<a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="class1 class2">{category1.title}</a>'
+    expected_output = f'<a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="p-category class1 class2">{category1.title}</a>'
 
     assert djpress_tags.post_category_link(category1, "class1 class2") == expected_output
+
+
+def test_get_post_date_no_post():
+    context = Context({"foo": "bar"})
+
+    assert djpress_tags.get_post_date(context) == ""
+    assert type(djpress_tags.get_post_date(context)) == str
+
+
+@pytest.mark.django_db
+def test_get_post_date_with_date_archives_disabled(settings, test_post1):
+    """djpress_tags.get_post_date is not impacted by the ARCHIVE_ENABLED setting."""
+    context = Context({"post": test_post1})
+
+    # Confirm settings are set according to settings_testing.py
+    assert settings.DJPRESS_SETTINGS["ARCHIVE_ENABLED"] is True
+
+    settings.DJPRESS_SETTINGS["ARCHIVE_ENABLED"] = False
+    assert settings.DJPRESS_SETTINGS["ARCHIVE_ENABLED"] is False
+
+    expected_output = test_post1.date.strftime("%b %-d, %Y")
+
+    assert djpress_tags.get_post_date(context) == expected_output
+
+
+@pytest.mark.django_db
+def test_get_post_date_with_date_archives_enabled(settings, test_post1):
+    """djpress_tags.get_post_date is not impacted by the ARCHIVE_ENABLED setting."""
+    context = Context({"post": test_post1})
+
+    # Confirm settings are set according to settings_testing.py
+    assert settings.DJPRESS_SETTINGS["ARCHIVE_ENABLED"] is True
+
+    expected_output = test_post1.date.strftime("%b %-d, %Y")
+
+    assert djpress_tags.get_post_date(context) == expected_output
 
 
 def test_post_date_no_post():
@@ -301,7 +392,7 @@ def test_post_date_no_post():
 
 @pytest.mark.django_db
 def test_post_date_with_date_archives_disabled(settings, test_post1):
-    """djpress_tags.post_date is not impacted by the ARCHIVE_ENABLED setting."""
+    """Should return just the date."""
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
@@ -317,42 +408,6 @@ def test_post_date_with_date_archives_disabled(settings, test_post1):
 
 @pytest.mark.django_db
 def test_post_date_with_date_archives_enabled(settings, test_post1):
-    """djpress_tags.post_date is not impacted by the ARCHIVE_ENABLED setting."""
-    context = Context({"post": test_post1})
-
-    # Confirm settings are set according to settings_testing.py
-    assert settings.DJPRESS_SETTINGS["ARCHIVE_ENABLED"] is True
-
-    expected_output = test_post1.date.strftime("%b %-d, %Y")
-
-    assert djpress_tags.post_date(context) == expected_output
-
-
-def test_post_date_link_no_post():
-    context = Context({"foo": "bar"})
-
-    assert djpress_tags.post_date_link(context) == ""
-    assert type(djpress_tags.post_date_link(context)) == str
-
-
-@pytest.mark.django_db
-def test_post_date_link_with_date_archives_disabled(settings, test_post1):
-    """Should return just the date."""
-    context = Context({"post": test_post1})
-
-    # Confirm settings are set according to settings_testing.py
-    assert settings.DJPRESS_SETTINGS["ARCHIVE_ENABLED"] is True
-
-    settings.DJPRESS_SETTINGS["ARCHIVE_ENABLED"] = False
-    assert settings.DJPRESS_SETTINGS["ARCHIVE_ENABLED"] is False
-
-    expected_output = test_post1.date.strftime("%b %-d, %Y")
-
-    assert djpress_tags.post_date_link(context) == expected_output
-
-
-@pytest.mark.django_db
-def test_post_date_link_with_date_archives_enabled(settings, test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
@@ -366,6 +421,19 @@ def test_post_date_link_with_date_archives_enabled(settings, test_post1):
     post_day_name = post_date.strftime("%-d")
     post_time = post_date.strftime("%-I:%M %p")
 
+    expected_output = (
+        f'<time class="dt-published" datetime="{post_date.isoformat()}">'
+        f'<a href="/test-url-archives/{post_year}/{post_month}/" title="View all posts in {post_month_name} {post_year}">{post_month_name}</a> '
+        f'<a href="/test-url-archives/{post_year}/{post_month}/{post_day}/" title="View all posts on {post_day_name} {post_month_name} {post_year}">{post_day_name}</a>, '
+        f'<a href="/test-url-archives/{post_year}/" title="View all posts in {post_year}">{post_year}</a>, '
+        f"{post_time}."
+        "</time>"
+    )
+
+    assert djpress_tags.post_date(context) == expected_output
+
+    # disable microformats
+    settings.DJPRESS_SETTINGS["MICROFORMATS_ENABLED"] = False
     expected_output = (
         f'<a href="/test-url-archives/{post_year}/{post_month}/" title="View all posts in {post_month_name} {post_year}">{post_month_name}</a> '
         f'<a href="/test-url-archives/{post_year}/{post_month}/{post_day}/" title="View all posts on {post_day_name} {post_month_name} {post_year}">{post_day_name}</a>, '
@@ -373,11 +441,11 @@ def test_post_date_link_with_date_archives_enabled(settings, test_post1):
         f"{post_time}."
     )
 
-    assert djpress_tags.post_date_link(context) == expected_output
+    assert djpress_tags.post_date(context) == expected_output
 
 
 @pytest.mark.django_db
-def test_post_date_link_with_date_archives_enabled_with_one_link_class(settings, test_post1):
+def test_post_date_with_date_archives_enabled_with_one_link_class(settings, test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
@@ -392,17 +460,19 @@ def test_post_date_link_with_date_archives_enabled_with_one_link_class(settings,
     post_time = post_date.strftime("%-I:%M %p")
 
     expected_output = (
+        f'<time class="dt-published" datetime="{post_date.isoformat()}">'
         f'<a href="/test-url-archives/{post_year}/{post_month}/" title="View all posts in {post_month_name} {post_year}" class="class1">{post_month_name}</a> '
         f'<a href="/test-url-archives/{post_year}/{post_month}/{post_day}/" title="View all posts on {post_day_name} {post_month_name} {post_year}" class="class1">{post_day_name}</a>, '
         f'<a href="/test-url-archives/{post_year}/" title="View all posts in {post_year}" class="class1">{post_year}</a>, '
         f"{post_time}."
+        "</time>"
     )
 
-    assert djpress_tags.post_date_link(context, "class1") == expected_output
+    assert djpress_tags.post_date(context, "class1") == expected_output
 
 
 @pytest.mark.django_db
-def test_post_date_link_with_date_archives_enabled_with_two_link_classes(settings, test_post1):
+def test_post_date_with_date_archives_enabled_with_two_link_classes(settings, test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
@@ -417,13 +487,15 @@ def test_post_date_link_with_date_archives_enabled_with_two_link_classes(setting
     post_time = post_date.strftime("%-I:%M %p")
 
     expected_output = (
+        f'<time class="dt-published" datetime="{post_date.isoformat()}">'
         f'<a href="/test-url-archives/{post_year}/{post_month}/" title="View all posts in {post_month_name} {post_year}" class="class1 class2">{post_month_name}</a> '
         f'<a href="/test-url-archives/{post_year}/{post_month}/{post_day}/" title="View all posts on {post_day_name} {post_month_name} {post_year}" class="class1 class2">{post_day_name}</a>, '
         f'<a href="/test-url-archives/{post_year}/" title="View all posts in {post_year}" class="class1 class2">{post_year}</a>, '
         f"{post_time}."
+        "</time>"
     )
 
-    assert djpress_tags.post_date_link(context, "class1 class2") == expected_output
+    assert djpress_tags.post_date(context, "class1 class2") == expected_output
 
 
 def test_post_content_no_post():
@@ -442,6 +514,21 @@ def test_post_content_with_post(test_post1):
     expected_output = f"{test_post1.content_markdown}"
 
     assert djpress_tags.post_content(context) == expected_output
+
+
+@pytest.mark.django_db
+def test_post_content_with_post_with_outer(settings, test_post1):
+    """If there's a post in the context, return the post content."""
+    context = Context({"post": test_post1})
+
+    # Microformats are enabled by default
+    expected_output = f'<section class="e-content">{test_post1.content_markdown}</section>'
+    assert djpress_tags.post_content(context, outer_tag="section") == expected_output
+
+    # Disable microformats
+    settings.DJPRESS_SETTINGS["MICROFORMATS_ENABLED"] = False
+    expected_output = f"<section>{test_post1.content_markdown}</section>"
+    assert djpress_tags.post_content(context, outer_tag="section") == expected_output
 
 
 @pytest.mark.django_db
@@ -524,23 +611,23 @@ def test_post_categories(settings, test_post1):
     # Confirm settings are set according to settings_testing.py
     assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
-    expected_output = f'<ul><li><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category">Test Category1</a></li></ul>'
+    expected_output = f'<ul><li><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="p-category">Test Category1</a></li></ul>'
 
-    assert djpress_tags.post_categories_link(context) == expected_output
+    assert djpress_tags.post_categories(context) == expected_output
 
 
 def test_post_categories_none_post_context():
     context = Context({"post": None})
 
     expected_output = ""
-    assert djpress_tags.post_categories_link(context) == expected_output
+    assert djpress_tags.post_categories(context) == expected_output
 
 
 def test_post_categories_no_post_context():
     context = Context({"foo": None})
 
     expected_output = ""
-    assert djpress_tags.post_categories_link(context) == expected_output
+    assert djpress_tags.post_categories(context) == expected_output
 
 
 @pytest.mark.django_db
@@ -549,7 +636,7 @@ def test_post_categories_no_categories_context(test_post1):
     context = Context({"post": test_post1})
 
     expected_output = ""
-    assert djpress_tags.post_categories_link(context) == expected_output
+    assert djpress_tags.post_categories(context) == expected_output
 
 
 @pytest.mark.django_db
@@ -559,9 +646,9 @@ def test_post_categories_ul(settings, test_post1):
     # Confirm settings are set according to settings_testing.py
     assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
-    expected_output = f'<ul><li><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category">Test Category1</a></li></ul>'
+    expected_output = f'<ul><li><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="p-category">Test Category1</a></li></ul>'
 
-    assert djpress_tags.post_categories_link(context, "ul") == expected_output
+    assert djpress_tags.post_categories(context, "ul") == expected_output
 
 
 @pytest.mark.django_db
@@ -571,9 +658,9 @@ def test_post_categories_ul_class1(settings, test_post1):
     # Confirm settings are set according to settings_testing.py
     assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
-    expected_output = f'<ul><li><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="class1">Test Category1</a></li></ul>'
+    expected_output = f'<ul><li><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="p-category class1">Test Category1</a></li></ul>'
 
-    assert djpress_tags.post_categories_link(context, outer="ul", link_class="class1") == expected_output
+    assert djpress_tags.post_categories(context, outer="ul", link_class="class1") == expected_output
 
 
 @pytest.mark.django_db
@@ -583,9 +670,9 @@ def test_post_categories_ul_class1_class2(settings, test_post1):
     # Confirm settings are set according to settings_testing.py
     assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
-    expected_output = f'<ul><li><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="class1 class2">Test Category1</a></li></ul>'
+    expected_output = f'<ul><li><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="p-category class1 class2">Test Category1</a></li></ul>'
 
-    assert djpress_tags.post_categories_link(context, outer="ul", link_class="class1 class2") == expected_output
+    assert djpress_tags.post_categories(context, outer="ul", link_class="class1 class2") == expected_output
 
 
 @pytest.mark.django_db
@@ -595,9 +682,9 @@ def test_post_categories_div(settings, test_post1):
     # Confirm settings are set according to settings_testing.py
     assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
-    expected_output = f'<div><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category">Test Category1</a></div>'
+    expected_output = f'<div><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="p-category">Test Category1</a></div>'
 
-    assert djpress_tags.post_categories_link(context, outer="div") == expected_output
+    assert djpress_tags.post_categories(context, outer="div") == expected_output
 
 
 @pytest.mark.django_db
@@ -607,9 +694,9 @@ def test_post_categories_div_class1(settings, test_post1):
     # Confirm settings are set according to settings_testing.py
     assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
-    expected_output = f'<div><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="class1">Test Category1</a></div>'
+    expected_output = f'<div><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="p-category class1">Test Category1</a></div>'
 
-    assert djpress_tags.post_categories_link(context, outer="div", link_class="class1") == expected_output
+    assert djpress_tags.post_categories(context, outer="div", link_class="class1") == expected_output
 
 
 @pytest.mark.django_db
@@ -619,9 +706,9 @@ def test_post_categories_div_class1_class2(settings, test_post1):
     # Confirm settings are set according to settings_testing.py
     assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
-    expected_output = f'<div><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="class1 class2">Test Category1</a></div>'
+    expected_output = f'<div><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="p-category class1 class2">Test Category1</a></div>'
 
-    assert djpress_tags.post_categories_link(context, outer="div", link_class="class1 class2") == expected_output
+    assert djpress_tags.post_categories(context, outer="div", link_class="class1 class2") == expected_output
 
 
 @pytest.mark.django_db
@@ -631,9 +718,9 @@ def test_post_categories_span(settings, test_post1):
     # Confirm settings are set according to settings_testing.py
     assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
-    expected_output = f'<span><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category">Test Category1</a></span>'
+    expected_output = f'<span><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="p-category">Test Category1</a></span>'
 
-    assert djpress_tags.post_categories_link(context, outer="span") == expected_output
+    assert djpress_tags.post_categories(context, outer="span") == expected_output
 
 
 @pytest.mark.django_db
@@ -643,9 +730,9 @@ def test_post_categories_span_class1(settings, test_post1):
     # Confirm settings are set according to settings_testing.py
     assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
-    expected_output = f'<span><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="class1">Test Category1</a></span>'
+    expected_output = f'<span><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="p-category class1">Test Category1</a></span>'
 
-    assert djpress_tags.post_categories_link(context, outer="span", link_class="class1") == expected_output
+    assert djpress_tags.post_categories(context, outer="span", link_class="class1") == expected_output
 
 
 @pytest.mark.django_db
@@ -655,9 +742,9 @@ def test_post_categories_span_class1_class2(settings, test_post1):
     # Confirm settings are set according to settings_testing.py
     assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
-    expected_output = f'<span><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="class1 class2">Test Category1</a></span>'
+    expected_output = f'<span><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="p-category class1 class2">Test Category1</a></span>'
 
-    assert djpress_tags.post_categories_link(context, outer="span", link_class="class1 class2") == expected_output
+    assert djpress_tags.post_categories(context, outer="span", link_class="class1 class2") == expected_output
 
 
 @pytest.mark.django_db
@@ -1497,3 +1584,124 @@ def test_get_recent_posts(settings, test_post1, test_post2, test_post3):
     tag_get_recent_posts = list(djpress_tags.get_recent_posts(context))
     page_posts = list(page.object_list)
     assert tag_get_recent_posts != page_posts
+
+
+@pytest.mark.django_db
+def test_post_wrapper_single_post_no_tag(settings):
+    """Creates an article by default."""
+    template_text = "{% load djpress_tags %}{% post_wrap %}<p>This is test post 1.</p>{% end_post_wrap %}"
+    context = Context({})
+
+    template = Template(template_text)
+    expected_output = '<article class="h-entry"><p>This is test post 1.</p></article>'
+    assert template.render(context) == expected_output
+
+    # Disable microformats
+    settings.DJPRESS_SETTINGS["MICROFORMATS_ENABLED"] = False
+
+    template = Template(template_text)
+    expected_output = "<article><p>This is test post 1.</p></article>"
+    assert template.render(context) == expected_output
+
+
+@pytest.mark.django_db
+def test_post_wrapper_single_post_with_valid_tag(settings):
+    """Create a div instead."""
+    template_text = "{% load djpress_tags %}{% post_wrap tag='div' %}<p>This is test post 1.</p>{% end_post_wrap %}"
+    context = Context({})
+
+    template = Template(template_text)
+    expected_output = '<div class="h-entry"><p>This is test post 1.</p></div>'
+    assert template.render(context) == expected_output
+
+    # Disable microformats
+    settings.DJPRESS_SETTINGS["MICROFORMATS_ENABLED"] = False
+
+    template = Template(template_text)
+    expected_output = "<div><p>This is test post 1.</p></div>"
+    assert template.render(context) == expected_output
+
+
+@pytest.mark.django_db
+def test_post_wrapper_single_post_with_valid_tag_double_quotes(settings):
+    """Create a div instead."""
+    template_text = '{% load djpress_tags %}{% post_wrap tag="div" %}<p>This is test post 1.</p>{% end_post_wrap %}'
+    context = Context({})
+
+    template = Template(template_text)
+    expected_output = '<div class="h-entry"><p>This is test post 1.</p></div>'
+    assert template.render(context) == expected_output
+
+    # Disable microformats
+    settings.DJPRESS_SETTINGS["MICROFORMATS_ENABLED"] = False
+
+    template = Template(template_text)
+    expected_output = "<div><p>This is test post 1.</p></div>"
+    assert template.render(context) == expected_output
+
+
+@pytest.mark.django_db
+def test_post_wrapper_single_post_with_invalid_tag():
+    """Just returns the content."""
+    template_text = "{% load djpress_tags %}{% post_wrap tag='foobar' %}<p>This is test post 1.</p>{% end_post_wrap %}"
+    context = Context({})
+
+    template = Template(template_text)
+    expected_output = "<p>This is test post 1.</p>"
+    assert template.render(context) == expected_output
+
+
+@pytest.mark.django_db
+def test_post_wrapper_single_post_with_valid_tag_arg_only():
+    """Just returns the content."""
+    template_text = "{% load djpress_tags %}{% post_wrap 'article' %}<p>This is test post 1.</p>{% end_post_wrap %}"
+    context = Context({})
+
+    template = Template(template_text)
+    expected_output = '<article class="h-entry"><p>This is test post 1.</p></article>'
+    assert template.render(context) == expected_output
+
+
+@pytest.mark.django_db
+def test_post_wrapper_single_post_with_invalid_tag_arg_only():
+    """Just returns the content."""
+    template_text = "{% load djpress_tags %}{% post_wrap 'foobar' %}<p>This is test post 1.</p>{% end_post_wrap %}"
+    context = Context({})
+
+    template = Template(template_text)
+    expected_output = "<p>This is test post 1.</p>"
+    assert template.render(context) == expected_output
+
+
+@pytest.mark.django_db
+def test_post_wrapper_single_post_with_class(settings):
+    template_text = (
+        "{% load djpress_tags %}{% post_wrap class='blog-post' %}<p>This is test post 1.</p>{% end_post_wrap %}"
+    )
+    context = Context({})
+
+    template = Template(template_text)
+    expected_output = '<article class="h-entry blog-post"><p>This is test post 1.</p></article>'
+    assert template.render(context) == expected_output
+
+    # Disable microformats
+    settings.DJPRESS_SETTINGS["MICROFORMATS_ENABLED"] = False
+    template = Template(template_text)
+    expected_output = '<article class="blog-post"><p>This is test post 1.</p></article>'
+    assert template.render(context) == expected_output
+
+
+@pytest.mark.django_db
+def test_post_wrapper_single_post_with_tag_and_class(settings):
+    template_text = "{% load djpress_tags %}{% post_wrap tag='div' class='blog-post' %}<p>This is test post 1.</p>{% end_post_wrap %}"
+    context = Context({})
+
+    template = Template(template_text)
+    expected_output = '<div class="h-entry blog-post"><p>This is test post 1.</p></div>'
+    assert template.render(context) == expected_output
+
+    # Disable microformats
+    settings.DJPRESS_SETTINGS["MICROFORMATS_ENABLED"] = False
+    template = Template(template_text)
+    expected_output = '<div class="blog-post"><p>This is test post 1.</p></div>'
+    assert template.render(context) == expected_output

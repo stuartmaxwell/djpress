@@ -23,32 +23,41 @@
 
       {% if post %}
 
-        <article>
+        {% post_wrap %}
+
           <header>
-            <h1>{% post_title_link %}</h1>
-            <p>By {% post_author_link %}. {% post_date_link %}</p>
+            {% post_title outer_tag="h1" %}
+            <p>By {% post_author %}. {% post_date %}</p>
           </header>
-          <section>
-            {% post_content %}
-          </section>
+
+          {% post_content outer_tag="section" %}
+
           <footer>
-            <p>Categories: {% post_categories_link "span" "badge" %}</p>
+            <p>Categories: {% post_categories "span" "badge" %}</p>
           </footer>
-        </article>
+
+        {% end_post_wrap %}
 
       {% else %}
 
+        <h1>Latest Posts</h1>
+
         {% for post in posts %}
 
-          <article>
+          {% post_wrap %}
+
             <header>
-              <h1>{% post_title_link %}</h1>
-              <p>By {% post_author_link %}. {% post_date_link %}</p>
+              {% post_title outer_tag="h2" %}
+              <p>By {% post_author %}. {% post_date %}</p>
             </header>
-            <section>
-              {% post_content %}
-            </section>
-          </article>
+
+            {% post_content outer_tag="section" %}
+
+            <footer>
+              <p>Categories: {% post_categories "span" "badge" %}</p>
+            </footer>
+
+          {% end_post_wrap %}
 
         {% empty %}
 
