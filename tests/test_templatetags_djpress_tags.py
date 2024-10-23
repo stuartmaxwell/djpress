@@ -168,19 +168,19 @@ def test_post_title_with_prefix(settings, test_post1):
 
 
 @pytest.mark.django_db
-def test_post_author(test_post1):
+def test_get_post_author(test_post1):
     context = Context({"post": test_post1})
 
     author = test_post1.author
     output = get_author_display_name(author)
-    assert djpress_tags.post_author(context) == output
+    assert djpress_tags.get_post_author(context) == output
 
 
-def test_post_author_no_post():
+def test_get_post_author_no_post():
     context = Context({"foo": "bar"})
 
-    assert djpress_tags.post_author(context) == ""
-    assert type(djpress_tags.post_author(context)) == str
+    assert djpress_tags.get_post_author(context) == ""
+    assert type(djpress_tags.get_post_author(context)) == str
 
 
 def test_post_author_link_no_post():

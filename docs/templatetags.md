@@ -600,7 +600,7 @@ Outputs:
 <h2 class="p-name"><a href="/my-post/">My Post Title</a></h2>
 ```
 
-## post_author
+## get_post_author
 
 Returns the display name of the post's author.
 
@@ -611,13 +611,13 @@ String containing the author's display name.
 ### Examples
 
 ```django
-<p>Written by {% post_author %}</p>
+<p>Written by {% get_post_author %}</p>
 ```
 
 Outputs:
 
 ```html
-<p>Written by Post Author</p>
+<p>Written by Sam Doe</p>
 ```
 
 ## post_author_link

@@ -355,7 +355,7 @@ def post_title(context: Context, *, outer_tag: str = "", link_class: str = "", f
 
 
 @register.simple_tag(takes_context=True)
-def post_author(context: Context) -> str:
+def get_post_author(context: Context) -> str:
     """Return the author display name.
 
     Tries to display the first name and last name if available, otherwise falls back to
