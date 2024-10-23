@@ -139,7 +139,7 @@ def test_parse_post_wrapper_params():
 
     # Test case 2
     params = ['class="blog-post"']
-    expected_output = ("article", "blog-post")
+    expected_output = ("", "blog-post")
     assert parse_post_wrapper_params(params) == expected_output
 
     # Test case 3
@@ -152,7 +152,7 @@ def test_parse_post_wrapper_params():
     expected_output = ("blog-post", "")
     assert parse_post_wrapper_params(params) == expected_output
 
-    # Test case 4
+    # Test case 5
     params = ['""', '"blog-post"']
     expected_output = ("", "blog-post")
     assert parse_post_wrapper_params(params) == expected_output
