@@ -449,7 +449,7 @@ def get_post_date(context: Context) -> str:
 
 
 @register.simple_tag(takes_context=True)
-def post_date_link(context: Context, link_class: str = "") -> str:
+def post_date(context: Context, link_class: str = "") -> str:
     """Return the date link for a post.
 
     Args:

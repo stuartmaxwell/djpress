@@ -697,7 +697,7 @@ Outputs:
 <p>Published on Jun 5, 2024</p>
 ```
 
-## post_date_link
+## post_date
 
 Returns the post's date as a set of links to date-based archives, if enabled.
 
@@ -712,7 +712,7 @@ An HTML string containing links to date-based archives, or just the formatted da
 ### Examples
 
 ```django
-<p>Posted on {% post_date_link link_class="date-link" %}</p>
+<p>Posted on {% post_date link_class="date-link" %}</p>
 ```
 
 Outputs:
