@@ -101,6 +101,11 @@ def test_post_title_posts(settings, test_post1):
     # this generates a URL based on the slug only - this is prefixed with the POST_PREFIX setting
     post_url = test_post1.url
 
+    expected_output = f'<a href="{post_url}" title="{test_post1.title}" class="u-url">{test_post1.title}</a>'
+    assert djpress_tags.post_title(context) == expected_output
+
+    # disable microformats
+    settings.DJPRESS_SETTINGS["MICROFORMATS_ENABLED"] = False
     expected_output = f'<a href="{post_url}" title="{test_post1.title}">{test_post1.title}</a>'
     assert djpress_tags.post_title(context) == expected_output
 
@@ -126,7 +131,7 @@ def test_post_title_single_post_force_link(test_post1):
 
     # this generates a URL based on the slug only - this is prefixed with the POST_PREFIX setting
     post_url = test_post1.url
-    expected_output = f'<a href="{post_url}" title="{test_post1.title}">{test_post1.title}</a>'
+    expected_output = f'<a href="{post_url}" title="{test_post1.title}" class="u-url">{test_post1.title}</a>'
     assert djpress_tags.post_title(context, force_link=True) == expected_output
 
 
@@ -163,7 +168,7 @@ def test_post_title_with_prefix(settings, test_post1):
 
     post_url = test_post1.url
 
-    expected_output = f'<a href="{post_url}" title="{test_post1.title}">{test_post1.title}</a>'
+    expected_output = f'<a href="{post_url}" title="{test_post1.title}" class="u-url">{test_post1.title}</a>'
     assert djpress_tags.post_title(context) == expected_output
 
 
