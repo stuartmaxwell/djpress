@@ -6,6 +6,30 @@ To use any of the following tags, you must load the `djpress_tags` in your templ
 {% load djpress_tags %}
 ```
 
+## get_posts
+
+Return all published posts as a queryset.
+
+### Returns
+
+A queryset of all published posts.
+
+### Examples
+
+This is useful for building an index page with all posts:
+
+```django
+{% get_posts as all_posts %}
+
+{% for post in all_posts %}
+
+<ul>
+<li>{{ post.title }}</li>
+</ul>
+
+{% endfor %}
+```
+
 ## blog_title
 
 Returns the blog title as configured in the settings with the `BLOG_TITLE` variable. If no blog title has been configured, this will return the default title: "My DJ Press Blog".

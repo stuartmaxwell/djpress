@@ -18,6 +18,54 @@ from djpress.utils import get_author_display_name
 register = template.Library()
 
 
+# Tags starting with `get_` are used to get data from the database.
+
+
+@register.simple_tag(takes_context=True)
+def get_recent_posts(context: Context) -> models.QuerySet[Post]:
+    """Return the recent posts.
+
+    This returns the most recent published posts, and tries to be efficient by checking if there's a `posts` object we
+    can use.
+    """
+    posts: Page | None = context.get("posts")
+
+    if isinstance(posts, Page) and posts.number == 1:
+        return posts.object_list
+
+    return Post.post_objects.get_recent_published_posts()
+
+
+@register.simple_tag
+def get_posts() -> models.QuerySet[Post]:
+    """Return all published posts as a queryset.
+
+    Returns:
+        models.QuerySet[Post]: All posts.
+    """
+    return Post.post_objects.get_published_posts()
+
+
+@register.simple_tag
+def get_pages() -> models.QuerySet[Post]:
+    """Return all published pages as a queryset.
+
+    Returns:
+        models.QuerySet[Post]: All pages.
+    """
+    return Post.page_objects.get_published_pages()
+
+
+@register.simple_tag
+def get_categories() -> models.QuerySet[Category] | None:
+    """Return all categories as a queryset.
+
+    Returns:
+        models.QuerySet[Category]: All categories.
+    """
+    return Category.objects.get_categories().order_by("menu_order", "title")
+
+
 @register.simple_tag
 def blog_title() -> str:
     """Return the blog title.
@@ -43,26 +91,6 @@ def blog_title_link(link_class: str = "") -> str:
     output = f'<a href="{reverse("djpress:index")}"{link_class_html}>{djpress_settings.BLOG_TITLE}</a>'
 
     return mark_safe(output)
-
-
-@register.simple_tag
-def get_pages() -> models.QuerySet[Post]:
-    """Return all pages as a queryset.
-
-    Returns:
-        models.QuerySet[Post]: All pages.
-    """
-    return Post.page_objects.get_published_pages()
-
-
-@register.simple_tag
-def get_categories() -> models.QuerySet[Category] | None:
-    """Return all categories as a queryset.
-
-    Returns:
-        models.QuerySet[Category]: All categories.
-    """
-    return Category.objects.get_categories().order_by("menu_order", "title")
 
 
 @register.simple_tag
@@ -254,21 +282,6 @@ def have_posts(context: Context) -> list[Post | None] | Page:
         return posts
 
     return []
-
-
-@register.simple_tag(takes_context=True)
-def get_recent_posts(context: Context) -> models.QuerySet[Post]:
-    """Return the recent posts.
-
-    This returns the most recent published posts, and tries to be efficient by checking if there's a `posts` object we
-    can use.
-    """
-    posts: Page | None = context.get("posts")
-
-    if isinstance(posts, Page) and posts.number == 1:
-        return posts.object_list
-
-    return Post.post_objects.get_recent_published_posts()
 
 
 @register.simple_tag(takes_context=True)
