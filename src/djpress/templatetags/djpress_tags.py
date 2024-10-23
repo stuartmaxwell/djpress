@@ -814,3 +814,29 @@ def rss_url() -> str:
         str: The URL to the RSS feed.
     """
     return url_utils.get_rss_url()
+
+
+@register.tag(name="blog_post")
+def blog_post_wrapper_tag(parser: template.base.Parser, token: template.base.Token) -> helpers.BlogPostWrapper:
+    """Parse the blog post wrapper tag.
+
+    This is a template tag that wraps the blog post content in a configurable HTML tag with a CSS class.
+
+    Example usage:
+        {% blog_post "article" "post" %}<p>Post content</p>{% end_blog_post %}
+
+    Args:
+        parser: The template parser.
+        token: The template token.
+
+    Returns:
+        BlogPostWrapper: The blog post wrapper tag.
+    """
+    params = token.split_contents()[1:]  # skip the tag name
+
+    tag, css_class = helpers.parse_blog_post_wrapper_params(params)
+
+    nodelist = parser.parse(("end_blog_post",))
+    parser.delete_first_token()
+
+    return helpers.BlogPostWrapper(nodelist, tag, css_class)
