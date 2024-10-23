@@ -311,10 +311,13 @@ def post_title(context: Context, *, outer_tag: str = "", link_class: str = "", f
     post, then return just the title of the post with no link. But this behavior can be overridden by setting
     `force_link` to `True`.
 
-    Otherwise return an empty string.
-
     The outer tag can be any of the following: "h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "span". If the outer tag
     is not one of these, then the title will be returned with no outer tag.
+
+    If the outer tag is one of the allowed tags, and if Microformats are enabled, then the outer tag will have the class
+    "p-name".
+
+    Otherwise return an empty string.
 
     Args:
         context: The context.
