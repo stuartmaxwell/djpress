@@ -23,7 +23,8 @@
 
       {% if post %}
 
-        <article>
+        {% blog_post %}
+
           <header>
             {% post_title outer_tag="h1" %}
             <p>By {% post_author_link %}. {% post_date_link %}</p>
@@ -34,7 +35,8 @@
           <footer>
             <p>Categories: {% post_categories_link "span" "badge" %}</p>
           </footer>
-        </article>
+
+        {% end_blog_post %}
 
       {% else %}
 
@@ -42,7 +44,8 @@
 
         {% for post in posts %}
 
-          <article>
+          {% blog_post %}
+
             <header>
               {% post_title outer_tag="h2" %}
               <p>By {% post_author_link %}. {% post_date_link %}</p>
@@ -54,7 +57,7 @@
               <p>Categories: {% post_categories_link "span" "badge" %}</p>
             </footer>
 
-          </article>
+          {% end_blog_post %}
 
         {% empty %}
 
