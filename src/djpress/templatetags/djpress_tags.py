@@ -431,7 +431,7 @@ def post_category_link(category: Category, link_class: str = "") -> str:
 
 
 @register.simple_tag(takes_context=True)
-def post_date(context: Context) -> str:
+def get_post_date(context: Context) -> str:
     """Return the date of a post.
 
     Args:

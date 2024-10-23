@@ -332,16 +332,16 @@ def test_post_category_link_with_category_path_with_two_link_classes(settings, c
     assert djpress_tags.post_category_link(category1, "class1 class2") == expected_output
 
 
-def test_post_date_no_post():
+def test_get_post_date_no_post():
     context = Context({"foo": "bar"})
 
-    assert djpress_tags.post_date(context) == ""
-    assert type(djpress_tags.post_date(context)) == str
+    assert djpress_tags.get_post_date(context) == ""
+    assert type(djpress_tags.get_post_date(context)) == str
 
 
 @pytest.mark.django_db
-def test_post_date_with_date_archives_disabled(settings, test_post1):
-    """djpress_tags.post_date is not impacted by the ARCHIVE_ENABLED setting."""
+def test_get_post_date_with_date_archives_disabled(settings, test_post1):
+    """djpress_tags.get_post_date is not impacted by the ARCHIVE_ENABLED setting."""
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
@@ -352,12 +352,12 @@ def test_post_date_with_date_archives_disabled(settings, test_post1):
 
     expected_output = test_post1.date.strftime("%b %-d, %Y")
 
-    assert djpress_tags.post_date(context) == expected_output
+    assert djpress_tags.get_post_date(context) == expected_output
 
 
 @pytest.mark.django_db
-def test_post_date_with_date_archives_enabled(settings, test_post1):
-    """djpress_tags.post_date is not impacted by the ARCHIVE_ENABLED setting."""
+def test_get_post_date_with_date_archives_enabled(settings, test_post1):
+    """djpress_tags.get_post_date is not impacted by the ARCHIVE_ENABLED setting."""
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
@@ -365,7 +365,7 @@ def test_post_date_with_date_archives_enabled(settings, test_post1):
 
     expected_output = test_post1.date.strftime("%b %-d, %Y")
 
-    assert djpress_tags.post_date(context) == expected_output
+    assert djpress_tags.get_post_date(context) == expected_output
 
 
 def test_post_date_link_no_post():

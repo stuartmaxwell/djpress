@@ -677,7 +677,7 @@ HTML text containing a link to the category.
 {% endfor %}
 ```
 
-## post_date
+## get_post_date
 
 Get the date of the current post.
 
@@ -688,7 +688,7 @@ A string containing the post's date formatted as "MMM D, YYYY".
 ### Examples
 
 ```django
-<p>Published on {% post_date %}</p>
+<p>Published on {% get_post_date %}</p>
 ```
 
 Outputs:
