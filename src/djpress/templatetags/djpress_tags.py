@@ -340,7 +340,20 @@ def post_title(context: Context, *, outer_tag: str = "", link_class: str = "", f
 
     # If there's a posts in the context, or if the link is forced, then we need to display the link.
     if posts or force_link:
-        link_class_html = f' class="{link_class}"' if link_class else ""
+        # Build the classes for the link
+        link_classes = ""
+
+        # Add p-category if microformats are enabled
+        if djpress_settings.MICROFORMATS_ENABLED:
+            link_classes += "u-url "
+
+        # Add the user-defined link class
+        link_classes += link_class
+
+        # Trim any trailing spaces
+        link_classes = link_classes.strip()
+
+        link_class_html = f' class="{link_classes}"' if link_classes else ""
 
         output = f'<a href="{post.url}" title="{output}"{link_class_html}>{output}</a>'
 
