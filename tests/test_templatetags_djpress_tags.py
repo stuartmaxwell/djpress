@@ -183,15 +183,15 @@ def test_get_post_author_no_post():
     assert type(djpress_tags.get_post_author(context)) == str
 
 
-def test_post_author_link_no_post():
+def test_post_author_no_post():
     context = Context({"foo": "bar"})
 
-    assert djpress_tags.post_author_link(context) == ""
-    assert type(djpress_tags.post_author_link(context)) == str
+    assert djpress_tags.post_author(context) == ""
+    assert type(djpress_tags.post_author(context)) == str
 
 
 @pytest.mark.django_db
-def test_post_author_link(settings, test_post1):
+def test_post_author(settings, test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
@@ -205,7 +205,7 @@ def test_post_author_link(settings, test_post1):
         f'{get_author_display_name(author)}"><span class="p-author">'
         f"{get_author_display_name(author)}</span></a>"
     )
-    assert djpress_tags.post_author_link(context) == expected_output
+    assert djpress_tags.post_author(context) == expected_output
 
     # Disable microformats
     settings.DJPRESS_SETTINGS["MICROFORMATS_ENABLED"] = False
@@ -214,11 +214,11 @@ def test_post_author_link(settings, test_post1):
         f'{get_author_display_name(author)}"><span>'
         f"{get_author_display_name(author)}</span></a>"
     )
-    assert djpress_tags.post_author_link(context) == expected_output
+    assert djpress_tags.post_author(context) == expected_output
 
 
 @pytest.mark.django_db
-def test_post_author_link_author_path_disabled(settings, test_post1):
+def test_post_author_author_path_disabled(settings, test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
@@ -230,11 +230,11 @@ def test_post_author_link_author_path_disabled(settings, test_post1):
     author = test_post1.author
 
     expected_output = f'<span class="p-author">{get_author_display_name(author)}</span>'
-    assert djpress_tags.post_author_link(context) == expected_output
+    assert djpress_tags.post_author(context) == expected_output
 
 
 @pytest.mark.django_db
-def test_post_author_link_with_author_path_with_one_link_class(settings, test_post1):
+def test_post_author_with_author_path_with_one_link_class(settings, test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
@@ -248,11 +248,11 @@ def test_post_author_link_with_author_path_with_one_link_class(settings, test_po
         f'{get_author_display_name(author)}" class="class1">'
         f'<span class="p-author">{get_author_display_name(author)}</span></a>'
     )
-    assert djpress_tags.post_author_link(context, "class1") == expected_output
+    assert djpress_tags.post_author(context, "class1") == expected_output
 
 
 @pytest.mark.django_db
-def test_post_author_link_with_author_path_with_two_link_class(settings, test_post1):
+def test_post_author_with_author_path_with_two_link_class(settings, test_post1):
     context = Context({"post": test_post1})
 
     # Confirm settings are set according to settings_testing.py
@@ -266,7 +266,7 @@ def test_post_author_link_with_author_path_with_two_link_class(settings, test_po
         f'{get_author_display_name(author)}" class="class1 class2">'
         f'<span class="p-author">{get_author_display_name(author)}</span></a>'
     )
-    assert djpress_tags.post_author_link(context, "class1 class2") == expected_output
+    assert djpress_tags.post_author(context, "class1 class2") == expected_output
 
 
 @pytest.mark.django_db

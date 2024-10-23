@@ -620,7 +620,7 @@ Outputs:
 <p>Written by Sam Doe</p>
 ```
 
-## post_author_link
+## post_author
 
 Get the author's display name, wrapped in a span tag, with a link to their author page.
 
@@ -635,7 +635,7 @@ HTML text containing the author's name, marked as safe.
 ### Examples
 
 ```django
-<p>By {% post_author_link %}</p>
+<p>By {% post_author %}</p>
 ```
 
 Outputs:
@@ -647,7 +647,7 @@ Outputs:
 With the `link_class` argument:
 
 ```django
-<p>By {% post_author_link link_class="author-link" %}</p>
+<p>By {% post_author link_class="author-link" %}</p>
 ```
 
 Outputs:
