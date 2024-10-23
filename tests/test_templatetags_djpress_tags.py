@@ -476,6 +476,21 @@ def test_post_content_with_post(test_post1):
 
 
 @pytest.mark.django_db
+def test_post_content_with_post_with_outer(settings, test_post1):
+    """If there's a post in the context, return the post content."""
+    context = Context({"post": test_post1})
+
+    # Microformats are enabled by default
+    expected_output = f'<section class="e-content">{test_post1.content_markdown}</section>'
+    assert djpress_tags.post_content(context, outer_tag="section") == expected_output
+
+    # Disable microformats
+    settings.DJPRESS_SETTINGS["MICROFORMATS_ENABLED"] = False
+    expected_output = f"<section>{test_post1.content_markdown}</section>"
+    assert djpress_tags.post_content(context, outer_tag="section") == expected_output
+
+
+@pytest.mark.django_db
 def test_post_content_with_posts(test_long_post1):
     """If there's a posts in the context, return the truncated post content."""
     # Context should have both a posts and a post to simulate the for post in posts loop
