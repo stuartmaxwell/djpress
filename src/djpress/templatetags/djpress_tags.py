@@ -492,6 +492,8 @@ def post_date_link(context: Context, link_class: str = "") -> str:
 @register.simple_tag(takes_context=True)
 def post_content(
     context: Context,
+    *,
+    outer_tag: str = "",
     read_more_link_class: str = "",
     read_more_text: str = "",
 ) -> str:
@@ -500,12 +502,18 @@ def post_content(
     If the post is part of a posts collection, then we return the truncated content of
     the post with the read more link.
 
-    If the post is a single post, then return the full content of the post.
+    If the post is a single post, return the full content of the post.
 
-    Otherwise return and empty string.
+    The outer tag can be any one of the following: "section", "div", "article", "p", "span". If the outer tag is not one
+    of these, then the content will be returned with no outer tag.
+
+    If there's an outer tag, and if microformats are enabled, then the outer tag will have the class "e-content".
+
+    If there's no post, return an empty string.
 
     Args:
         context: The context.
+        outer_tag: The outer HTML tag for the content.
         read_more_link_class: The CSS class(es) for the read more link.
         read_more_text: The text for the read more link.
 
@@ -516,18 +524,26 @@ def post_content(
     post: Post | None = context.get("post")
     posts: Page | None = context.get("posts")
 
-    content: str = ""
+    # If there's no post, return an empty string.
+    if not post:
+        return ""
 
-    if posts and post:
-        content = mark_safe(post.truncated_content_markdown)
+    # If there's a posts in the context, then we need to display the truncated content.
+    if posts:
+        content = post.truncated_content_markdown
         if post.is_truncated:
             content += helpers.post_read_more_link(post, read_more_link_class, read_more_text)
-        return mark_safe(content)
+    else:
+        content = post.content_markdown
 
-    if post:
-        return mark_safe(post.content_markdown)
+    # If the outer tag is one of the allowed tags, then wrap the output in the outer tag.
+    if outer_tag in ["section", "div", "article", "p", "span"]:
+        # If Microformats are enabled, use e-content with the outer tag.
+        mf = ' class="e-content"' if djpress_settings.MICROFORMATS_ENABLED else ""
 
-    return content
+        content = f"<{outer_tag}{mf}>{content}</{outer_tag}>"
+
+    return mark_safe(content)
 
 
 @register.simple_tag(takes_context=True)
