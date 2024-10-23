@@ -169,7 +169,7 @@ class BlogPostWrapper(template.Node):
     def __init__(self, nodelist: template.NodeList, tag: str = "", css_class: str = "") -> None:
         """Initialize the BlogPostWrapper."""
         self.nodelist = nodelist
-        self.tag = tag
+        self.tag = "article" if tag == "" else tag
         self.css_class = css_class
 
     def render(self, context: template.Context) -> str:
@@ -180,17 +180,10 @@ class BlogPostWrapper(template.Node):
         if self.tag not in ["div", "span", "section", "article"]:
             return mark_safe(content)
 
-        # If microformats are enabled, add the h-entry class before the css class
-        if djpress_settings.MICROFORMATS_ENABLED:
-            self.css_class = f"h-entry {self.css_class}" if self.css_class else "h-entry"
-
-        if self.css_class:
-            self.css_class = f' class="{self.css_class}"'
-
         return mark_safe(f"<{self.tag}{self.css_class}>{content}</{self.tag}>")
 
 
-def parse_blog_post_wrapper_params(params: list) -> tuple[str, str]:
+def parse_post_wrapper_params(params: list) -> tuple[str, str]:
     """Parse the parameters for the template tag.
 
     Args:
@@ -199,7 +192,7 @@ def parse_blog_post_wrapper_params(params: list) -> tuple[str, str]:
     Returns:
         tuple: The tag and CSS class.
     """
-    tag = "article"
+    tag = ""
     css_class = ""
 
     for num, param in enumerate(params):

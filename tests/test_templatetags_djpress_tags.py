@@ -1546,9 +1546,9 @@ def test_get_recent_posts(settings, test_post1, test_post2, test_post3):
 
 
 @pytest.mark.django_db
-def test_blog_post_wrapper_single_post_no_tag(settings):
+def test_post_wrapper_single_post_no_tag(settings):
     """Creates an article by default."""
-    template_text = "{% load djpress_tags %}{% blog_post %}<p>This is test post 1.</p>{% end_blog_post %}"
+    template_text = "{% load djpress_tags %}{% post_wrap %}<p>This is test post 1.</p>{% end_post_wrap %}"
     context = Context({})
 
     template = Template(template_text)
@@ -1564,9 +1564,9 @@ def test_blog_post_wrapper_single_post_no_tag(settings):
 
 
 @pytest.mark.django_db
-def test_blog_post_wrapper_single_post_with_valid_tag(settings):
+def test_post_wrapper_single_post_with_valid_tag(settings):
     """Create a div instead."""
-    template_text = "{% load djpress_tags %}{% blog_post tag='div' %}<p>This is test post 1.</p>{% end_blog_post %}"
+    template_text = "{% load djpress_tags %}{% post_wrap tag='div' %}<p>This is test post 1.</p>{% end_post_wrap %}"
     context = Context({})
 
     template = Template(template_text)
@@ -1582,9 +1582,9 @@ def test_blog_post_wrapper_single_post_with_valid_tag(settings):
 
 
 @pytest.mark.django_db
-def test_blog_post_wrapper_single_post_with_valid_tag_double_quotes(settings):
+def test_post_wrapper_single_post_with_valid_tag_double_quotes(settings):
     """Create a div instead."""
-    template_text = '{% load djpress_tags %}{% blog_post tag="div" %}<p>This is test post 1.</p>{% end_blog_post %}'
+    template_text = '{% load djpress_tags %}{% post_wrap tag="div" %}<p>This is test post 1.</p>{% end_post_wrap %}'
     context = Context({})
 
     template = Template(template_text)
@@ -1600,9 +1600,9 @@ def test_blog_post_wrapper_single_post_with_valid_tag_double_quotes(settings):
 
 
 @pytest.mark.django_db
-def test_blog_post_wrapper_single_post_with_invalid_tag():
+def test_post_wrapper_single_post_with_invalid_tag():
     """Just returns the content."""
-    template_text = "{% load djpress_tags %}{% blog_post tag='foobar' %}<p>This is test post 1.</p>{% end_blog_post %}"
+    template_text = "{% load djpress_tags %}{% post_wrap tag='foobar' %}<p>This is test post 1.</p>{% end_post_wrap %}"
     context = Context({})
 
     template = Template(template_text)
@@ -1611,9 +1611,9 @@ def test_blog_post_wrapper_single_post_with_invalid_tag():
 
 
 @pytest.mark.django_db
-def test_blog_post_wrapper_single_post_with_valid_tag_arg_only():
+def test_post_wrapper_single_post_with_valid_tag_arg_only():
     """Just returns the content."""
-    template_text = "{% load djpress_tags %}{% blog_post 'article' %}<p>This is test post 1.</p>{% end_blog_post %}"
+    template_text = "{% load djpress_tags %}{% post_wrap 'article' %}<p>This is test post 1.</p>{% end_post_wrap %}"
     context = Context({})
 
     template = Template(template_text)
@@ -1622,9 +1622,9 @@ def test_blog_post_wrapper_single_post_with_valid_tag_arg_only():
 
 
 @pytest.mark.django_db
-def test_blog_post_wrapper_single_post_with_invalid_tag_arg_only():
+def test_post_wrapper_single_post_with_invalid_tag_arg_only():
     """Just returns the content."""
-    template_text = "{% load djpress_tags %}{% blog_post 'foobar' %}<p>This is test post 1.</p>{% end_blog_post %}"
+    template_text = "{% load djpress_tags %}{% post_wrap 'foobar' %}<p>This is test post 1.</p>{% end_post_wrap %}"
     context = Context({})
 
     template = Template(template_text)
@@ -1633,9 +1633,9 @@ def test_blog_post_wrapper_single_post_with_invalid_tag_arg_only():
 
 
 @pytest.mark.django_db
-def test_blog_post_wrapper_single_post_with_class(settings):
+def test_post_wrapper_single_post_with_class(settings):
     template_text = (
-        "{% load djpress_tags %}{% blog_post class='blog-post' %}<p>This is test post 1.</p>{% end_blog_post %}"
+        "{% load djpress_tags %}{% post_wrap class='blog-post' %}<p>This is test post 1.</p>{% end_post_wrap %}"
     )
     context = Context({})
 
@@ -1651,8 +1651,8 @@ def test_blog_post_wrapper_single_post_with_class(settings):
 
 
 @pytest.mark.django_db
-def test_blog_post_wrapper_single_post_with_tag_and_class(settings):
-    template_text = "{% load djpress_tags %}{% blog_post tag='div' class='blog-post' %}<p>This is test post 1.</p>{% end_blog_post %}"
+def test_post_wrapper_single_post_with_tag_and_class(settings):
+    template_text = "{% load djpress_tags %}{% post_wrap tag='div' class='blog-post' %}<p>This is test post 1.</p>{% end_post_wrap %}"
     context = Context({})
 
     template = Template(template_text)

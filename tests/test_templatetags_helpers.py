@@ -8,7 +8,7 @@ from djpress.templatetags.helpers import (
     categories_html,
     category_link,
     post_read_more_link,
-    parse_blog_post_wrapper_params,
+    parse_post_wrapper_params,
 )
 
 
@@ -131,33 +131,33 @@ def test_post_read_more_link(test_post1):
     assert post_read_more_link(test_post1, link_class, read_more_text) == expected_output
 
 
-def test_parse_blog_post_wrapper_params():
+def test_parse_post_wrapper_params():
     # Test case 1
     params = ['tag="div"', 'class="blog-post"']
     expected_output = ("div", "blog-post")
-    assert parse_blog_post_wrapper_params(params) == expected_output
+    assert parse_post_wrapper_params(params) == expected_output
 
     # Test case 2
     params = ['class="blog-post"']
     expected_output = ("article", "blog-post")
-    assert parse_blog_post_wrapper_params(params) == expected_output
+    assert parse_post_wrapper_params(params) == expected_output
 
     # Test case 3
     params = ['"div"', '"blog-post"']
     expected_output = ("div", "blog-post")
-    assert parse_blog_post_wrapper_params(params) == expected_output
+    assert parse_post_wrapper_params(params) == expected_output
 
     # Test case 4
     params = ['"blog-post"']
     expected_output = ("blog-post", "")
-    assert parse_blog_post_wrapper_params(params) == expected_output
+    assert parse_post_wrapper_params(params) == expected_output
 
     # Test case 4
     params = ['""', '"blog-post"']
     expected_output = ("", "blog-post")
-    assert parse_blog_post_wrapper_params(params) == expected_output
+    assert parse_post_wrapper_params(params) == expected_output
 
     # Test case 6
     params = ['tag="div"', 'class="blog-post"', 'extra="extra"']
     expected_output = ("div", "blog-post")
-    assert parse_blog_post_wrapper_params(params) == expected_output
+    assert parse_post_wrapper_params(params) == expected_output

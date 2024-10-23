@@ -816,14 +816,14 @@ def rss_url() -> str:
     return url_utils.get_rss_url()
 
 
-@register.tag(name="blog_post")
-def blog_post_wrapper_tag(parser: template.base.Parser, token: template.base.Token) -> helpers.BlogPostWrapper:
+@register.tag(name="post_wrap")
+def post_wrapper_tag(parser: template.base.Parser, token: template.base.Token) -> helpers.BlogPostWrapper:
     """Parse the blog post wrapper tag.
 
     This is a template tag that wraps the blog post content in a configurable HTML tag with a CSS class.
 
     Example usage:
-        {% blog_post "article" "post" %}<p>Post content</p>{% end_blog_post %}
+        {% post_wrap "article" "post" %}<p>Post content</p>{% end_post_wrap %}
 
     Args:
         parser: The template parser.
@@ -834,9 +834,16 @@ def blog_post_wrapper_tag(parser: template.base.Parser, token: template.base.Tok
     """
     params = token.split_contents()[1:]  # skip the tag name
 
-    tag, css_class = helpers.parse_blog_post_wrapper_params(params)
+    tag, css_class = helpers.parse_post_wrapper_params(params)
 
-    nodelist = parser.parse(("end_blog_post",))
+    # If microformats are enabled, add the h-entry class before the css class
+    if djpress_settings.MICROFORMATS_ENABLED:
+        css_class = f"h-entry {css_class}" if css_class else "h-entry"
+
+    if css_class:
+        css_class = f' class="{css_class}"'
+
+    nodelist = parser.parse(("end_post_wrap",))
     parser.delete_first_token()
 
     return helpers.BlogPostWrapper(nodelist, tag, css_class)

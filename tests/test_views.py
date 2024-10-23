@@ -32,7 +32,7 @@ def test_index_view_multiple_posts(client, test_post1, test_post2, test_post3):
         f'<h2 class="p-name"><a href="/test-posts/test-post1/" title="Test Post1">Test Post1</a></h2>'
         in response.content.decode()
     )
-    print(response.content.decode())
+    assert f'<article class="h-entry">' in response.content.decode()
 
 
 @pytest.mark.django_db
