@@ -490,6 +490,10 @@ def post_date(context: Context, link_class: str = "") -> str:
         f"{post_time}."
     )
 
+    # If Microformats are enabled, use dt-published with the date.
+    if djpress_settings.MICROFORMATS_ENABLED:
+        output = f'<time class="dt-published" datetime="{output_date.isoformat()}">{output}</time>'
+
     return mark_safe(output)
 
 
