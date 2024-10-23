@@ -1,6 +1,13 @@
 {
-  "python.testing.pytestArgs": ["tests", "-v"],
+  "python.testing.pytestArgs": [
+    "tests",
+    "-vv"
+  ],
   "python.testing.unittestEnabled": false,
   "python.testing.pytestEnabled": true,
-  "python.analysis.exclude": ["**/build/**", "**/.tox/**", "**/.venv/**"]
+  "python.analysis.exclude": [
+    "**/build/**",
+    "**/.tox/**",
+    "**/.venv/**"
+  ]
 }
