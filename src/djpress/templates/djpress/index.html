@@ -25,7 +25,7 @@
 
         <article>
           <header>
-            <h1>{% post_title_link %}</h1>
+            {% post_title outer_tag="h1" %}
             <p>By {% post_author_link %}. {% post_date_link %}</p>
           </header>
           <section>
@@ -38,11 +38,13 @@
 
       {% else %}
 
+        <h1>Latest Posts</h1>
+
         {% for post in posts %}
 
           <article>
             <header>
-              <h1>{% post_title_link %}</h1>
+              {% post_title outer_tag="h2" %}
               <p>By {% post_author_link %}. {% post_date_link %}</p>
             </header>
             <section>
