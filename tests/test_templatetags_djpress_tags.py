@@ -407,6 +407,19 @@ def test_post_date_with_date_archives_enabled(settings, test_post1):
     post_time = post_date.strftime("%-I:%M %p")
 
     expected_output = (
+        f'<time class="dt-published" datetime="{post_date.isoformat()}">'
+        f'<a href="/test-url-archives/{post_year}/{post_month}/" title="View all posts in {post_month_name} {post_year}">{post_month_name}</a> '
+        f'<a href="/test-url-archives/{post_year}/{post_month}/{post_day}/" title="View all posts on {post_day_name} {post_month_name} {post_year}">{post_day_name}</a>, '
+        f'<a href="/test-url-archives/{post_year}/" title="View all posts in {post_year}">{post_year}</a>, '
+        f"{post_time}."
+        "</time>"
+    )
+
+    assert djpress_tags.post_date(context) == expected_output
+
+    # disable microformats
+    settings.DJPRESS_SETTINGS["MICROFORMATS_ENABLED"] = False
+    expected_output = (
         f'<a href="/test-url-archives/{post_year}/{post_month}/" title="View all posts in {post_month_name} {post_year}">{post_month_name}</a> '
         f'<a href="/test-url-archives/{post_year}/{post_month}/{post_day}/" title="View all posts on {post_day_name} {post_month_name} {post_year}">{post_day_name}</a>, '
         f'<a href="/test-url-archives/{post_year}/" title="View all posts in {post_year}">{post_year}</a>, '
@@ -432,10 +445,12 @@ def test_post_date_with_date_archives_enabled_with_one_link_class(settings, test
     post_time = post_date.strftime("%-I:%M %p")
 
     expected_output = (
+        f'<time class="dt-published" datetime="{post_date.isoformat()}">'
         f'<a href="/test-url-archives/{post_year}/{post_month}/" title="View all posts in {post_month_name} {post_year}" class="class1">{post_month_name}</a> '
         f'<a href="/test-url-archives/{post_year}/{post_month}/{post_day}/" title="View all posts on {post_day_name} {post_month_name} {post_year}" class="class1">{post_day_name}</a>, '
         f'<a href="/test-url-archives/{post_year}/" title="View all posts in {post_year}" class="class1">{post_year}</a>, '
         f"{post_time}."
+        "</time>"
     )
 
     assert djpress_tags.post_date(context, "class1") == expected_output
@@ -457,10 +472,12 @@ def test_post_date_with_date_archives_enabled_with_two_link_classes(settings, te
     post_time = post_date.strftime("%-I:%M %p")
 
     expected_output = (
+        f'<time class="dt-published" datetime="{post_date.isoformat()}">'
         f'<a href="/test-url-archives/{post_year}/{post_month}/" title="View all posts in {post_month_name} {post_year}" class="class1 class2">{post_month_name}</a> '
         f'<a href="/test-url-archives/{post_year}/{post_month}/{post_day}/" title="View all posts on {post_day_name} {post_month_name} {post_year}" class="class1 class2">{post_day_name}</a>, '
         f'<a href="/test-url-archives/{post_year}/" title="View all posts in {post_year}" class="class1 class2">{post_year}</a>, '
         f"{post_time}."
+        "</time>"
     )
 
     assert djpress_tags.post_date(context, "class1 class2") == expected_output
