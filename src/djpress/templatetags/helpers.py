@@ -66,7 +66,19 @@ def category_link(category: Category, link_class: str = "") -> str:
     """
     category_url = category.url
 
-    link_class_html = f' class="{link_class}"' if link_class else ""
+    link_classes = ""
+
+    # Add p-category if microformats are enabled
+    if djpress_settings.MICROFORMATS_ENABLED:
+        link_classes += "p-category "
+
+    # Add the user-defined link class
+    link_classes += link_class
+
+    # Trim any trailing spaces
+    link_classes = link_classes.strip()
+
+    link_class_html = f' class="{link_classes}"' if link_classes else ""
 
     return (
         f'<a href="{category_url}" title="View all posts in the {category.title} '

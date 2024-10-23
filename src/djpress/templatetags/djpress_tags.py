@@ -649,7 +649,7 @@ def author_name(
 
 
 @register.simple_tag(takes_context=True)
-def post_categories_link(
+def post_categories(
     context: Context,
     outer: str = "ul",
     outer_class: str = "",

@@ -873,7 +873,7 @@ Outputs:
 <h1 class="author-title">Posts that 'Sam Jones' wrote</h1>
 ```
 
-## post_categories_link
+## post_categories
 
 Returns a list of links to the categories of the current post.
 
@@ -892,7 +892,7 @@ An HTML string containing a list of category links for the current post.
 Just the tag with no arguments:
 
 ```django
-{% post_categories_link %}
+{% post_categories %}
 ```
 
 Outputs:
@@ -908,7 +908,7 @@ Outputs:
 The tag with all options provided as arguments and using a `div` for the outer tag:
 
 ```django
-{% post_categories_link outer="div" outer_class="post-categories" link_class="category-link" %}
+{% post_categories outer="div" outer_class="post-categories" link_class="category-link" %}
 ```
 
 Outputs the following HTML:
@@ -922,7 +922,7 @@ Outputs the following HTML:
 The tag with a `span` for the outer tag:
 
 ```django
-{% post_categories_link outer="span" %}
+{% post_categories outer="span" %}
 ```
 
 Outputs the following HTML:
