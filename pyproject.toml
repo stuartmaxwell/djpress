@@ -9,7 +9,10 @@ description = "A blog application for Django sites, inspired by classic WordPres
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [{ name = "Stuart Maxwell", email = "stuart@amanzi.nz" }]
-dependencies = ["django", "markdown", "pygments"]
+dependencies = [
+    "django",
+    "markdown",
+]
 license = { file = "LICENSE" }
 classifiers = [
   "Development Status :: 3 - Alpha",
