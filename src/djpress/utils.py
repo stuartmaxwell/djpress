@@ -83,15 +83,53 @@ def validate_date_parts(year: str | None, month: str | None, day: str | None) ->
     return result
 
 
-def get_template_name(templates: list[str]) -> str:
+def get_templates(view_name: str) -> list[str]:
+    """Get the template names for a view.
+
+    Args:
+        view_name (str): The view name.
+
+    Returns:
+        list[str]: The list of template names.
+    """
+    theme = djpress_settings.THEME
+
+    template = ""
+
+    if view_name == "index":
+        template = f"djpress/{theme}/home.html"
+
+    if view_name == "archive_posts":
+        template = f"djpress/{theme}/archives.html"
+
+    if view_name == "category_posts":
+        template = f"djpress/{theme}/category.html"
+
+    if view_name == "author_posts":
+        template = f"djpress/{theme}/author.html"
+
+    if view_name == "single_post":
+        template = f"djpress/{theme}/single.html"
+
+    if view_name == "single_page":
+        template = f"djpress/{theme}/single.html"
+
+    default_template = f"djpress/{theme}/index.html"
+
+    return [template, default_template] if template else [default_template]
+
+
+def get_template_name(view_name: str) -> str:
     """Return the first template that exists.
 
     Args:
-        templates (list[str]): The list of template names.
+        view_name (str): The view name
 
     Returns:
         str: The template name.
     """
+    templates = get_templates(view_name)
+
     try:
         template = str(select_template(templates).template.name)
     except TemplateDoesNotExist as exc:
