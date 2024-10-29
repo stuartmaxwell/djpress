@@ -89,19 +89,25 @@ def test_render_markdown_image_with_title():
     )
 
 
-def test_get_template_name():
+def test_get_template_name(settings):
     # Test case 1 - template exists
     templates = [
         "djpress/not-exists.html",
-        "djpress/index.html",
+        "djpress/default/index.html",
     ]
     template_name = get_template_name(templates)
-    assert template_name == "djpress/index.html"
+    assert template_name == "djpress/default/index.html"
 
-    # Test case 2 - template does not exist
+    # Test case 2 - template does not exist - fall back to default
     templates = [
         "djpress/not-exists.html",
         "djpress/not-exists-2.html",
     ]
+    template_name = get_template_name(templates)
+    assert template_name == "djpress/default/index.html"
+
+    # Test case 3 - default template file does not exist
+    settings.DJPRESS_SETTINGS["THEME"] = "not-exists"
+
     with pytest.raises(TemplateDoesNotExist):
         get_template_name(templates)

@@ -1,0 +1,86 @@
+{% load static %}
+{% load djpress_tags %}
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% blog_page_title post_text="| " %}{% blog_title %}</title>
+    <link rel="stylesheet" href="{% static "simple/css/simple.min.css" %}">
+    <link rel="stylesheet" href="{% static "simple/css/style.css" %}">
+  </head>
+  <body>
+    <header>
+      <h1>{% blog_title_link %}</h1>
+      <nav>
+        {% blog_pages %}
+      </nav>
+    </header>
+
+    <nav>
+      <h3>Recent Posts:</h3>
+      <ul>
+        {% get_recent_posts as posts %}
+        {% for post in posts %}
+          <li><a href="{{ post.url }}">{{ post.title }}</a></li>
+        {% endfor %}
+      </ul>
+    </nav>
+
+    <main>
+
+      {% if post %}
+
+        {% post_wrap %}
+
+          <header>
+            {% post_title outer_tag="h1" %}
+            <p>By {% post_author %}. {% post_date %}</p>
+          </header>
+
+          {% post_content outer_tag="section" %}
+
+          <footer>
+            <p>Categories: {% post_categories "span" "badge" %}</p>
+          </footer>
+
+        {% end_post_wrap %}
+
+      {% else %}
+
+        <h1>Latest Posts</h1>
+
+        {% for post in posts %}
+
+          {% post_wrap %}
+
+            <header>
+              {% post_title outer_tag="h2" %}
+              <p>By {% post_author %}. {% post_date %}</p>
+            </header>
+
+            {% post_content outer_tag="section" %}
+
+            <footer>
+              <p>Categories: {% post_categories "span" "badge" %}</p>
+            </footer>
+
+          {% end_post_wrap %}
+
+        {% empty %}
+
+          <p>No posts available.</p>
+
+        {% endfor %}
+
+      {% endif %}
+
+      {% pagination_links %}
+    </main>
+
+    <footer>
+      <p>{% blog_title_link %}</p>
+    </footer>
+  </body>
+</html>

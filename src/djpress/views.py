@@ -86,12 +86,7 @@ def index(
     Context:
         posts (Page): The published posts as a Page object.
     """
-    template_names: list[str] = [
-        "djpress/home.html",
-        "djpress/index.html",
-    ]
-
-    template: str = get_template_name(templates=template_names)
+    template: str = get_template_name("index")
 
     posts = Paginator(
         Post.post_objects.get_published_posts(),
@@ -129,11 +124,7 @@ def archive_posts(
     Context:
         posts (Page): The published posts for the date as a Page object.
     """
-    template_names: list[str] = [
-        "djpress/archives.html",
-        "djpress/index.html",
-    ]
-    template: str = get_template_name(templates=template_names)
+    template: str = get_template_name(view_name="archive_posts")
 
     try:
         date_parts = validate_date_parts(year=year, month=month, day=day)
@@ -172,11 +163,7 @@ def category_posts(request: HttpRequest, slug: str) -> HttpResponse:
         posts (Page): The published posts for the category as a Page object.
         category (Category): The category object.
     """
-    template_names: list[str] = [
-        "djpress/category.html",
-        "djpress/index.html",
-    ]
-    template: str = get_template_name(templates=template_names)
+    template: str = get_template_name(view_name="category_posts")
 
     try:
         category: Category = Category.objects.get_category_by_slug(slug=slug)
@@ -212,11 +199,7 @@ def author_posts(request: HttpRequest, author: str) -> HttpResponse:
         posts (Page): The published posts by the author as a Page object.
         author (User): The author as a User object.
     """
-    template_names: list[str] = [
-        "djpress/author.html",
-        "djpress/index.html",
-    ]
-    template: str = get_template_name(templates=template_names)
+    template: str = get_template_name(view_name="author_posts")
 
     try:
         user: User = User.objects.get(username=author)
@@ -260,11 +243,6 @@ def single_post(
     Context:
         post (Post): The post object.
     """
-    template_names: list[str] = [
-        "djpress/single.html",
-        "djpress/index.html",
-    ]
-
     try:
         date_parts = validate_date_parts(year=year, month=month, day=day)
         post = Post.post_objects.get_published_post_by_slug(slug=slug, **date_parts)
@@ -275,7 +253,8 @@ def single_post(
         msg = "Post not found"
         raise Http404(msg) from exc
 
-    template: str = get_template_name(templates=template_names)
+    template: str = get_template_name(view_name="single_post")
+
     return render(
         request=request,
         context=context,
@@ -299,11 +278,6 @@ def single_page(request: HttpRequest, path: str) -> HttpResponse:
     Raises:
         Http404: If the page is not found.
     """
-    template_names: list[str] = [
-        "djpress/single.html",
-        "djpress/index.html",
-    ]
-
     try:
         post = Post.page_objects.get_published_page_by_path(path)
         context: dict = {"post": post}
@@ -311,7 +285,7 @@ def single_page(request: HttpRequest, path: str) -> HttpResponse:
         msg = "Page not found"
         raise Http404(msg) from exc
 
-    template: str = get_template_name(templates=template_names)
+    template: str = get_template_name(view_name="single_page")
 
     return render(
         request=request,

@@ -21,4 +21,5 @@ DJPRESS_SETTINGS = {
     "RSS_ENABLED": (True, bool),
     "RSS_PATH": ("rss", str),
     "MICROFORMATS_ENABLED": (True, bool),
+    "THEME": ("default", str),
 }
