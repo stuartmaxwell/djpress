@@ -828,13 +828,40 @@ def page_link(
 
 
 @register.simple_tag
-def rss_url() -> str:
+def get_rss_url() -> str:
     """Return the URL to the RSS feed.
 
     Returns:
         str: The URL to the RSS feed.
     """
     return url_utils.get_rss_url()
+
+
+@register.simple_tag
+def rss_link() -> str:
+    """Return an HTML link to the RSS feed.
+
+    If the RSS feed is enabled, then return an HTML link tag that points to the RSS feed. Otherwise, return an empty
+    string.
+
+    Example:
+        ```django
+        {% rss_link %}
+        ```
+
+        ```html
+        <link rel="alternate" type="application/rss+xml" title="Latest Posts" href="/rss/">
+        ```
+
+    Returns:
+        str: The HTML link to the RSS feed.
+    """
+    if not djpress_settings.RSS_ENABLED:
+        return ""
+
+    rss_url = url_utils.get_rss_url()
+
+    return mark_safe(f'<link rel="alternate" type="application/rss+xml" title="Latest Posts" href="{rss_url}">')
 
 
 @register.tag(name="post_wrap")

@@ -1543,9 +1543,30 @@ def test_page_link(test_page1):
 
 
 def test_rss_url(settings):
-    assert settings.DJPRESS_SETTINGS["RSS_PATH"] == "test-rss"
+    settings.DJPRESS_SETTINGS["RSS_ENABLED"] = True
+
+    settings.DJPRESS_SETTINGS["RSS_PATH"] = "test-rss"
     expected_output = "/test-rss/"
-    assert djpress_tags.rss_url() == expected_output
+    assert settings.DJPRESS_SETTINGS["RSS_PATH"] == "test-rss"
+    assert settings.DJPRESS_SETTINGS["RSS_ENABLED"] is True
+    assert djpress_tags.get_rss_url() == expected_output
+
+    settings.DJPRESS_SETTINGS["RSS_PATH"] = "foobar"
+    expected_output = "/foobar/"
+    assert settings.DJPRESS_SETTINGS["RSS_PATH"] == "foobar"
+    assert settings.DJPRESS_SETTINGS["RSS_ENABLED"] is True
+    assert djpress_tags.get_rss_url() == expected_output
+
+
+def test_rss_link(settings):
+    settings.DJPRESS_SETTINGS["RSS_ENABLED"] = True
+    settings.DJPRESS_SETTINGS["RSS_PATH"] = "test-rss"
+    expected_output = f'<link rel="alternate" type="application/rss+xml" title="Latest Posts" href="/test-rss/">'
+    assert djpress_tags.rss_link() == expected_output
+
+    settings.DJPRESS_SETTINGS["RSS_ENABLED"] = False
+    expected_output = ""
+    assert djpress_tags.rss_link() == expected_output
 
 
 @pytest.mark.django_db
