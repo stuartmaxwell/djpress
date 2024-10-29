@@ -112,7 +112,7 @@ def get_templates(view_name: str) -> list[str]:
         template = f"djpress/{theme}/single.html"
 
     if view_name == "single_page":
-        template = f"djpress/{theme}/single.html"
+        template = f"djpress/{theme}/page.html"
 
     default_template = f"djpress/{theme}/index.html"
 
