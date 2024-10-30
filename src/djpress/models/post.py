@@ -66,7 +66,12 @@ class PagesManager(models.Manager):
     ) -> "Post":
         """Return a single published page from a path.
 
-        The path can consist of one or more pages, e.g. "about", "about/contact".
+        The path can consist of one or more pages, e.g. "about", "about/contact". We split the path into parts and
+        check the page is valid. These are the checks to be made:
+
+        1. The first part of the path must be a top-level page.
+        2. Subsequent parts must be children of the previous page.
+        3. The final page must be published.
 
         Args:
             path (str): The path to the page.
@@ -85,16 +90,23 @@ class PagesManager(models.Manager):
         for i, slug in enumerate(path_parts):
             if i == 0:
                 try:
+                    # The first item must be a top-level page
                     current_page = self.get(slug=slug, parent__isnull=True)
                 except Post.DoesNotExist as exc:
                     msg = "Page not found"
                     raise PageNotFoundError(msg) from exc
             else:
                 try:
+                    # Subsequent items must be children of the previous page
                     current_page = self.get(slug=slug, parent=current_page)
                 except Post.DoesNotExist as exc:
                     msg = "Page not found"
                     raise PageNotFoundError(msg) from exc
+
+        # Check if the final page is published or raise a PageNotFoundError
+        if not current_page.is_published:
+            msg = "Page not found"
+            raise PageNotFoundError(msg)
 
         return current_page
 
@@ -449,19 +461,45 @@ class Post(models.Model):
 
     @property
     def is_published(self: "Post") -> bool:
-        """Return whether the post is published.
+        """Return whether the post or page is published.
 
         For a post to be published, it must meet the following requirements:
         - The status must be "published".
         - The date must be less than or equal to the current date/time.
 
-        This also checks if the parent page is published.
+        For a page to be published, it must meet the following requirements:
+        - The status must be "published".
+        - The date must be less than or equal to the current date/time.
+        - All ancestor pages must also be published.
 
         Returns:
             bool: Whether the post is published.
         """
+        # If the post or page status is not published or the date is in the future, return False
         if not (self.status == "published" and self.date <= timezone.now()):
             return False
-        if self.parent:
+
+        # If the post is a page and has a parent, check if the parent is published
+        if self.post_type == "page" and self.parent:
             return self.parent.is_published
+
+        # If we get to here, the post is published
         return True
+
+    @property
+    def is_parent(self) -> bool:
+        """Return whether the post is a parent page.
+
+        Returns:
+            bool: Whether the post is a parent page.
+        """
+        return self.children.exists()
+
+    @property
+    def is_child(self) -> bool:
+        """Return whether the post is a child page.
+
+        Returns:
+            bool: Whether the post is a child page.
+        """
+        return self.parent is not None

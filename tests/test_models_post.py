@@ -436,6 +436,38 @@ def test_get_published_page_by_path_grandparent(test_page1, test_page2, test_pag
 
 
 @pytest.mark.django_db
+def test_get_published_page_with_draft_parent(test_page1, test_page2, test_page3):
+    """Test that the get_published_page_by_path method returns the correct page."""
+    test_page1.parent = test_page2
+    test_page1.save()
+
+    assert test_page1 == Post.page_objects.get_published_page_by_path(f"/test-page2/test-page1")
+
+    test_page2.status = "draft"
+    test_page2.save()
+
+    with pytest.raises(PageNotFoundError):
+        Post.page_objects.get_published_page_by_path(f"/test-page2/test-page1")
+
+
+@pytest.mark.django_db
+def test_get_published_page_with_draft_grandparent(test_page1, test_page2, test_page3):
+    """Test that the get_published_page_by_path method returns the correct page."""
+    test_page1.parent = test_page2
+    test_page1.save()
+    test_page2.parent = test_page3
+    test_page2.save()
+
+    assert test_page1 == Post.page_objects.get_published_page_by_path(f"/test-page3/test-page2/test-page1")
+
+    test_page3.status = "draft"
+    test_page3.save()
+
+    with pytest.raises(PageNotFoundError):
+        Post.page_objects.get_published_page_by_path(f"/test-page3/test-page2/test-page1")
+
+
+@pytest.mark.django_db
 def test_get_non_existent_page_by_path():
     """Test that the get_published_page_by_path method raises a PageNotFoundError."""
     with pytest.raises(PageNotFoundError):
@@ -868,6 +900,14 @@ def test_page_get_page_tree_with_grandchildren(test_page1, test_page2, test_page
 def test_page_get_page_tree_with_grandchildren_parent_with_future_date(
     test_page1, test_page2, test_page3, test_page4, test_page5
 ):
+    """Test complex page structure.
+
+    test_page5
+    ├── test_page2 (future) = should be unpublished
+    │   ├── test_page1 = should be unpublished
+    │   └── test_page3 = should be unpublished
+    test_page4
+    """
     test_page1.parent = test_page2
     test_page1.save()
     test_page3.parent = test_page2
@@ -876,12 +916,11 @@ def test_page_get_page_tree_with_grandchildren_parent_with_future_date(
     test_page2.date = timezone.now() + timezone.timedelta(days=1)
     test_page2.save()
 
+    assert test_page2.is_published is False
+
     expected_tree = [
         {"page": test_page4, "children": []},
-        {
-            "page": test_page5,
-            "children": [],
-        },
+        {"page": test_page5, "children": []},
     ]
     assert Post.page_objects.get_page_tree() == expected_tree
 
@@ -890,6 +929,14 @@ def test_page_get_page_tree_with_grandchildren_parent_with_future_date(
 def test_page_get_page_tree_with_grandchildren_parent_with_status_draft(
     test_page1, test_page2, test_page3, test_page4, test_page5
 ):
+    """Test complex page structure.
+
+    test_page5
+    ├── test_page2 (future) = should be unpublished
+    │   ├── test_page1 = should be unpublished
+    │   └── test_page3 = should be unpublished
+    test_page4
+    """
     test_page1.parent = test_page2
     test_page1.save()
     test_page3.parent = test_page2
@@ -900,10 +947,7 @@ def test_page_get_page_tree_with_grandchildren_parent_with_status_draft(
 
     expected_tree = [
         {"page": test_page4, "children": []},
-        {
-            "page": test_page5,
-            "children": [],
-        },
+        {"page": test_page5, "children": []},
     ]
     assert Post.page_objects.get_page_tree() == expected_tree
 
@@ -945,43 +989,115 @@ def test_page_order_title(test_page1, test_page2, test_page3, test_page4, test_p
 
 
 @pytest.mark.django_db
-def test_page_is_published(test_page1, test_page2, test_page3, test_page4, test_page5):
+def test_page_is_published_parent_published_page_draft(test_page1, test_page2):
+    test_page1.parent = test_page2
+    test_page1.save()
     assert test_page1.is_published is True
     assert test_page2.is_published is True
-    assert test_page3.is_published is True
 
     test_page1.status = "draft"
     test_page1.save()
     assert test_page1.is_published is False
-
-    test_page2.parent = test_page1
-    test_page2.save()
-    assert test_page2.is_published is False
-
-    test_page2.parent = test_page3
-    test_page2.save()
     assert test_page2.is_published is True
 
-    # change test_page3 to be in the future
+
+@pytest.mark.django_db
+def test_page_is_published(test_page1, test_page2, test_page3, test_page4, test_page5):
+    # All pages are published
+    assert test_page1.is_published is True
+    assert test_page2.is_published is True
+    assert test_page3.is_published is True
+    assert test_page4.is_published is True
+    assert test_page5.is_published is True
+
+    # Change test_page1 to be draft - test_page1 will be unpublished
+    test_page1.status = "draft"
+    test_page1.save()
+    assert test_page1.is_published is False
+
+    # Change test_page2 to have test_page1 as the parent - now both will be unpublished
+    test_page2.parent = test_page1
+    test_page2.save()
+    assert test_page1.is_published is False
+    assert test_page2.is_published is False
+
+    # Change test_page1 to be published again - test_page1 and the child test_page2 will be published again
+    test_page1.status = "published"
+    test_page1.save()
+    assert test_page1.is_published is True
+    assert test_page2.is_published is True
+
+    # Now change test_page2 to draft - test_page1 will still be published, but test_page2 will be unpublished
+    test_page2.status = "draft"
+    test_page2.save()
+    assert test_page1.is_published is True
+    assert test_page2.is_published is False
+
+    # Change test_page2 to published - now both will be published again
+    test_page2.status = "published"
+    test_page2.save()
+    assert test_page2.is_published is True
+    assert test_page1.is_published is True
+
+    # Change test_page3 to be in the future - test_page3 and the child test_page2 will be unpublished
     test_page3.date = timezone.now() + timezone.timedelta(days=1)
     test_page3.save()
-    assert test_page2.is_published is False
     assert test_page3.is_published is False
+    assert test_page2.is_published is True
+    assert test_page1.is_published is True
 
-    # Change test_page3 to be published again
+    # Change test_page2 to have test_page3 as the parent - test_page3 and test_page2 will be unpublished and test_page1 will be published
+    test_page2.parent = test_page3
+    test_page2.save()
+    assert test_page3.is_published is False
+    assert test_page2.is_published is False
+    assert test_page1.is_published is True
+
+    # Change test_page3 to be published again - test_page3 and the child test_page2 will be published
     test_page3.date = timezone.now()
     test_page3.save()
+    assert test_page2.is_published is True
+    assert test_page3.is_published is True
+
+    # Change test_page3 to have test_page4 as the parent - test_page4, test_page3 and test_page2 will be published
     test_page3.parent = test_page4
     test_page3.save()
     assert test_page3.is_published is True
-
-    test_page4.parent = test_page5
-    test_page4.save()
-    assert test_page3.is_published is True
+    assert test_page2.is_published is True
     assert test_page4.is_published is True
 
+    # Change test_page 4 to have test_page5 as the parent - test_page5, test_page4, test_page3 and test_page2 will be published
+    test_page4.parent = test_page5
+    test_page4.save()
+    assert test_page2.is_published is True
+    assert test_page3.is_published is True
+    assert test_page4.is_published is True
+    assert test_page5.is_published is True
+
+    # Change test_page5 to be draft - test_page5, test_page4, test_page3 and test_page2 will be unpublished
     test_page5.status = "draft"
     test_page5.save()
+    assert test_page5.is_published is False
     assert test_page3.is_published is False
     assert test_page4.is_published is False
     assert test_page5.is_published is False
+
+
+@pytest.mark.django_db
+def test_page_is_parent(test_page1, test_page2):
+    assert test_page1.is_parent is False
+    assert test_page2.is_parent is False
+
+    test_page1.parent = test_page2
+    test_page1.save()
+    assert test_page2.is_parent is True
+
+
+@pytest.mark.django_db
+def test_page_is_child(test_page1, test_page2):
+    assert test_page1.is_child is False
+    assert test_page2.is_child is False
+
+    test_page1.parent = test_page2
+    test_page1.save()
+    assert test_page1.is_child is True
