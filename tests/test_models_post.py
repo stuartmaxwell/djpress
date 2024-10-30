@@ -985,3 +985,23 @@ def test_page_is_published(test_page1, test_page2, test_page3, test_page4, test_
     assert test_page3.is_published is False
     assert test_page4.is_published is False
     assert test_page5.is_published is False
+
+
+@pytest.mark.django_db
+def test_page_is_parent(test_page1, test_page2):
+    assert test_page1.is_parent is False
+    assert test_page2.is_parent is False
+
+    test_page1.parent = test_page2
+    test_page1.save()
+    assert test_page2.is_parent is True
+
+
+@pytest.mark.django_db
+def test_page_is_child(test_page1, test_page2):
+    assert test_page1.is_child is False
+    assert test_page2.is_child is False
+
+    test_page1.parent = test_page2
+    test_page1.save()
+    assert test_page1.is_child is True

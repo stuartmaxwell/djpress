@@ -465,3 +465,21 @@ class Post(models.Model):
         if self.parent:
             return self.parent.is_published
         return True
+
+    @property
+    def is_parent(self) -> bool:
+        """Return whether the post is a parent page.
+
+        Returns:
+            bool: Whether the post is a parent page.
+        """
+        return self.children.exists()
+
+    @property
+    def is_child(self) -> bool:
+        """Return whether the post is a child page.
+
+        Returns:
+            bool: Whether the post is a child page.
+        """
+        return self.parent is not None
