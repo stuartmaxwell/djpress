@@ -42,3 +42,7 @@ urlpatterns = [
 - Run migrations: `python3 manage.py migrate`
 
 > Note that this relies on the Django Admin for content management, so ensure that you have a user with at least `staff` status to manage content.
+
+## Badges
+
+[![codecov](https://codecov.io/github/stuartmaxwell/djpress/graph/badge.svg?token=IOS7BCD54B)](https://codecov.io/github/stuartmaxwell/djpress)
