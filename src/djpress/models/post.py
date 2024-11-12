@@ -13,9 +13,11 @@ from django.utils.text import slugify
 from djpress.conf import settings as djpress_settings
 from djpress.exceptions import PageNotFoundError, PostNotFoundError
 from djpress.models import Category
-from djpress.utils import render_markdown
+from djpress.utils import get_markdown_renderer
 
 logger = logging.getLogger(__name__)
+
+render_markdown = get_markdown_renderer()
 
 
 PUBLISHED_POSTS_CACHE_KEY = "published_posts"

@@ -1,24 +1,28 @@
 """Utility functions that are used in the project."""
 
-import markdown
 from django.contrib.auth.models import User
 from django.template.loader import TemplateDoesNotExist, select_template
 from django.utils import timezone
+from django.utils.module_loading import import_string
 
 from djpress.conf import settings as djpress_settings
 
 
-def render_markdown(markdown_text: str) -> str:
-    """Return the Markdown text as HTML."""
-    md = markdown.Markdown(
-        extensions=djpress_settings.MARKDOWN_EXTENSIONS,
-        extension_configs=djpress_settings.MARKDOWN_EXTENSION_CONFIGS,
-        output_format="html",
-    )
-    html = md.convert(markdown_text)
-    md.reset()
+def get_markdown_renderer() -> callable:
+    """Get the configured markdown renderer function.
 
-    return html
+    Returns:
+        callable: The markdown renderer function.
+    """
+    renderer_path = djpress_settings.MARKDOWN_RENDERER
+
+    try:
+        return import_string(renderer_path)
+    except ImportError as exc:
+        from django.core.exceptions import ImproperlyConfigured
+
+        msg = f"Could not import markdown renderer '{renderer_path}': {exc}"
+        raise ImproperlyConfigured(msg) from exc
 
 
 def get_author_display_name(user: User) -> str:
