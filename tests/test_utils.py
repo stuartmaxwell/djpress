@@ -1,8 +1,11 @@
 import pytest
 
-from djpress.utils import get_author_display_name, render_markdown, get_template_name
+from djpress.utils import get_author_display_name, get_markdown_renderer, get_template_name
 from django.contrib.auth.models import User
 from django.template.loader import TemplateDoesNotExist
+
+
+render_markdown = get_markdown_renderer()
 
 
 # create a parameterized fixture for a test user with first name, last name, and username
@@ -46,6 +49,14 @@ def test_get_author_display_name(test_user):
 
     if not first_name and not last_name:
         assert display_name == user_name
+
+
+def test_render_markdown_does_not_exist(settings):
+    settings.DJPRESS_SETTINGS["MARKDOWN_RENDERER"] = "djpress.not_exists"
+    from django.core.exceptions import ImproperlyConfigured
+
+    with pytest.raises(ImproperlyConfigured):
+        get_markdown_renderer()
 
 
 def test_render_markdown_basic():
