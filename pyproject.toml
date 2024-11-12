@@ -4,12 +4,12 @@ build-backend = "hatchling.build"
 
 [project]
 name = "djpress"
-version = "0.10.0"
+version = "0.11.0"
 description = "A blog application for Django sites, inspired by classic WordPress."
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [{ name = "Stuart Maxwell", email = "stuart@amanzi.nz" }]
-dependencies = ["django", "markdown"]
+dependencies = ["django>=4.2.0", "markdown>=3.7"]
 license = { file = "LICENSE" }
 classifiers = [
   "Development Status :: 3 - Alpha",
