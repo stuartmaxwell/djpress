@@ -6,19 +6,19 @@
 - [Post](#post)
 - [Index](#index)
 
-### Page
+## Page
 
 A page is a single piece of content stored in the `Post` table with a `post_type` of `page`. They are used to build static pages on your site that don't belong to categories, nor do they form part of any chronological structure, although they do have created and updated dates that can be used if desired. A page can have a parent (and that parent can have a parent), so that you can build a hierarchical menu. Typical examples are "About" pages or "Contact" pages.
 
-### Post
+## Post
 
 A post is a single blog post stored in the `Post` table with a `post_type` of `post`. A post can belong to categories and tags, and have a created date that is used to display posts in a chronological order on an "Index" page. Posts also have an updated date field that can optionally be used if desired.
 
-### Index
+## Index
 
 These are views that display a chronological list of blog posts that match a particular aspect. For example "/2024" would show all posts in the year 2024, or "/author/sam" shows all blog posts from the author called Sam. Index views have pagination to limit the number of posts displayed on a page which is configurable in the settings. Also, on an Index page, the posts are typically truncated to avoid polluting search engines with multiple copies of the same post on different URLs (although this is configurable).
 
-## URL Types
+### URL Types
 
 - [Single post](#single-post) (Post)
 - [Single page](#single-page) (Page)
@@ -43,7 +43,6 @@ Prefix is optional and configurable with the `POST_PREFIX` setting, and the defa
 - {{ year }}/{{ month }}/{{ day }}/post == "/2024/01/01/post/test-post"
 - foo{{ year }}bar{{ month }} == "/foo2024bar01/test-post"
 - articles == "/articles/test-post"
-
 
 ### Single page
 
@@ -125,7 +124,7 @@ However, browsing by tag can be disabled with the `TAG_ENABLED` setting. This is
 
 There may be additional URL patterns that need to be resolved, that are not covered by the above rules.
 
-#### RSS feed:
+#### RSS feed
 
 - /{{ RSS_PATH }}
 
@@ -163,9 +162,9 @@ To avoid excessive, and complex validation when modifying the settings, we will 
     - Translate the POST_PREFIX into a regex
     - Components used to make up the prefix (all optional):
         - Free form text, e.g. "post"
-        - Year = {{ year }}  = (?P<year>\d{4})
-        - Month = {{ month }} = (?P<month>\d{2})
-        - Day = {{ day }} = (?P<day>\d{2})
+        - Year = {{ year }}  = `(?P<year>\d{4})`
+        - Month = {{ month }} = `(?P<month>\d{2})`
+        - Day = {{ day }} = `(?P<day>\d{2})`
     - e.g. "post/{{ year }}/{{ month }}/{{ day }}" = `r"/post/(?P<year>\d{4})/(?P<month>\d{2})/(?P<day>\d{2})"`
     - The rest of the path is assumed to be the slug and used to find the post
         - If the POST_PREFIX has a date, use this to ensure the post matches the date

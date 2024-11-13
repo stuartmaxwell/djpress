@@ -11,6 +11,13 @@ uv := "uv run --python 3.13 --extra test"
 #Set the uv command to run a tool
 uv-tool := "uv tool run"
 
+# Sphinx settings
+SPHINXOPTS    := ""
+SPHINXBUILD   := "sphinx-build"
+SPHINXPROJ    := "djpress"
+SOURCEDIR     := "docs"
+BUILDDIR      := "docs/_build"
+
 # Run the Django development server
 run:
     @just sync
@@ -96,3 +103,11 @@ pc-up:
 # Run pre-commit hooks
 pc-run:
     {{uv-tool}} pre-commit run --all-files
+
+# Sphinx
+sphinx:
+    @{{SPHINXBUILD}} -M "{{SOURCEDIR}}" "{{BUILDDIR}}" {{SPHINXOPTS}}
+
+# Live HTML build with auto-reload
+sphinx-live:
+    uv run sphinx-autobuild -b html "{{SOURCEDIR}}" "{{BUILDDIR}}" {{SPHINXOPTS}}
