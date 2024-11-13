@@ -2,7 +2,10 @@
 
 from pathlib import Path
 
-import tomllib
+try:
+    import tomllib
+except ImportError:
+    import tomli as tomllib
 
 # Define the path to pyproject.toml
 pyproject_path = Path(__file__).parent.parent.parent / "pyproject.toml"

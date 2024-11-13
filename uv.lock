@@ -294,6 +294,7 @@ source = { editable = "." }
 dependencies = [
     { name = "django" },
     { name = "markdown" },
+    { name = "tomli", marker = "python_full_version < '3.11'" },
 ]
 
 [package.optional-dependencies]
@@ -330,6 +331,7 @@ requires-dist = [
     { name = "sphinx-autobuild", marker = "extra == 'docs'", specifier = ">=2024.10.3" },
     { name = "sphinx-copybutton", marker = "extra == 'docs'", specifier = ">=0.5.2" },
     { name = "sphinx-rtd-theme", marker = "extra == 'docs'", specifier = ">=3.0.1" },
+    { name = "tomli", marker = "python_full_version < '3.11'", specifier = ">=2.1.0" },
 ]
 
 [[package]]
