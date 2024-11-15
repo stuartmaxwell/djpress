@@ -1,6 +1,9 @@
-name: Test
+name: Run Tests on all Supported Python and Django Versions
 
-on: push
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
 
 permissions:
   contents: read
