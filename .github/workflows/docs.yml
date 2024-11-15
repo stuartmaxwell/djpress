@@ -2,8 +2,8 @@ name: Deploy Sphinx Documentation
 
 on:
   push:
-    branches: [ main ]  # or master, depending on your default branch
-  workflow_dispatch:  # Allows manual trigger
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
