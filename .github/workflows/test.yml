@@ -1,4 +1,4 @@
-name: Test
+name: Run Tests on all Supported Python and Django Versions
 
 on:
   push:
