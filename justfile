@@ -104,10 +104,6 @@ pc-up:
 pc-run:
     {{uv-tool}} pre-commit run --all-files
 
-# Sphinx
-sphinx:
-    @{{SPHINXBUILD}} -M "{{SOURCEDIR}}" "{{BUILDDIR}}" {{SPHINXOPTS}}
-
-# Live HTML build with auto-reload
-sphinx-live:
+# Use Sphinx to build and view the documentation
+docs:
     uv run sphinx-autobuild -b html "{{SOURCEDIR}}" "{{BUILDDIR}}" {{SPHINXOPTS}}
