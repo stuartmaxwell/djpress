@@ -116,3 +116,9 @@ BUILDDIR      := "docs/_build"
 @bump-minor *ARGS:
     uv run bumpver update --minor {{ ARGS }}
     uv sync
+
+# Create a new GitHub release - this requires Python 3.11 or newer, and the GitHub CLI must be installed and configured
+version := `python3 -c "from tomllib import load; print(load(open('pyproject.toml', 'rb'))['project']['version'])"`
+[confirm("Create release v{{version}}?")]
+@release:
+    gh release create "v{{version}}" --generate-notes
