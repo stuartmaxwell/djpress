@@ -4,16 +4,12 @@ build-backend = "hatchling.build"
 
 [project]
 name = "djpress"
-version = "0.11.2"
+version = "0.11.3"
 description = "A blog application for Django sites, inspired by classic WordPress."
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [{ name = "Stuart Maxwell", email = "stuart@amanzi.nz" }]
-dependencies = [
-  "django>=4.2.0",
-  "markdown>=3.7",
-  "tomli>=2.1.0 ; python_full_version < '3.11'",
-]
+dependencies = ["django>=4.2.0", "markdown>=3.7"]
 license = { file = "LICENSE" }
 classifiers = [
   "Development Status :: 3 - Alpha",
@@ -43,6 +39,9 @@ Homepage = "https://github.com/stuartmaxwell/djpress"
 Documentation = "https://stuartmaxwell.github.io/djpress/"
 Repository = "https://github.com/stuartmaxwell/djpress"
 Issues = "https://github.com/stuartmaxwell/djpress/issues"
+
+[dependency-groups]
+dev = ["bumpver>=2024.1130"]
 
 [project.optional-dependencies]
 test = [
@@ -94,3 +93,15 @@ python_files = "tests.py test_*.py *_tests.py"
 branch = true
 include = ["src/djpress/*"]
 omit = ["*/tests/*", "*/migrations/*"]
+
+[tool.bumpver]
+current_version = "0.11.3"
+version_pattern = "MAJOR.MINOR.PATCH"
+commit_message = "👍 bump version {old_version} -> {new_version}"
+commit = true
+push = true
+tag = true
+
+[tool.bumpver.file_patterns]
+"pyproject.toml" = ['version = "{version}"']
+"src/djpress/__init__.py" = ['^__version__ = "{version}"$']

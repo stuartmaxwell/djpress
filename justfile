@@ -107,3 +107,12 @@ pc-run:
 # Use Sphinx to build and view the documentation
 docs:
     uv run sphinx-autobuild -b html "{{SOURCEDIR}}" "{{BUILDDIR}}" {{SPHINXOPTS}}
+
+# Use BumpVer to increase the patch version number. Use just bump -d to view a dry-run.
+@bump *ARGS:
+    uv run bumpver update --patch {{ ARGS }}
+
+# Use BumpVer to increase the minor version number. Use just bump -d to view a dry-run.
+@bump-minor *ARGS:
+    uv run bumpver update --minor {{ ARGS }}
+    uv sync
