@@ -97,7 +97,7 @@ omit = ["*/tests/*", "*/migrations/*"]
 [tool.bumpver]
 current_version = "0.11.3"
 version_pattern = "MAJOR.MINOR.PATCH"
-commit_message = ":bookmark: bump version {old_version} -> {new_version}"
+commit_message = "👍 bump version {old_version} -> {new_version}"
 commit = true
 push = true
 tag = true
