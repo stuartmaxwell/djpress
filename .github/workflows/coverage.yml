@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   test:
-    name: Run tests and collect coverage
+    name: Run test and collect coverage
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
