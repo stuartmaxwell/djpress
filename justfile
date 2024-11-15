@@ -107,3 +107,7 @@ pc-run:
 # Use Sphinx to build and view the documentation
 docs:
     uv run sphinx-autobuild -b html "{{SOURCEDIR}}" "{{BUILDDIR}}" {{SPHINXOPTS}}
+
+# Use BumpVer to increase the version number
+@bump *ARGS:
+    uv run bumpver update {{ ARGS }}
