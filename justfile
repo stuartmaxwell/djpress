@@ -115,3 +115,4 @@ docs:
 # Use BumpVer to increase the minor version number. Use just bump -d to view a dry-run.
 @bump-minor *ARGS:
     uv run bumpver update --minor {{ ARGS }}
+    uv sync
