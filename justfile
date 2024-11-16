@@ -118,7 +118,12 @@ BUILDDIR      := "docs/_build"
     uv sync
 
 # Create a new GitHub release - this requires Python 3.11 or newer, and the GitHub CLI must be installed and configured
-version := `python3 -c "from tomllib import load; print(load(open('pyproject.toml', 'rb'))['project']['version'])"`
-[confirm("Create release v{{version}}?")]
+version := `echo "from tomllib import load; print(load(open('pyproject.toml', 'rb'))['project']['version'])" | uv run - `
+
+[confirm("Are you sure you want to create a new release?\nThis will create a new GitHub release and will build and deploy a new version to PyPi.\nYou should have already updated the version number using one of the bump recipes.\nTo check the version number, run just version.\n\nCreate release?")]
 @release:
+    echo "Creating a new release for v{{version}}"
     gh release create "v{{version}}" --generate-notes
+
+@version:
+    echo {{version}}
