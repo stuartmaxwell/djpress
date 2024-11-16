@@ -1,8 +1,12 @@
 name: Run Tests on all Supported Python and Django Versions
 
 on:
+  pull_request:
+    branches:
+      - main
   push:
-    branches: [ main ]
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
