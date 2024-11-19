@@ -8,6 +8,14 @@ from django.utils.module_loading import import_string
 from djpress.conf import settings as djpress_settings
 
 
+# Hook definitions
+class Hooks(Enum):
+    """Available hook points in DJ Press."""
+
+    PRE_RENDER_CONTENT = "pre_render_content"
+    POST_RENDER_CONTENT = "post_render_content"
+
+
 class PluginRegistry:
     """A registry for plugins.
 
@@ -26,7 +34,14 @@ class PluginRegistry:
         Args:
             hook_name (str): The name of the hook.
             callback (callable): The function to call when the hook is triggered.
+
+        Raises:
+            TypeError: If hook_name is not a Hooks enum member.
         """
+        if not isinstance(hook_name, Hooks):
+            msg = f"hook_name must be a Hooks enum member, got {type(hook_name)}"
+            raise TypeError(msg)
+
         if hook_name not in self.hooks:
             self.hooks[hook_name] = []
         self.hooks[hook_name].append(callback)
@@ -42,7 +57,14 @@ class PluginRegistry:
 
         Returns:
             The modified value after all callbacks have been run.
+
+        Raises:
+            TypeError: If hook_name is not a Hooks enum member.
         """
+        if not isinstance(hook_name, Hooks):
+            msg = f"hook_name must be a Hooks enum member, got {type(hook_name)}"
+
+            raise TypeError(msg)
         if not self._loaded:
             self.load_plugins()
 
@@ -162,15 +184,3 @@ class DJPressPlugin:
 
 # Instantiate the global plugin registry
 registry = PluginRegistry()
-
-
-# Hook definitions
-class Hooks(Enum):
-    """Available hook points in DJ Press."""
-
-    PRE_RENDER_CONTENT = "pre_render_content"
-    POST_RENDER_CONTENT = "post_render_content"
-
-    def __str__(self) -> str:
-        """Return the hook's value when used as a string."""
-        return self.value
