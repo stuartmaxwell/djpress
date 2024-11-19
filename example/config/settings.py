@@ -89,3 +89,7 @@ STATICFILES_DIRS = [
 
 # Required for django-debug-toolbar
 INTERNAL_IPS = ["127.0.0.1"]
+
+DJPRESS_SETTINGS = {
+    "PLUGINS": ["djpress_example_plugin"],
+}
