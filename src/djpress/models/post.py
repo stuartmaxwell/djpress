@@ -343,12 +343,18 @@ class Post(models.Model):
         return self.title
 
     def save(self: "Post", *args, **kwargs) -> None:  # noqa: ANN002, ANN003
-        """Override the save method to auto-generate the slug."""
+        """Override the save method."""
+        # auto-generate the slug.
         if not self.slug:
             self.slug = slugify(self.title)
             if not self.slug or self.slug.strip("-") == "":
                 msg = "Invalid title. Unable to generate a valid slug."
                 raise ValueError(msg)
+
+        # If the post is a post, we need to ensure that the parent is None
+        if self.post_type == "post":
+            self.parent = None
+
         self.full_clean()
         super().save(*args, **kwargs)
 
