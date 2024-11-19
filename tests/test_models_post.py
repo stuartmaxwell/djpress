@@ -1101,3 +1101,19 @@ def test_page_is_child(test_page1, test_page2):
     test_page1.parent = test_page2
     test_page1.save()
     assert test_page1.is_child is True
+
+
+@pytest.mark.django_db
+def test_parent_page_cant_have_post_child(test_page1, test_post1):
+    test_post1.parent = test_page1
+    test_post1.save()
+
+    assert test_post1 not in test_page1.children.all()
+
+
+@pytest.mark.django_db
+def test_post_parent_is_none(test_post1, test_page1):
+    test_post1.parent = test_page1
+    test_post1.save()
+
+    assert test_post1.parent is None
