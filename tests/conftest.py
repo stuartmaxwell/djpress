@@ -6,6 +6,7 @@ from django.contrib.auth.models import User
 
 from djpress.url_converters import SlugPathConverter
 from djpress.models import Category, Post
+from djpress.plugins import registry
 
 from example.config import settings_testing
 
@@ -182,3 +183,19 @@ def test_page5(user):
         status="published",
         post_type="page",
     )
+
+
+@pytest.fixture
+def clean_registry():
+    """Reset the plugin registry before and after each test."""
+    # Reset before test
+    registry.hooks = {}
+    registry.plugins = []
+    registry._loaded = False
+
+    yield
+
+    # Reset after test
+    registry.hooks = {}
+    registry.plugins = []
+    registry._loaded = False
