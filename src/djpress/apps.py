@@ -14,3 +14,8 @@ class DjpressConfig(AppConfig):
         """Run when the app is ready."""
         # Import signals to ensure they are registered
         import djpress.signals  # noqa: F401
+
+        # Initialize plugin system
+        from djpress.plugins import registry
+
+        registry.load_plugins()

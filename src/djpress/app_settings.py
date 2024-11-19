@@ -16,6 +16,8 @@ DJPRESS_SETTINGS = {
     "MARKDOWN_EXTENSIONS": ([], list),
     "MARKDOWN_RENDERER": ("djpress.markdown_renderer.default_renderer", str),
     "MICROFORMATS_ENABLED": (True, bool),
+    "PLUGINS": ([], list),
+    "PLUGIN_SETTINGS": ({}, dict),
     "POST_PREFIX": ("{{ year }}/{{ month }}/{{ day }}", str),
     "POST_READ_MORE_TEXT": ("Read more...", str),
     "RECENT_PUBLISHED_POSTS_COUNT": (20, int),

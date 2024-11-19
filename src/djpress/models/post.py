@@ -13,6 +13,7 @@ from django.utils.text import slugify
 from djpress.conf import settings as djpress_settings
 from djpress.exceptions import PageNotFoundError, PostNotFoundError
 from djpress.models import Category
+from djpress.plugins import Hooks, registry
 from djpress.utils import get_markdown_renderer
 
 logger = logging.getLogger(__name__)
@@ -395,7 +396,17 @@ class Post(models.Model):
     @property
     def content_markdown(self: "Post") -> str:
         """Return the content as HTML converted from Markdown."""
-        return render_markdown(self.content)
+        # Get the raw markdown content
+        content = self.content
+
+        # Let plugins modify the markdown before rendering
+        content = registry.run_hook(Hooks.PRE_RENDER_CONTENT, content)
+
+        # Render the markdown
+        html_content = render_markdown(content)
+
+        # Let the plugins modify the markdown after rendering and return the results
+        return registry.run_hook(Hooks.POST_RENDER_CONTENT, html_content)
 
     @property
     def truncated_content_markdown(self: "Post") -> str:
