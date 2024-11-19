@@ -1,5 +1,6 @@
 """Plugin system for DJ Press."""
 
+from enum import Enum
 from typing import Any
 
 from django.utils.module_loading import import_string
@@ -164,8 +165,12 @@ registry = PluginRegistry()
 
 
 # Hook definitions
-class Hooks:
-    """A collection of hook names."""
+class Hooks(Enum):
+    """Available hook points in DJ Press."""
 
     PRE_RENDER_CONTENT = "pre_render_content"
     POST_RENDER_CONTENT = "post_render_content"
+
+    def __str__(self) -> str:
+        """Return the hook's value when used as a string."""
+        return self.value
