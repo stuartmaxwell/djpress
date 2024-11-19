@@ -59,3 +59,36 @@ def test_truncated_posts_feed(client, user):
     assert "<title>Post 1</title>" in feed
     assert "Truncated content" not in feed
     assert f'&lt;a href="/{post_prefix}/post-1/"&gt;Read more&lt;/a&gt;&lt;/p&gt;' in feed
+
+
+@pytest.mark.django_db
+def test_pages_not_in_feed(client, test_post1, test_post2, test_post3, test_page1, user):
+    url = get_rss_url()
+    response = client.get(url)
+
+    assert response.status_code == 200
+    assert response["Content-Type"] == "application/rss+xml; charset=utf-8"
+
+    feed = response.content.decode("utf-8")
+    assert "<item>" in feed
+    assert test_post1.title in feed
+    assert test_post2.title in feed
+    assert test_post3.title in feed
+    assert test_page1.title not in feed
+
+    Post.page_objects.create(
+        title="New Test Page",
+        content="Content of page 1.",
+        author=user,
+        status="published",
+        post_type="page",
+    )
+
+    response = client.get(url)
+
+    assert response.status_code == 200
+    assert response["Content-Type"] == "application/rss+xml; charset=utf-8"
+
+    feed = response.content.decode("utf-8")
+    assert "<item>" in feed
+    assert "New Test Page" not in feed
