@@ -361,7 +361,7 @@ class Post(models.Model):
 
         # If the post is a post and it's published, run the post_save_post hook
         if self.post_type == "post" and self.is_published:
-            registry.run_hook(Hooks.POST_SAVE_POST, post=self)
+            registry.run_hook(Hooks.POST_SAVE_POST, self)
 
     def clean(self) -> None:
         """Custom validation for the Post model."""

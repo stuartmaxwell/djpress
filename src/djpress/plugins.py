@@ -15,15 +15,7 @@ class Hooks(Enum):
 
     PRE_RENDER_CONTENT = "pre_render_content"
     POST_RENDER_CONTENT = "post_render_content"
-
     POST_SAVE_POST = "post_save_post"
-
-    @property
-    def no_return(self) -> bool:
-        """Whether this hook should return a value."""
-        return self in {
-            self.POST_SAVE_POST,
-        }
 
 
 class PluginRegistry:
@@ -68,7 +60,7 @@ class PluginRegistry:
             **kwargs: Additional keyword arguments to pass to the callbacks.
 
         Returns:
-            The modified value after all callbacks have been run.
+            The value after all callbacks have been run.
 
         Raises:
             TypeError: If hook_name is not a Hooks enum member.
@@ -81,13 +73,9 @@ class PluginRegistry:
             self.load_plugins()
 
         if hook_name in self.hooks:
-            if hook_name.no_return:
-                for callback in self.hooks[hook_name]:
-                    callback(*args, **kwargs)
-                return None
-
             for callback in self.hooks[hook_name]:
                 value = callback(value, *args, **kwargs)
+
         return value
 
     def load_plugins(self) -> None:
