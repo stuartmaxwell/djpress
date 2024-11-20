@@ -1,5 +1,6 @@
 """Plugin system for DJ Press."""
 
+import contextlib  # Ruff: SIM105
 from enum import Enum
 from typing import Any
 
@@ -28,29 +29,31 @@ class PluginRegistry:
         self.hooks = {}
         self._loaded = False
 
-    def register_hook(self, hook_name: str, callback: callable) -> None:
+    def register_hook(self, hook_name: Hooks | str, callback: callable) -> None:
         """Register a callback function for a specific hook.
 
         Args:
-            hook_name (str): The name of the hook.
+            hook_name (Hooks | str): The name of the hook - this can be referenced either as the plain text name of
+                the hook (e.g. `"pre_render_content"`) or as a Hooks enum member (e.g. `Hooks.PRE_RENDER_CONTENT`).
             callback (callable): The function to call when the hook is triggered.
 
         Raises:
             TypeError: If hook_name is not a Hooks enum member.
         """
-        if not isinstance(hook_name, Hooks):
-            msg = f"hook_name must be a Hooks enum member, got {type(hook_name)}"
-            raise TypeError(msg)
+        # Convert string to Enum if needed, and supress error if not possible
+        if isinstance(hook_name, str):
+            with contextlib.suppress(ValueError):
+                hook_name = Hooks(hook_name)
 
         if hook_name not in self.hooks:
             self.hooks[hook_name] = []
         self.hooks[hook_name].append(callback)
 
-    def run_hook(self, hook_name: str, value: Any = None, *args: Any, **kwargs: Any) -> Any:  # noqa: ANN401
+    def run_hook(self, hook_name: Hooks, value: Any = None, *args: Any, **kwargs: Any) -> Any:  # noqa: ANN401
         """Run all registered callbacks for a given hook.
 
         Args:
-            hook_name (str): The name of the hook.
+            hook_name (Hooks): The name of the hook to run, this should be in the form of a Hooks enum member.
             value: The value to be modified by the callbacks.
             *args: Additional positional arguments to pass to the callbacks.
             **kwargs: Additional keyword arguments to pass to the callbacks.
@@ -63,8 +66,8 @@ class PluginRegistry:
         """
         if not isinstance(hook_name, Hooks):
             msg = f"hook_name must be a Hooks enum member, got {type(hook_name)}"
-
             raise TypeError(msg)
+
         if not self._loaded:
             self.load_plugins()
 
