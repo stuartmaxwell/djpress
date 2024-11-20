@@ -59,3 +59,56 @@ def test_check_detects_plugin_with_unknown_hook(bad_plugin_registry):
     print(warnings)
     assert len(warnings) == 1
     assert "unknown hook 'foobar'" in str(warnings[0])
+
+
+def test_check_detects_plugin_with_unknown_hook_not_loaded(clean_registry):
+    """Test that check system detects plugin with unknown hook when plugins aren't loaded."""
+
+    class BadPlugin(DJPressPlugin):
+        name = "bad_plugin"
+
+        def setup(self, registry):
+            registry.register_hook("foobar", lambda x: x)
+
+    # Manually create and setup the plugin
+    plugin = BadPlugin()
+    plugin.setup(registry)
+
+    # Force registry to appear unloaded
+    registry._loaded = False
+
+    warnings = check_plugin_hooks(None)
+    assert len(warnings) == 1
+    assert "unknown hook 'foobar'" in str(warnings[0])
+
+
+def test_check_loads_plugins_if_not_loaded(clean_registry):
+    """Test that check loads plugins if they aren't already loaded."""
+    from djpress.plugins import registry  # Import inside test
+
+    # Reset registry state
+    registry._loaded = False
+    registry.plugins = []
+    registry.hooks = {}
+
+    # Mock load_plugins to verify it's called
+    from unittest.mock import patch
+
+    with patch("djpress.plugins.registry.load_plugins") as mock_load:
+        check_plugin_hooks(None)
+        mock_load.assert_called_once()
+
+
+def test_check_skips_loading_plugins_if_already_loaded(clean_registry):
+    """Test that check skips loading plugins if they're already loaded."""
+    from djpress.plugins import registry
+
+    # Make sure registry shows as loaded
+    registry._loaded = True
+
+    # Mock load_plugins to verify it's NOT called
+    from unittest.mock import patch
+
+    with patch("djpress.plugins.registry.load_plugins") as mock_load:
+        check_plugin_hooks(None)
+        mock_load.assert_not_called()
