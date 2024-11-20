@@ -1,7 +1,7 @@
 import pytest
 from django.core.checks import Warning
 from djpress.checks import check_plugin_hooks
-from djpress.plugins import registry, Hooks
+from djpress.plugins import DJPressPlugin, registry, Hooks
 
 
 def test_check_valid_hooks(clean_registry):
@@ -51,3 +51,11 @@ def test_check_multiple_hooks(clean_registry):
     warnings = check_plugin_hooks(None)
     assert len(warnings) == 1  # Only one warning for the unknown hook
     assert "unknown hook 'unknown_hook'" in str(warnings[0])
+
+
+def test_check_detects_plugin_with_unknown_hook(bad_plugin_registry):
+    """Test that check system detects plugin using unknown hook."""
+    warnings = check_plugin_hooks(None)
+    print(warnings)
+    assert len(warnings) == 1
+    assert "unknown hook 'foobar'" in str(warnings[0])
