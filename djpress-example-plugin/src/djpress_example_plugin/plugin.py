@@ -1,10 +1,6 @@
 """An example DJ Press plugin."""
 
-import logging
-
-from djpress.plugins import DJPressPlugin, Hooks, PluginRegistry
-
-logger = logging.getLogger(__name__)
+from djpress.plugins import DJPressPlugin, PluginRegistry
 
 
 class Plugin(DJPressPlugin):
@@ -12,18 +8,14 @@ class Plugin(DJPressPlugin):
 
     name = "djpress_example_plugin"
 
-    def __init__(self) -> None:
-        """Initisalize the plugin."""
-        super().__init__()
-
     def setup(self, registry: PluginRegistry) -> None:
         """Set up the plugin.
 
         Args:
             registry (Hooks): The plugin registry.
         """
-        registry.register_hook(Hooks.PRE_RENDER_CONTENT, self.add_greeting)
-        registry.register_hook(Hooks.POST_RENDER_CONTENT, self.add_goodbye)
+        registry.register_hook("pre_render_content", self.add_greeting)
+        registry.register_hook("post_render_content", self.add_goodbye)
 
     def add_greeting(self, content: str) -> str:
         """Add a greeting to the content.
@@ -36,7 +28,7 @@ class Plugin(DJPressPlugin):
         Returns:
             str: The modified content.
         """
-        return f"Hello, world! This was added by `djpress_example_plugin`!\n\n---\n\n{content}"
+        return f"{self.config.get("pre_text")} This was added by `djpress_example_plugin`!\n\n---\n\n{content}"
 
     def add_goodbye(self, content: str) -> str:
         """Add a goodbye message to the content.
@@ -49,4 +41,6 @@ class Plugin(DJPressPlugin):
         Returns:
             str: The modified content.
         """
-        return f"{content}<hr><p>Goodbye, world! This was added by <code>djpress_example_plugin</code>!</p>"
+        return (
+            f"{content}<hr><p>{self.config.get("pre_text")} This was added by <code>djpress_example_plugin</code>!</p>"
+        )

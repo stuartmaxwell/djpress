@@ -92,4 +92,10 @@ INTERNAL_IPS = ["127.0.0.1"]
 
 DJPRESS_SETTINGS = {
     "PLUGINS": ["djpress_example_plugin"],
+    "PLUGIN_SETTINGS": {
+        "djpress_example_plugin": {
+            "pre_text": "Hello, this text is configurable!",
+            "post_text": "Goodbye, this text is configurable!",
+        },
+    },
 }
