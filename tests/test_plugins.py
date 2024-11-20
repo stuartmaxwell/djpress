@@ -310,3 +310,98 @@ def test_register_multiple_callbacks(clean_registry):
     # Verify both callbacks are executed in order
     result = registry.run_hook(Hooks.PRE_RENDER_CONTENT, "test")
     assert result == "test12"
+
+
+def test_content_modification_hook(clean_registry):
+    """Test hooks that modify and return content."""
+
+    def test_callback(content: str) -> str:
+        return content + " modified"
+
+    registry.register_hook(Hooks.PRE_RENDER_CONTENT, test_callback)
+    result = registry.run_hook(Hooks.PRE_RENDER_CONTENT, "test")
+    assert result == "test modified"
+
+
+def test_signal_hook(clean_registry):
+    """Test hooks that don't return values (signal-like hooks)."""
+    calls = []
+
+    def test_callback(post=None):
+        calls.append(post)
+
+    # Create a mock post
+    class MockPost:
+        title = "Test Post"
+
+    post = MockPost()
+
+    registry.register_hook(Hooks.POST_SAVE_POST, test_callback)
+    result = registry.run_hook(Hooks.POST_SAVE_POST, post=post)
+
+    assert result is None  # Signal hooks return None
+    assert len(calls) == 1  # Callback was called
+    assert calls[0] == post  # Callback received the post object
+
+
+def test_multiple_signal_hooks(clean_registry):
+    """Test multiple callbacks for signal-like hooks."""
+    calls = []
+
+    def callback1(post=None):
+        calls.append(f"callback1: {post.title}")
+
+    def callback2(post=None):
+        calls.append(f"callback2: {post.title}")
+
+    class MockPost:
+        title = "Test Post"
+
+    post = MockPost()
+
+    registry.register_hook(Hooks.POST_SAVE_POST, callback1)
+    registry.register_hook(Hooks.POST_SAVE_POST, callback2)
+
+    registry.run_hook(Hooks.POST_SAVE_POST, post=post)
+
+    assert len(calls) == 2
+    assert calls == ["callback1: Test Post", "callback2: Test Post"]
+
+
+def test_hook_type_properties():
+    """Test that hooks correctly identify their type."""
+    assert Hooks.PRE_RENDER_CONTENT.no_return is False
+    assert Hooks.POST_RENDER_CONTENT.no_return is False
+    assert Hooks.POST_SAVE_POST.no_return is True
+
+
+def test_mixed_hook_types(clean_registry):
+    """Test that different hook types work together."""
+    content_calls = []
+    signal_calls = []
+
+    def content_callback(content: str) -> str:
+        content_calls.append(content)
+        return content + " modified"
+
+    def signal_callback(post=None):
+        signal_calls.append(post.title)
+
+    class MockPost:
+        title = "Test Post"
+
+    post = MockPost()
+
+    # Register both types of hooks
+    registry.register_hook(Hooks.PRE_RENDER_CONTENT, content_callback)
+    registry.register_hook(Hooks.POST_SAVE_POST, signal_callback)
+
+    # Test content modification hook
+    content_result = registry.run_hook(Hooks.PRE_RENDER_CONTENT, "test")
+    assert content_result == "test modified"
+    assert content_calls == ["test"]
+
+    # Test signal hook
+    signal_result = registry.run_hook(Hooks.POST_SAVE_POST, post=post)
+    assert signal_result is None
+    assert signal_calls == ["Test Post"]
