@@ -16,6 +16,14 @@ class Hooks(Enum):
     PRE_RENDER_CONTENT = "pre_render_content"
     POST_RENDER_CONTENT = "post_render_content"
 
+    @property
+    def returns_value(self) -> bool:
+        """Whether this hook should return a value."""
+        return self in {
+            self.PRE_RENDER_CONTENT,
+            self.POST_RENDER_CONTENT,
+        }
+
 
 class PluginRegistry:
     """A registry for plugins.
@@ -72,10 +80,14 @@ class PluginRegistry:
             self.load_plugins()
 
         if hook_name in self.hooks:
+            if hook_name.returns_value:
+                for callback in self.hooks[hook_name]:
+                    value = callback(value, *args, **kwargs)
+                return value
             for callback in self.hooks[hook_name]:
-                value = callback(value, *args, **kwargs)
+                callback(*args, **kwargs)
 
-        return value
+        return None
 
     def load_plugins(self) -> None:
         """Load all plugins.
