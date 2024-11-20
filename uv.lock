@@ -1,6 +1,12 @@
 version = 1
 requires-python = ">=3.10"
 
+[manifest]
+members = [
+    "djpress",
+    "djpress-example-plugin",
+]
+
 [[package]]
 name = "alabaster"
 version = "1.0.0"
@@ -304,7 +310,7 @@ wheels = [
 
 [[package]]
 name = "djpress"
-version = "0.11.3"
+version = "0.12.0"
 source = { editable = "." }
 dependencies = [
     { name = "django" },
@@ -323,6 +329,7 @@ docs = [
 ]
 test = [
     { name = "django-debug-toolbar" },
+    { name = "djpress-example-plugin" },
     { name = "nox" },
     { name = "pytest" },
     { name = "pytest-coverage" },
@@ -339,6 +346,7 @@ requires-dist = [
     { name = "cogapp", marker = "extra == 'docs'", specifier = ">=3.4.1" },
     { name = "django", specifier = ">=4.2.0" },
     { name = "django-debug-toolbar", marker = "extra == 'test'", specifier = ">=4.4.0" },
+    { name = "djpress-example-plugin", marker = "extra == 'test'", editable = "djpress-example-plugin" },
     { name = "furo", marker = "extra == 'docs'", specifier = ">=2024.8.6" },
     { name = "markdown", specifier = ">=3.7" },
     { name = "myst-parser", marker = "extra == 'docs'", specifier = ">=4.0.0" },
@@ -354,6 +362,21 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [{ name = "bumpver", specifier = ">=2024.1130" }]
+
+[[package]]
+name = "djpress-example-plugin"
+version = "0.1.0"
+source = { editable = "djpress-example-plugin" }
+dependencies = [
+    { name = "django" },
+    { name = "djpress" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "django", specifier = ">=4.2.0" },
+    { name = "djpress", editable = "." },
+]
 
 [[package]]
 name = "docutils"

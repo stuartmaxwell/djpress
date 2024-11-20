@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "djpress"
-version = "0.11.4"
+version = "0.12.0"
 description = "A blog application for Django sites, inspired by classic WordPress."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -50,6 +50,7 @@ test = [
   "pytest-coverage>=0.0",
   "django-debug-toolbar>=4.4.0",
   "nox>=2024.4.15",
+  "djpress-example-plugin",
 ]
 docs = [
   "cogapp>=3.4.1",
@@ -95,7 +96,7 @@ include = ["src/djpress/*"]
 omit = ["*/tests/*", "*/migrations/*"]
 
 [tool.bumpver]
-current_version = "0.11.4"
+current_version = "0.12.0"
 version_pattern = "MAJOR.MINOR.PATCH"
 commit_message = "👍 bump version {old_version} -> {new_version}"
 commit = true
@@ -105,3 +106,9 @@ tag = true
 [tool.bumpver.file_patterns]
 "pyproject.toml" = ['version = "{version}"']
 "src/djpress/__init__.py" = ['^__version__ = "{version}"$']
+
+[tool.uv.workspace]
+members = ["djpress-example-plugin"]
+
+[tool.uv.sources]
+djpress-example-plugin = { workspace = true }

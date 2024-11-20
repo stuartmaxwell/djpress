@@ -1,0 +1,1 @@
+"""DJ Press example plugin."""

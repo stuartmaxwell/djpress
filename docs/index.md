@@ -8,6 +8,7 @@ complete:
 - [URL Structure](url_structure.md)
 - [Template Tags](templatetags.md)
 - [Themes](themes.md)
+- [Plugins](plugins.md)
 
 ## Table of Contents
 
@@ -20,4 +21,5 @@ configuration
 url_structure
 templatetags
 themes
+plugins
 ```
