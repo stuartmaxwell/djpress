@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 
 from djpress.url_converters import SlugPathConverter
 from djpress.models import Category, Post
-from djpress.plugins import registry
+from djpress.plugins import DJPressPlugin, registry
 
 from example.config import settings_testing
 
@@ -199,3 +199,20 @@ def clean_registry():
     registry.hooks = {}
     registry.plugins = []
     registry._loaded = False
+
+
+@pytest.fixture
+def bad_plugin_registry(clean_registry):
+    """Create a registry with a plugin that uses an unknown hook."""
+
+    class BadPlugin(DJPressPlugin):
+        name = "bad_plugin"
+
+        def setup(self, registry):
+            registry.register_hook("foobar", lambda x: x)
+
+    # Manually create and setup the plugin
+    plugin = BadPlugin()
+    plugin.setup(registry)
+
+    return registry
