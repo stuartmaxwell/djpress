@@ -1,6 +1,7 @@
 """Djpress app configuration."""
 
 from django.apps import AppConfig
+from django.core.checks import Tags, register
 
 
 class DjpressConfig(AppConfig):
@@ -19,3 +20,8 @@ class DjpressConfig(AppConfig):
         from djpress.plugins import registry
 
         registry.load_plugins()
+
+        # Register check explicitly
+        from djpress.checks import check_plugin_hooks
+
+        register(check_plugin_hooks, Tags.compatibility)

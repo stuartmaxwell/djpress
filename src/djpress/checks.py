@@ -1,12 +1,15 @@
 """Custom checks for DJPress."""
 
-from django.core.checks import Warning, register
+from django.core.checks import Warning
 
 
-@register()
 def check_plugin_hooks(app_configs, **kwargs) -> list[Warning]:  # noqa: ANN001, ANN003, ARG001
     """Check for unknown plugin hooks."""
     from djpress.plugins import Hooks, registry
+
+    # Ensure plugins are loaded
+    if not registry._loaded:  # noqa: SLF001
+        registry.load_plugins()
 
     warnings = []
 
