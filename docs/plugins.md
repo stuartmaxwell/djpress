@@ -37,20 +37,33 @@ class Plugin(DJPressPlugin):
         return content
 ```
 
+## Saving Plugin Data
+
+Plugins can store a blob of JSON data in the database through the use of a JSONField on the PluginStorage model.
+
+To retrieve the data, plugins can use: `data = self.get_data()`, and to save the data: `self.save_data(data)`.
+
 ## Available Hooks
 
 Currently available hooks:
 
-- `pre_render_content`: Called before markdown content is rendered to HTML
-- `post_render_content`: Called after markdown content is rendered to HTML
+- `pre_render_content`: Called before markdown content is rendered to HTML. Passes the content to the plugin and
+  expects to get content back.
+- `post_render_content`: Called after markdown content is rendered to HTML. Passes the content to the plugin and
+  expects to get content back.
+- `post_save_post`: Called after saving a published post. Passes the published post to the plugin and ignores any
+  returned values.
 
 **Note** that you can also import the `Hooks` enum class, and reference the hook names specifically, e.g.
-`from djpress.plugins import Hooks` and then you can refer to the above two hooks as follows:
+`from djpress.plugins import Hooks` and then you can refer to the above hooks as follows:
 
 - `Hooks.PRE_RENDER_CONTENT`
 - `Hooks.POST_RENDER_CONTENT`
+- `Hooks.POST_SAVE_POST`
 
-Each hook receives the content as its first argument and must return the modified content.
+Each hook receives a value as its first argument and returns a value to be used by DJ Press. For example, the hooks
+relating to rendering content expect to receive content back to continue processing. However, the `POST_SAVE_POST` hook
+ignores any returned values since it has finished processing that step.
 
 ## Installing Plugins
 

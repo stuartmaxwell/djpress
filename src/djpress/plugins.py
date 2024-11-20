@@ -185,6 +185,26 @@ class DJPressPlugin:
             registry (PluginRegistry): The plugin registry.
         """
 
+    def get_data(self) -> dict:
+        """Get this plugin's stored data.
+
+        Returns:
+            dict: The plugin's stored data, or empty dict if none exists.
+        """
+        from djpress.models import PluginStorage
+
+        return PluginStorage.objects.get_data(self.name)
+
+    def save_data(self, data: dict) -> None:
+        """Save this plugin's data.
+
+        Args:
+            data: The data to store for this plugin.
+        """
+        from djpress.models import PluginStorage
+
+        PluginStorage.objects.save_data(self.name, data)
+
 
 # Instantiate the global plugin registry
 registry = PluginRegistry()

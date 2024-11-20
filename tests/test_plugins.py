@@ -321,3 +321,30 @@ def test_content_modification_hook(clean_registry):
     registry.register_hook(Hooks.PRE_RENDER_CONTENT, test_callback)
     result = registry.run_hook(Hooks.PRE_RENDER_CONTENT, "test")
     assert result == "test modified"
+
+
+@pytest.mark.django_db
+def test_plugin_storage_interface():
+    """Test plugin storage interface methods."""
+
+    class TestPlugin(DJPressPlugin):
+        name = "test_plugin"
+
+    plugin = TestPlugin()
+
+    # Test get_data with no storage
+    assert plugin.get_data() == {}
+
+    # Test save_data and get_data
+    plugin.save_data({"key": "value"})
+    assert plugin.get_data() == {"key": "value"}
+
+    # Test save_data with update
+    plugin.save_data({"new_key": "new_value"})
+    assert plugin.get_data() == {"new_key": "new_value"}
+
+    # Test save additional data
+    data = plugin.get_data()
+    data["extra"] = "data"
+    plugin.save_data(data)
+    assert plugin.get_data() == {"new_key": "new_value", "extra": "data"}
