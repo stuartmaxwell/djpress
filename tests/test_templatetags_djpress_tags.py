@@ -23,6 +23,13 @@ def test_get_posts(test_post1, test_long_post1, test_post2, test_post3):
 
 
 @pytest.mark.django_db
+def test_get_pages(test_page1, test_page2):
+    pages = [test_page1, test_page2]
+
+    assert list(djpress_tags.get_pages()) == pages
+
+
+@pytest.mark.django_db
 def test_have_posts_single_post(test_post1):
     """Return a list of posts in the context."""
     context = Context({"post": test_post1})
