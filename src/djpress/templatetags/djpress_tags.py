@@ -189,7 +189,7 @@ def blog_pages(
     Returns:
         str: The pages of the blog.
     """
-    pages: models.QuerySet[Post] = get_pages()
+    pages = Post.page_objects.get_published_pages()
 
     if not pages:
         return ""
