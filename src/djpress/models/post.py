@@ -29,7 +29,7 @@ class PagesManager(models.Manager):
 
     def get_queryset(self: "PagesManager") -> models.QuerySet:
         """Return the queryset for pages."""
-        return super().get_queryset().filter(post_type="page")
+        return super().get_queryset().filter(post_type="page").select_related("parent")
 
     def get_published_pages(self: "PagesManager") -> models.QuerySet:
         """Return all published pages.
@@ -40,7 +40,7 @@ class PagesManager(models.Manager):
         - All parent pages must also be published.
         """
         return Post.page_objects.filter(
-            pk__in=[page.pk for page in self.get_queryset().select_related("parent") if page.is_published],
+            pk__in=[page.pk for page in self.get_queryset() if page.is_published],
         ).order_by("menu_order", "title", "-date")
 
     def get_published_page_by_slug(
