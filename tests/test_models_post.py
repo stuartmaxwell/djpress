@@ -42,7 +42,7 @@ def test_get_published_content_with_future_date(user):
         post_type="post",
         date=timezone.now() + timezone.timedelta(days=1),
     )
-    assert Post.post_objects.all().count() == 2
+    assert Post.admin_objects.all().count() == 2
     assert Post.post_objects.get_published_posts().count() == 1
 
 
@@ -570,7 +570,7 @@ def test_get_cached_published_posts(settings, monkeypatch, test_post1, test_post
 
 
 @pytest.mark.django_db
-def test_get_cached_future_published_posts(user, settings, mock_timezone_now, monkeypatch):
+def test_get_cached_future_published_posts(user, settings, mock_timezone_now, monkeypatch, test_post1):
     """Test that the def _get_cached_recent_published_posts method sets the correct timeout.
 
     This is a complicated test that involves mocking the timezone.now function and the cache.set function.
@@ -587,12 +587,17 @@ def test_get_cached_future_published_posts(user, settings, mock_timezone_now, mo
 
     assert mock_timezone_now == timezone.now()
 
+    post_date = mock_timezone_now + timezone.timedelta(hours=2)
+
+    print(f"{mock_timezone_now=}")
+    print(f"{post_date=}")
+
     Post.post_objects.create(
         title="Test Post",
         slug="test-post",
         content="This is a test post.",
         author=user,
-        date=mock_timezone_now + timezone.timedelta(hours=2),
+        date=post_date,
         status="published",
         post_type="post",
     )
@@ -614,6 +619,10 @@ def test_get_cached_future_published_posts(user, settings, mock_timezone_now, mo
 
     # Check if the timeout is correct (should be close to 2 hours)
     expected_timeout = 7200  # 2 hours in seconds
+
+    print(f"{args=}")
+    print(f"{kwargs=}")
+
     actual_timeout = kwargs.get("timeout") or args[2]  # timeout might be a kwarg or the third positional arg
     assert abs(actual_timeout - expected_timeout) < 5  # Allow a small margin of error
 

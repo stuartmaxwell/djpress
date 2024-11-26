@@ -24,12 +24,44 @@ render_markdown = get_markdown_renderer()
 PUBLISHED_POSTS_CACHE_KEY = "published_posts"
 
 
+class AdminManager(models.Manager):
+    """Manager that returns all posts/pages - used only by admin."""
+
+    def get_queryset(self) -> models.QuerySet:
+        """Return completely unfiltered queryset."""
+        return super().get_queryset()
+
+
+class PostsAndPagesManager(models.Manager):
+    """Default manager that only returns published content."""
+
+    def get_queryset(self) -> models.QuerySet:
+        """Return only published posts and pages."""
+        return (
+            super()
+            .get_queryset()
+            .filter(
+                status="published",
+                date__lte=timezone.now(),
+            )
+        )
+
+
 class PagesManager(models.Manager):
     """Page custom manager."""
 
     def get_queryset(self: "PagesManager") -> models.QuerySet:
         """Return the queryset for pages."""
-        return super().get_queryset().filter(post_type="page").select_related("parent")
+        return (
+            super()
+            .get_queryset()
+            .filter(
+                post_type="page",
+                status="published",
+                date__lte=timezone.now(),
+            )
+            .order_by("menu_order", "title")
+        )
 
     def get_published_pages(self: "PagesManager") -> models.QuerySet:
         """Return all published pages.
@@ -106,11 +138,6 @@ class PagesManager(models.Manager):
                     msg = "Page not found"
                     raise PageNotFoundError(msg) from exc
 
-        # Check if the final page is published or raise a PageNotFoundError
-        if not current_page.is_published:
-            msg = "Page not found"
-            raise PageNotFoundError(msg)
-
         return current_page
 
     def get_page_tree(self) -> list[dict["Post", list[dict]]]:
@@ -164,7 +191,16 @@ class PostsManager(models.Manager):
 
     def get_queryset(self: "PostsManager") -> models.QuerySet:
         """Return the queryset for posts."""
-        return super().get_queryset().filter(post_type="post").order_by("-date")
+        return (
+            super()
+            .get_queryset()
+            .filter(
+                post_type="post",
+                status="published",
+                date__lte=timezone.now(),
+            )
+            .order_by("-date")
+        )
 
     def get_published_posts(self: "PostsManager") -> models.QuerySet:
         """Returns all published posts.
@@ -173,11 +209,7 @@ class PostsManager(models.Manager):
         - The status must be "published".
         - The date must be less than or equal to the current date/time.
         """
-        return (
-            self.get_queryset()
-            .filter(status="published", date__lte=timezone.now())
-            .prefetch_related("categories", "author")
-        )
+        return self.get_queryset().prefetch_related("categories", "author")
 
     def get_recent_published_posts(self: "PostsManager") -> models.QuerySet:
         """Return recent published posts.
@@ -205,7 +237,15 @@ class PostsManager(models.Manager):
         if queryset is None or len(queryset) != djpress_settings.RECENT_PUBLISHED_POSTS_COUNT:
             # Get the queryset from the database for all published posts, including those in the future. Then we
             # calculate the timeout to set, and then filter the queryset to only include the recent published posts.
-            queryset = self.get_queryset().filter(status="published").prefetch_related("categories", "author")
+            # Note: we use admin_objects here to get all posts, including those in the future.
+            queryset = (
+                self.model.admin_objects.filter(post_type="post", status="published")
+                .prefetch_related(
+                    "categories",
+                    "author",
+                )
+                .order_by("-date")
+            )
             timeout = self._get_cache_timeout(queryset)
             queryset = queryset.filter(date__lte=timezone.now())[: djpress_settings.RECENT_PUBLISHED_POSTS_COUNT]
 
@@ -236,7 +276,7 @@ class PostsManager(models.Manager):
         future_posts = queryset.filter(date__gt=timezone.now())
         if future_posts.exists():
             future_post = future_posts[0]
-            return (future_post.date - timezone.now()).total_seconds()
+            return int((future_post.date - timezone.now()).total_seconds())
 
         return None
 
@@ -324,20 +364,22 @@ class Post(models.Model):
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name="children",
+        related_name="_children",  # Danger! This returns all children of a parent, published or not.
         limit_choices_to={"post_type": "page"},
     )
 
     # Managers
-    objects = models.Manager()
-    post_objects: "PostsManager" = PostsManager()
+    admin_objects = AdminManager()  # Unfiltered - for admin use only
+    objects = PostsAndPagesManager()  # Default manager returns only published content
     page_objects: "PagesManager" = PagesManager()
+    post_objects: "PostsManager" = PostsManager()
 
     class Meta:
         """Meta options for the Post model."""
 
         verbose_name = "post"
         verbose_name_plural = "posts"
+        default_manager_name = "admin_objects"  # For Django internals/admin
 
     def __str__(self: "Post") -> str:
         """Return the string representation of the post."""
@@ -396,6 +438,14 @@ class Post(models.Model):
                 msg = "Circular reference detected in page hierarchy."
                 raise ValidationError(msg)
             ancestor = ancestor.parent
+
+    @property
+    def children(self) -> models.QuerySet:
+        """Return only published children pages."""
+        return self._children.filter(
+            status="published",
+            date__lte=timezone.now(),
+        ).order_by("menu_order", "title")
 
     @property
     def content_markdown(self: "Post") -> str:
