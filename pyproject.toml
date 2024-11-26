@@ -75,6 +75,7 @@ ignore = [
   "FIX002", # Line contains TODO, consider resolving the issue
   "TD002",  # Missing author in TODO
   "S308",   # suspicious-mark-safe-usage
+  "RUF012", # Checks for mutable default values in class attributes. https://github.com/astral-sh/ruff/issues/5243
 ]
 
 [tool.ruff.lint.per-file-ignores]
