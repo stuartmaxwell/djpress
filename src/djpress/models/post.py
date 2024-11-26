@@ -324,7 +324,7 @@ class Post(models.Model):
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name="children",
+        related_name="_children",  # Danger! This returns all children of a parent, published or not.
         limit_choices_to={"post_type": "page"},
     )
 
@@ -396,6 +396,14 @@ class Post(models.Model):
                 msg = "Circular reference detected in page hierarchy."
                 raise ValidationError(msg)
             ancestor = ancestor.parent
+
+    @property
+    def children(self) -> models.QuerySet:
+        """Return only published children pages."""
+        return self._children.filter(
+            status="published",
+            date__lte=timezone.now(),
+        ).order_by("menu_order", "title")
 
     @property
     def content_markdown(self: "Post") -> str:
