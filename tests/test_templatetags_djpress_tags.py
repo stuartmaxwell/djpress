@@ -23,10 +23,16 @@ def test_get_posts(test_post1, test_long_post1, test_post2, test_post3):
 
 
 @pytest.mark.django_db
-def test_get_pages(test_page1, test_page2):
-    pages = [test_page1, test_page2]
+def test_get_pages(test_page1, test_page2, test_page3):
+    assert list(djpress_tags.get_pages()) == [test_page1, test_page2, test_page3]
 
-    assert list(djpress_tags.get_pages()) == pages
+    test_page1.status = "draft"
+    test_page1.save()
+    assert list(djpress_tags.get_pages()) == [test_page2, test_page3]
+
+    test_page2.parent = test_page1
+    test_page2.save()
+    assert list(djpress_tags.get_pages()) == [test_page3]
 
 
 @pytest.mark.django_db
