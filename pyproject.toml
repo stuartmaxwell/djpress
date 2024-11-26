@@ -99,6 +99,7 @@ omit = ["*/tests/*", "*/migrations/*"]
 current_version = "0.13.2"
 version_pattern = "MAJOR.MINOR.PATCH"
 commit_message = "👍 bump version {old_version} -> {new_version}"
+pre_commit_hook = "uv sync --all-extras"
 commit = true
 push = true
 tag = true
