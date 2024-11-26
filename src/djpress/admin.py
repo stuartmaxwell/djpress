@@ -1,7 +1,5 @@
 """djpress admin configuration."""
 
-from typing import ClassVar
-
 from django.contrib import admin
 from django.utils import timezone
 from django.utils.html import format_html
@@ -14,21 +12,21 @@ from djpress.models import Category, PluginStorage, Post
 class CategoryAdmin(admin.ModelAdmin):
     """Category admin configuration."""
 
-    list_display: ClassVar["str"] = ["title", "slug"]
+    list_display = ["title", "slug"]
 
 
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
     """Post admin configuration."""
 
-    list_display: ClassVar[list[str]] = ["post_type", "published_status", "title", "parent", "formatted_date", "author"]
-    list_display_links: ClassVar[list[str]] = ["title"]
-    ordering: ClassVar[list[str]] = ["post_type", "-date"]  # Displays pages first, then sorted by date.
-    list_filter: ClassVar[list[str]] = ["post_type", "date", "author"]
-    prepopulated_fields: ClassVar[dict[str, str]] = {"slug": ("title",)}
-    search_fields: ClassVar[list[str]] = ["title", "content", "slug"]
-    readonly_fields: ClassVar[list[str]] = ["modified_date"]
-    fieldsets: ClassVar = [
+    list_display = ["post_type", "published_status", "title", "parent", "formatted_date", "author"]
+    list_display_links = ["title"]
+    ordering = ["post_type", "-date"]  # Displays pages first, then sorted by date.
+    list_filter = ["post_type", "date", "author"]
+    prepopulated_fields = {"slug": ("title",)}
+    search_fields = ["title", "content", "slug"]
+    readonly_fields = ["modified_date"]
+    fieldsets = [
         (
             None,
             {
@@ -93,8 +91,8 @@ class PostAdmin(admin.ModelAdmin):
 class PluginStorageAdmin(admin.ModelAdmin):
     """PluginStorage admin configuration."""
 
-    list_display: ClassVar["str"] = ["plugin_name", "plugin_data"]
-    list_display_links: ClassVar["str"] = ["plugin_name"]
-    ordering: ClassVar["str"] = ["plugin_name"]
-    search_fields: ClassVar["str"] = ["plugin_name"]
-    list_filter: ClassVar["str"] = ["plugin_name"]
+    list_display = ["plugin_name", "plugin_data"]
+    list_display_links = ["plugin_name"]
+    ordering = ["plugin_name"]
+    search_fields = ["plugin_name"]
+    list_filter = ["plugin_name"]

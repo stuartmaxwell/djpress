@@ -1,7 +1,6 @@
 """Post model."""
 
 import logging
-from typing import ClassVar
 
 from django.contrib.auth.models import User
 from django.core.cache import cache
@@ -346,8 +345,8 @@ class PostsManager(models.Manager):
 class Post(models.Model):
     """Post model."""
 
-    STATUS_CHOICES: ClassVar = [("draft", "Draft"), ("published", "Published")]
-    CONTENT_TYPE_CHOICES: ClassVar = [("post", "Post"), ("page", "Page")]
+    STATUS_CHOICES = [("draft", "Draft"), ("published", "Published")]
+    CONTENT_TYPE_CHOICES = [("post", "Post"), ("page", "Page")]
 
     title = models.CharField(max_length=200)
     slug = models.SlugField(unique=True, blank=True)
