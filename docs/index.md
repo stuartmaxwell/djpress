@@ -9,6 +9,7 @@ complete:
 - [Template Tags](templatetags.md)
 - [Themes](themes.md)
 - [Plugins](plugins.md)
+- [Sitemap](sitemap.md)
 
 ## Table of Contents
 
@@ -22,4 +23,5 @@ url_structure
 templatetags
 themes
 plugins
+sitemap
 ```
