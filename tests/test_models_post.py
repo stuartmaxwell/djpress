@@ -1,10 +1,11 @@
 import pytest
 from django.utils import timezone
 from unittest.mock import Mock
-from djpress.models import Category, Post
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
+from django.db.models import QuerySet
 
+from djpress.models import Category, Post
 from djpress import urls as djpress_urls
 from djpress.models.post import PUBLISHED_POSTS_CACHE_KEY
 from djpress.exceptions import PostNotFoundError, PageNotFoundError
@@ -20,6 +21,20 @@ def test_post_model(test_post1, user, category1):
     assert test_post1.post_type == "post"
     assert test_post1.categories.count() == 1
     assert str(test_post1) == "Test Post1"
+
+
+@pytest.mark.django_db
+def test_post_default_queryset(test_post1, test_post2, test_post3):
+    """Make sure the default queryset returns only published posts."""
+    assert list(Post.objects.all()) == [test_post1, test_post2, test_post3]
+
+    test_post1.status = "draft"
+    test_post1.save()
+    assert list(Post.objects.all()) == [test_post2, test_post3]
+
+    test_post2.date = timezone.now() + timezone.timedelta(days=1)
+    test_post2.save()
+    assert list(Post.objects.all()) == [test_post3]
 
 
 @pytest.mark.django_db
@@ -1126,3 +1141,188 @@ def test_post_parent_is_none(test_post1, test_page1):
     test_post1.save()
 
     assert test_post1.parent is None
+
+
+@pytest.mark.django_db
+def test_post_get_years(test_post1, test_post2, test_post3):
+    # type should be a queryset
+    assert isinstance(Post.post_objects.get_years(), QuerySet)
+    # Queryset should have 1 item
+    assert len(Post.post_objects.get_years()) == 1
+    # The item should be the year of the post
+    assert Post.post_objects.get_years()[0].year == test_post1.date.year
+
+    test_post2.date = timezone.make_aware(timezone.datetime(2023, 1, 1, 12, 0, 0))
+    test_post2.save()
+
+    # Queryset should have 2 items
+    assert len(Post.post_objects.get_years()) == 2
+    # The items should be the years of the posts
+    assert Post.post_objects.get_years()[0].year == test_post2.date.year
+    assert Post.post_objects.get_years()[1].year == test_post1.date.year
+
+    test_post3.date = timezone.make_aware(timezone.datetime(2022, 1, 1, 12, 0, 0))
+    test_post3.save()
+
+    # Queryset should have 3 items
+    assert len(Post.post_objects.get_years()) == 3
+    # The items should be the years of the posts
+    assert Post.post_objects.get_years()[0].year == test_post3.date.year
+    assert Post.post_objects.get_years()[1].year == test_post2.date.year
+    assert Post.post_objects.get_years()[2].year == test_post1.date.year
+
+    # Change a post to draft status
+    test_post1.status = "draft"
+    test_post1.save()
+
+    # Queryset should have 2 items
+    assert len(Post.post_objects.get_years()) == 2
+    # The items should be the years of the posts
+    assert Post.post_objects.get_years()[0].year == test_post3.date.year
+    assert Post.post_objects.get_years()[1].year == test_post2.date.year
+
+
+@pytest.mark.django_db
+def test_post_get_months(test_post1, test_post2, test_post3):
+    months = Post.post_objects.get_months(test_post1.date.year)
+
+    # type should be a queryset
+    assert isinstance(months, QuerySet)
+    # Queryset should have 1 item - all three posts are in the same year and month
+    assert len(months) == 1
+    # The item should be the month of the post
+    assert months[0].month == test_post1.date.month
+
+    # Set specific dates for each of the posts
+    test_post1.date = timezone.make_aware(timezone.datetime(2022, 1, 1, 12, 0, 0))
+    test_post1.save()
+    test_post2.date = timezone.make_aware(timezone.datetime(2022, 2, 1, 12, 0, 0))
+    test_post2.save()
+    test_post3.date = timezone.make_aware(timezone.datetime(2022, 3, 1, 12, 0, 0))
+    test_post3.save()
+
+    months = Post.post_objects.get_months(test_post1.date.year)
+
+    # Queryset should have 3 items
+    assert len(months) == 3
+    # The items should be the months of the posts
+    assert months[0].month == test_post1.date.month
+    assert months[1].month == test_post2.date.month
+    assert months[2].month == test_post3.date.month
+
+    # Change a post to draft status
+    test_post1.status = "draft"
+    test_post1.save()
+
+    months = Post.post_objects.get_months(test_post1.date.year)
+
+    # Queryset should have 2 items
+    assert len(months) == 2
+    # The items should be the months of the posts
+    assert months[0].month == test_post2.date.month
+    assert months[1].month == test_post3.date.month
+
+
+@pytest.mark.django_db
+def test_post_get_days(test_post1, test_post2, test_post3):
+    days = Post.post_objects.get_days(test_post1.date.year, test_post1.date.month)
+
+    # type should be a queryset
+    assert isinstance(days, QuerySet)
+    # Queryset should have 1 item - all three posts are in the same year and month
+    assert len(days) == 1
+
+    # Set specific dates for each of the posts
+    test_post1.date = timezone.make_aware(timezone.datetime(2022, 1, 1, 12, 0, 0))
+    test_post1.save()
+    test_post2.date = timezone.make_aware(timezone.datetime(2022, 1, 2, 12, 0, 0))
+    test_post2.save()
+    test_post3.date = timezone.make_aware(timezone.datetime(2022, 1, 3, 12, 0, 0))
+    test_post3.save()
+
+    days = Post.post_objects.get_days(test_post1.date.year, test_post1.date.month)
+
+    # Queryset should have 3 items
+    assert len(days) == 3
+    # The items should be the days of the posts
+    assert days[0].day == test_post1.date.day
+    assert days[1].day == test_post2.date.day
+    assert days[2].day == test_post3.date.day
+
+    # Change a post to draft status
+    test_post1.status = "draft"
+    test_post1.save()
+
+    days = Post.post_objects.get_days(test_post1.date.year, test_post1.date.month)
+
+    # Queryset should have 2 items
+    assert len(days) == 2
+    # The items should be the days of the posts
+    assert days[0].day == test_post2.date.day
+    assert days[1].day == test_post3.date.day
+
+
+@pytest.mark.django_db
+def test_get_year_last_modified(test_post1, test_post2, test_post3):
+    # Should match the modified date of the last post in the list - i.e. most recent post
+    assert Post.post_objects.get_year_last_modified(test_post1.date.year) == test_post3.modified_date
+
+    # Change test_post3 to draft and it should now match test_post2
+    test_post3.status = "draft"
+    test_post3.save()
+    assert Post.post_objects.get_year_last_modified(test_post1.date.year) == test_post2.modified_date
+
+    # Changetest_post2 to future date and it should now match test_post1
+    test_post2.date = timezone.now() + timezone.timedelta(days=1)
+    test_post2.save()
+    assert Post.post_objects.get_year_last_modified(test_post1.date.year) == test_post1.modified_date
+
+
+@pytest.mark.django_db
+def test_get_month_last_modified(test_post1, test_post2, test_post3):
+    # Should match the modified date of the last post in the list - i.e. most recent post
+    assert (
+        Post.post_objects.get_month_last_modified(test_post1.date.year, test_post1.date.month)
+        == test_post3.modified_date
+    )
+
+    # Change test_post3 to draft and it should now match test_post2
+    test_post3.status = "draft"
+    test_post3.save()
+    assert (
+        Post.post_objects.get_month_last_modified(test_post1.date.year, test_post1.date.month)
+        == test_post2.modified_date
+    )
+
+    # Changetest_post2 to future date and it should now match test_post1
+    test_post2.date = timezone.now() + timezone.timedelta(days=1)
+    test_post2.save()
+    assert (
+        Post.post_objects.get_month_last_modified(test_post1.date.year, test_post1.date.month)
+        == test_post1.modified_date
+    )
+
+
+@pytest.mark.django_db
+def test_get_day_last_modified(test_post1, test_post2, test_post3):
+    # Should match the modified date of the last post in the list - i.e. most recent post
+    assert (
+        Post.post_objects.get_day_last_modified(test_post1.date.year, test_post1.date.month, test_post1.date.day)
+        == test_post3.modified_date
+    )
+
+    # Change test_post3 to draft and it should now match test_post2
+    test_post3.status = "draft"
+    test_post3.save()
+    assert (
+        Post.post_objects.get_day_last_modified(test_post1.date.year, test_post1.date.month, test_post1.date.day)
+        == test_post2.modified_date
+    )
+
+    # Changetest_post2 to future date and it should now match test_post1
+    test_post2.date = timezone.now() + timezone.timedelta(days=1)
+    test_post2.save()
+    assert (
+        Post.post_objects.get_day_last_modified(test_post1.date.year, test_post1.date.month, test_post1.date.day)
+        == test_post1.modified_date
+    )
