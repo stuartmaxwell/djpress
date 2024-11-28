@@ -2,6 +2,7 @@ import pytest
 
 from djpress.models import Category
 from django.utils.text import slugify
+from django.utils import timezone
 
 
 @pytest.mark.django_db
@@ -169,3 +170,52 @@ def test_category_permalink(settings):
     settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] = ""
 
     assert category.permalink == "test-category"
+
+
+@pytest.mark.django_db
+def test_category_posts(test_post1, test_post2, category1, category2):
+    assert list(category1.posts.all()) == [test_post1]
+    assert list(category2.posts.all()) == [test_post2]
+
+    test_post2.categories.set([category1])
+    test_post2.save()
+    assert list(category1.posts.all()) == [test_post1, test_post2]
+    assert list(category2.posts.all()) == []
+
+
+@pytest.mark.django_db
+def test_category_has_posts(test_post1, test_post2, category1, category2):
+    assert category1.has_posts is True
+    assert category2.has_posts is True
+
+    test_post2.categories.set([category1])
+    test_post2.save()
+    assert category1.has_posts is True
+    assert category2.has_posts is False
+
+
+@pytest.mark.django_db
+def test_get_category_published(test_post1, test_post2, category1, category2):
+    assert list(Category.objects.get_categories_with_published_posts()) == [category1, category2]
+
+    test_post1.status = "draft"
+    test_post1.save()
+    assert list(Category.objects.get_categories_with_published_posts()) == [category2]
+
+    test_post2.date = timezone.now() + timezone.timedelta(days=1)
+    test_post2.save()
+    assert list(Category.objects.get_categories_with_published_posts()) == []
+
+
+@pytest.mark.django_db
+def test_category_last_modified(test_post1, test_post2, category1, category2):
+    assert category1.last_modified == test_post1.modified_date
+    assert category2.last_modified == test_post2.modified_date
+
+    test_post1.modified_date = timezone.now() + timezone.timedelta(days=1)
+    test_post1.save()
+    assert category1.last_modified == test_post1.modified_date
+
+    test_post1.status = "draft"
+    test_post1.save()
+    assert category1.last_modified is None

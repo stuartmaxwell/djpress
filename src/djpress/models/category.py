@@ -2,6 +2,8 @@
 
 from django.core.cache import cache
 from django.db import IntegrityError, models, transaction
+from django.db.models import Max
+from django.utils import timezone
 from django.utils.text import slugify
 
 from djpress.conf import settings as djpress_settings
@@ -51,6 +53,13 @@ class CategoryManager(models.Manager):
                 raise ValueError(msg) from exc
 
         return category
+
+    def get_categories_with_published_posts(self) -> "Category":
+        """Return a queryset of categories that have published posts.
+
+        We can use the has_posts property to include only categories with published posts.
+        """
+        return Category.objects.filter(pk__in=[category.pk for category in self.get_queryset() if category.has_posts])
 
 
 class Category(models.Model):
@@ -103,3 +112,29 @@ class Category(models.Model):
         from djpress.url_utils import get_category_url
 
         return get_category_url(self)
+
+    @property
+    def posts(self) -> models.QuerySet:
+        """Return only published posts."""
+        return self._posts.filter(
+            status="published",
+            date__lte=timezone.now(),
+        )
+
+    @property
+    def has_posts(self: "Category") -> bool:
+        """Return True if the category has published posts."""
+        return self.posts.exists()
+
+    @property
+    def last_modified(self: "Category") -> None | timezone.datetime:
+        """Return the most recent last modified date of posts in the category.
+
+        This property is used in the sitemap to determine the last modified date of the category.
+
+        If the category has no published posts, we return None.
+
+        Returns:
+            None | timezone.datetime: The most recent last modified date of posts in the category.
+        """
+        return self.posts.aggregate(latest=Max("modified_date"))["latest"]

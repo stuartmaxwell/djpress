@@ -6,6 +6,7 @@ from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import Max
 from django.utils import timezone
 from django.utils.text import slugify
 
@@ -341,6 +342,75 @@ class PostsManager(models.Manager):
         """
         return self.get_published_posts().filter(author=author)
 
+    def get_years(self) -> models.QuerySet:
+        """Return a list of years that have published posts.
+
+        Returns:
+            list[int]: A distinct list of years.
+        """
+        return self.dates("date", "year")
+
+    def get_months(self, year: int) -> models.QuerySet:
+        """Return a list of months for a given year that have published posts.
+
+        Args:
+            year (int): The year.
+
+        Returns:
+            list[int]: A distinct list of months.
+        """
+        return self.filter(date__year=year).dates("date", "month")
+
+    def get_days(self, year: int, month: int) -> models.QuerySet:
+        """Return a list of days for a given year and month that have published posts.
+
+        Args:
+            year (int): The year.
+            month (int): The month.
+
+        Returns:
+            list[int]: A distinct list of days.
+        """
+        return self.filter(date__year=year, date__month=month).dates("date", "day")
+
+    def get_year_last_modified(self, year: int) -> timezone.datetime | None:
+        """Return the most recent modified_date of posts for a given year.
+
+        Args:
+            year (int): The year.
+
+        Returns:
+            timezone.datetime | None: The last published post for the given year.
+        """
+        return self.filter(date__year=year).aggregate(latest=Max("modified_date"))["latest"]
+
+    def get_month_last_modified(self, year: int, month: int) -> timezone.datetime | None:
+        """Return the most recent modified_date of posts for a given month.
+
+        Args:
+            year (int): The year.
+            month (int): The month.
+
+        Returns:
+            timezone.datetime | None: The last published post for the given month.
+        """
+        return self.filter(date__year=year, date__month=month).aggregate(latest=Max("modified_date"))["latest"]
+
+    def get_day_last_modified(self, year: int, month: int, day: int) -> timezone.datetime | None:
+        """Return the most recent modified_date of posts for a given day.
+
+        Args:
+            year (int): The year.
+            month (int): The month.
+            day (int): The day.
+
+        Returns:
+            timezone.datetime | None: The last published post for the given day.
+        """
+        return self.filter(date__year=year, date__month=month, date__day=day).aggregate(latest=Max("modified_date"))[
+            "latest"
+        ]
+
 
 class Post(models.Model):
     """Post model."""
@@ -356,7 +426,7 @@ class Post(models.Model):
     modified_date = models.DateTimeField(auto_now=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="draft")
     post_type = models.CharField(max_length=10, choices=CONTENT_TYPE_CHOICES, default="post")
-    categories = models.ManyToManyField(Category, blank=True)
+    categories = models.ManyToManyField(Category, blank=True, related_name="_posts")
     menu_order = models.IntegerField(default=0)
     parent = models.ForeignKey(
         "self",
