@@ -8,6 +8,7 @@ from django.contrib.auth.models import User
 from django.urls import reverse
 from django.utils import timezone
 
+from djpress.models import Post
 from djpress.url_utils import get_archives_url, get_author_url, get_category_url
 
 
@@ -167,8 +168,21 @@ def test_category_with_category_enabled_false(client, settings):
 
 
 @pytest.mark.django_db
-def test_date_archives_year(client, test_post1):
+def test_date_archives_year(client, settings, test_post1):
+    assert settings.DJPRESS_SETTINGS["ARCHIVE_PREFIX"] == "test-url-archives"
     url = get_archives_url(test_post1.date.year)
+    assert url == f"/test-url-archives/{test_post1.date.year}/"
+    response = client.get(url)
+    assert response.status_code == 200
+    assert test_post1.title.encode() in response.content
+    assert "posts" in response.context
+    assert isinstance(response.context["posts"], Iterable)
+    assert "Test Post1" in response.content.decode()
+
+    settings.DJPRESS_SETTINGS["ARCHIVE_PREFIX"] = ""
+    url = get_archives_url(test_post1.date.year)
+    assert url == f"/{test_post1.date.year}/"
+
     response = client.get(url)
     assert response.status_code == 200
     assert test_post1.title.encode() in response.content
@@ -196,8 +210,21 @@ def test_date_archives_year_no_posts(client, test_post1):
 
 
 @pytest.mark.django_db
-def test_date_archives_month(client, test_post1):
+def test_date_archives_month(client, settings, test_post1):
+    assert settings.DJPRESS_SETTINGS["ARCHIVE_PREFIX"] == "test-url-archives"
     url = get_archives_url(test_post1.date.year, test_post1.date.month)
+    assert url == f"/test-url-archives/{test_post1.date.year}/{test_post1.date.month}/"
+
+    response = client.get(url)
+    assert response.status_code == 200
+    assert test_post1.title.encode() in response.content
+    assert "posts" in response.context
+    assert isinstance(response.context["posts"], Iterable)
+
+    settings.DJPRESS_SETTINGS["ARCHIVE_PREFIX"] = ""
+    url = get_archives_url(test_post1.date.year, test_post1.date.month)
+    assert url == f"/{test_post1.date.year}/{test_post1.date.month}/"
+
     response = client.get(url)
     assert response.status_code == 200
     assert test_post1.title.encode() in response.content
@@ -226,12 +253,112 @@ def test_date_archives_month_no_posts(client, test_post1):
 
 
 @pytest.mark.django_db
-def test_date_archives_day(client, test_post1):
+def test_date_archives_day(client, settings, test_post1):
+    assert settings.DJPRESS_SETTINGS["ARCHIVE_PREFIX"] == "test-url-archives"
     url = get_archives_url(test_post1.date.year, test_post1.date.month, test_post1.date.day)
+    assert url == f"/test-url-archives/{test_post1.date.year}/{test_post1.date.month}/{test_post1.date.day}/"
+
     response = client.get(url)
     assert response.status_code == 200
-    assert "posts" in response.context
     assert test_post1.title.encode() in response.content
+    assert "posts" in response.context
+    assert isinstance(response.context["posts"], Iterable)
+
+    settings.DJPRESS_SETTINGS["ARCHIVE_PREFIX"] = ""
+    url = get_archives_url(test_post1.date.year, test_post1.date.month, test_post1.date.day)
+    assert url == f"/{test_post1.date.year}/{test_post1.date.month}/{test_post1.date.day}/"
+
+    response = client.get(url)
+    assert response.status_code == 200
+    assert test_post1.title.encode() in response.content
+    assert "posts" in response.context
+    assert isinstance(response.context["posts"], Iterable)
+
+    assert settings.DJPRESS_SETTINGS["POST_PREFIX"] == "test-posts"
+    settings.DJPRESS_SETTINGS["POST_PREFIX"] = "{{ year }}/{{ month }}/{{ day }}"
+    url = get_archives_url(test_post1.date.year, test_post1.date.month, test_post1.date.day)
+    assert url == f"/{test_post1.date.year}/{test_post1.date.month}/{test_post1.date.day}/"
+
+    response = client.get(url)
+    assert response.status_code == 200
+    assert test_post1.title.encode() in response.content
+    assert "posts" in response.context
+    assert isinstance(response.context["posts"], Iterable)
+
+
+@pytest.mark.django_db
+def test_conflict_day_archives_and_single_post(client, settings, test_post1):
+    """Change the POST_PREFIX to match the same format as the day archives.
+
+    For example, with POST_PREFIX = "{{ year }}/{{ month }}", either of the following two URLs could be valid posts:
+
+    - /2024/01/31/ - This could be a day archive, or a post with the slug "31" in the year 2024 and month 01.
+    - /2024/01/test-post1/
+
+    The first URL will try to get a post and if that doesn't exist, it will try to get a day archive, but only if the
+    POST_PREFIX matches the day archive format.
+    """
+    settings.DJPRESS_SETTINGS["ARCHIVE_PREFIX"] = ""
+    settings.DJPRESS_SETTINGS["POST_PREFIX"] = "{{ year }}/{{ month }}"
+    url = get_archives_url(test_post1.date.year, test_post1.date.month, test_post1.date.day)
+    assert url == f"/{test_post1.date.year}/{test_post1.date.month}/{test_post1.date.day}/"
+
+    response = client.get(url)
+    assert response.status_code == 200
+    assert test_post1.title.encode() in response.content
+    assert "posts" in response.context
+    assert isinstance(response.context["posts"], Iterable)
+
+
+@pytest.mark.django_db
+def test_conflict_month_archives_and_single_post(client, settings, test_post1):
+    """Similar concept to test_conflict_day_archives_and_single_post.
+
+    With POST_PREFIX = "{{ year }}", either of the following two URLs could be valid posts:
+
+    - /2024/12/ - This could be a month archive, or a post with the slug "12" in the year 2024.
+    - /2024/test-post1/
+    """
+    settings.DJPRESS_SETTINGS["ARCHIVE_PREFIX"] = ""
+    settings.DJPRESS_SETTINGS["POST_PREFIX"] = "{{ year }}"
+    url = get_archives_url(test_post1.date.year, test_post1.date.month)
+    assert url == f"/{test_post1.date.year}/{test_post1.date.month}/"
+
+    response = client.get(url)
+    assert response.status_code == 200
+    assert test_post1.title.encode() in response.content
+    assert "posts" in response.context
+    assert isinstance(response.context["posts"], Iterable)
+
+
+@pytest.mark.django_db
+def test_conflict_year_archives_and_single_post(client, settings, test_post1):
+    """Similar concept to test_conflict_day_archives_and_single_post and test_conflict_month_archives_and_single_post.
+
+    With POST_PREFIX = "", either of the following two URLs could be valid posts:
+
+    - /2024/ - This could be a year archive, or a post with the slug "2024".
+    - /test-post1/
+    """
+    settings.DJPRESS_SETTINGS["ARCHIVE_PREFIX"] = ""
+    settings.DJPRESS_SETTINGS["POST_PREFIX"] = ""
+    url = get_archives_url(test_post1.date.year)
+    assert url == f"/{test_post1.date.year}/"
+
+    response = client.get(url)
+    assert response.status_code == 200
+    assert test_post1.title.encode() in response.content
+    assert "posts" in response.context
+    assert isinstance(response.context["posts"], Iterable)
+
+    # If the post slug is 2024, then the post will be returned.
+    test_post1.slug = str(test_post1.date.year)
+    test_post1.save()
+    response = client.get(url)
+    assert response.status_code == 200
+    assert test_post1.title.encode() in response.content
+    assert "post" in response.context
+    assert isinstance(response.context["post"], Post)
 
 
 @pytest.mark.django_db

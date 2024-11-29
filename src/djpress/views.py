@@ -28,14 +28,24 @@ def dispatcher(request: HttpRequest, path: str) -> HttpResponse | None:
     if djpress_settings.RSS_ENABLED and (path in (djpress_settings.RSS_PATH, f"{djpress_settings.RSS_PATH}/")):
         return PostFeed()(request)
 
-    # 2. Check if it matches the single post regex
+    # 2. Check if it matches the single post or the archives regex
     post_match = re.fullmatch(get_path_regex("post"), path)
+    archives_match = re.fullmatch(get_path_regex("archives"), path)
     if post_match:
+        # Does the post exist?
         post_groups = post_match.groupdict()
-        return single_post(request, **post_groups)
+        post = get_post(**post_groups)
+
+        # If so, return the single post view
+        if post:
+            return single_post(request, post)
+
+        # If it doesn't look like an archive post, then it's a 404 - otherwise continue to the next step
+        if not archives_match:
+            msg = "Post not found"
+            raise Http404(msg)
 
     # 3. Check if it matches the archives regex
-    archives_match = re.fullmatch(get_path_regex("archives"), path)
     if archives_match:
         archives_groups = archives_match.groupdict()
         return archive_posts(request, **archives_groups)
@@ -221,21 +231,44 @@ def author_posts(request: HttpRequest, author: str) -> HttpResponse:
     )
 
 
-def single_post(
-    request: HttpRequest,
+def get_post(
     slug: str,
     year: str | None = None,
     month: str | None = None,
     day: str | None = None,
-) -> HttpResponse:
-    """View for a single post.
+) -> None | Post:
+    """Try to get a post by slug and date parts.
 
     Args:
-        request (HttpRequest): The request object.
         slug (str): The post slug.
         year (str | None): The year.
         month (str | None): The month.
         day (str | None): The day.
+
+    Returns:
+        None | Post: The post object, or None if not found.
+    """
+    try:
+        date_parts = validate_date_parts(year=year, month=month, day=day)
+        return Post.post_objects.get_published_post_by_slug(slug=slug, **date_parts)
+    except (PostNotFoundError, ValueError):
+        # A PageNotFoundError means we were able to parse the path, but the page was not found
+        # A ValueError means we were not able to parse the path
+        return None
+
+
+def single_post(
+    request: HttpRequest,
+    post: Post,
+) -> HttpResponse:
+    """View for a single post.
+
+    The single_post view is different to the others in that it doesn't look for a post since this is done in the
+    dispatcher function. This view is only called if a post is found.
+
+    Args:
+        request (HttpRequest): The request object.
+        post (Post): The post object.
 
     Returns:
         HttpResponse: The response.
@@ -243,16 +276,7 @@ def single_post(
     Context:
         post (Post): The post object.
     """
-    try:
-        date_parts = validate_date_parts(year=year, month=month, day=day)
-        post = Post.post_objects.get_published_post_by_slug(slug=slug, **date_parts)
-        context: dict = {"post": post}
-    except (PostNotFoundError, ValueError) as exc:
-        # A PageNotFoundError means we were able to parse the path, but the page was not found
-        # A ValueError means we were not able to parse the path
-        msg = "Post not found"
-        raise Http404(msg) from exc
-
+    context: dict = {"post": post}
     template: str = get_template_name(view_name="single_post")
 
     return render(
