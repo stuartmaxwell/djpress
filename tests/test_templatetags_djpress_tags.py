@@ -1125,26 +1125,26 @@ def test_blog_pages(test_page1, test_page2):
 
 
 @pytest.mark.django_db
-def test_blog_page_title(test_post1, test_page1):
+def test_page_title(test_post1, test_page1):
     # Test case 1 - category page
     context = Context({"category": test_post1.categories.first()})
-    assert test_post1.categories.first().title == djpress_tags.blog_page_title(context)
+    assert test_post1.categories.first().title == djpress_tags.page_title(context)
 
     # Test case 2 - author page
     context = Context({"author": test_post1.author})
-    assert get_author_display_name(test_post1.author) == djpress_tags.blog_page_title(context)
+    assert get_author_display_name(test_post1.author) == djpress_tags.page_title(context)
 
     # Test case 3 - single post
     context = Context({"post": test_post1})
-    assert test_post1.title == djpress_tags.blog_page_title(context)
+    assert test_post1.title == djpress_tags.page_title(context)
 
     # Test case 4 - single page
     context = Context({"post": test_page1})
-    assert test_page1.title == djpress_tags.blog_page_title(context)
+    assert test_page1.title == djpress_tags.page_title(context)
 
     # Test case 5 - no context
     context = Context()
-    assert "" == djpress_tags.blog_page_title(context)
+    assert "" == djpress_tags.page_title(context)
 
 
 @pytest.mark.django_db

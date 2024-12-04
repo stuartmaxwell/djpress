@@ -102,9 +102,9 @@ Outputs the following:
 <a href="/" class="class1 class2">My DJ Press Blog</a>
 ```
 
-## blog_page_title
+## page_title
 
-Returns the title of the blog page, depending on the context of the page. A different title is returned for a category page, a blog page, author page, etc. This is useful to be used in the `<title>` tag of the template.
+Returns the title of the page, depending on the context of the page. A different title is returned for a category page, a blog page, author page, etc. This is useful to be used in the `<title>` tag of the template.
 
 **Returns:** A string with no HTML formatting.
 
@@ -118,7 +118,7 @@ Returns the title of the blog page, depending on the context of the page. A diff
 The tag with no options for a single blog page or post:
 
 ```django
-<title>{% blog_page_title %}</title>
+<title>{% page_title %}</title>
 ````
 
 Outputs the following:
@@ -130,7 +130,7 @@ Outputs the following:
 The tag can be combined with the `site_title` tag as well as using the `post_text` field.
 
 ```django
-<title>{% blog_page_title post_text=" | " %}{% site_title %}</title>
+<title>{% page_title post_text=" | " %}{% site_title %}</title>
 ```
 
 Outputs the following:
@@ -142,7 +142,7 @@ Outputs the following:
 Or you can get creative with an emoji:
 
 ```django
-<title>{% blog_page_title pre_text="🚀 " post_text=" | " %}{% site_title %}</title>
+<title>{% page_title pre_text="🚀 " post_text=" | " %}{% site_title %}</title>
 ```
 
 Outputs the following:

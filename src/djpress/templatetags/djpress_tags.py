@@ -222,7 +222,7 @@ def blog_pages(
 
 
 @register.simple_tag(takes_context=True)
-def blog_page_title(
+def page_title(
     context: Context,
     pre_text: str = "",
     post_text: str = "",
@@ -242,20 +242,20 @@ def blog_page_title(
     post: Post | None = context.get("post")
 
     if category:
-        page_title = category.title
+        title = category.title
 
     elif author:
-        page_title = get_author_display_name(author)
+        title = get_author_display_name(author)
 
     elif post:
-        page_title = post.title
+        title = post.title
     else:
-        page_title = ""
+        title = ""
 
-    if page_title:
-        page_title = f"{pre_text}{page_title}{post_text}"
+    if title:
+        title = f"{pre_text}{title}{post_text}"
 
-    return page_title
+    return title
 
 
 @register.simple_tag(takes_context=True)
