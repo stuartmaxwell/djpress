@@ -124,13 +124,13 @@ def post_read_more_link(
     return f'<p><a href="{post.url}"{link_class_html}>{read_more_text}</a></p>'
 
 
-def get_blog_pages_list(
+def get_site_pages_list(
     pages: list[dict[Post, list]],
     li_class: str = "",
     a_class: str = "",
     ul_child_class: str = "",
 ) -> str:
-    """Return the HTML for the blog pages list.
+    """Return the HTML for the site pages list.
 
     This expects to be passed the output of the get_page_tree method.
 
@@ -141,7 +141,7 @@ def get_blog_pages_list(
         ul_child_class: The CSS class(es) for the child ul
 
     Returns:
-        str: The HTML for the blog pages list.
+        str: The HTML for the site pages list.
     """
     class_li = f' class="{li_class}"' if li_class else ""
     class_ul = f' class="{ul_child_class}"' if ul_child_class else ""
@@ -156,7 +156,7 @@ def get_blog_pages_list(
 
         if children:
             output += f"<ul{class_ul}>"
-            output += get_blog_pages_list(children, li_class=li_class, a_class=a_class, ul_child_class=ul_child_class)
+            output += get_site_pages_list(children, li_class=li_class, a_class=a_class, ul_child_class=ul_child_class)
             output += "</ul>"
 
         output += "</li>"

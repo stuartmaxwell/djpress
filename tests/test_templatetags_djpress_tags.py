@@ -778,12 +778,12 @@ def test_blog_categories_no_categories():
 
 
 @pytest.mark.django_db
-def test_blog_pages_list_no_pages():
-    assert djpress_tags.blog_pages_list() == ""
+def test_site_pages_list_no_pages():
+    assert djpress_tags.site_pages_list() == ""
 
 
 @pytest.mark.django_db
-def test_blog_pages_list_no_children(test_page1, test_page2, test_page3):
+def test_site_pages_list_no_children(test_page1, test_page2, test_page3):
     expected_output = (
         "<ul>"
         f"<li>{get_page_link(page=test_page1)}</li>"
@@ -792,11 +792,11 @@ def test_blog_pages_list_no_children(test_page1, test_page2, test_page3):
         "</ul>"
     )
 
-    assert djpress_tags.blog_pages_list() == expected_output
+    assert djpress_tags.site_pages_list() == expected_output
 
 
 @pytest.mark.django_db
-def test_blog_pages_list_no_children_with_classes(test_page1, test_page2, test_page3):
+def test_site_pages_list_no_children_with_classes(test_page1, test_page2, test_page3):
     expected_output = (
         '<ul class="ul-outer-class">'
         f'<li class="li-class">{get_page_link(page=test_page1, link_class="a-class")}</li>'
@@ -806,7 +806,7 @@ def test_blog_pages_list_no_children_with_classes(test_page1, test_page2, test_p
     )
 
     assert (
-        djpress_tags.blog_pages_list(
+        djpress_tags.site_pages_list(
             ul_outer_class="ul-outer-class", li_class="li-class", a_class="a-class", ul_child_class="ul-child-class"
         )
         == expected_output
@@ -814,7 +814,7 @@ def test_blog_pages_list_no_children_with_classes(test_page1, test_page2, test_p
 
 
 @pytest.mark.django_db
-def test_blog_pages_list_one_child(test_page1, test_page2, test_page3):
+def test_site_pages_list_one_child(test_page1, test_page2, test_page3):
     test_page2.parent = test_page1
     test_page2.save()
 
@@ -829,11 +829,11 @@ def test_blog_pages_list_one_child(test_page1, test_page2, test_page3):
         "</ul>"
     )
 
-    assert djpress_tags.blog_pages_list() == expected_output
+    assert djpress_tags.site_pages_list() == expected_output
 
 
 @pytest.mark.django_db
-def test_blog_pages_list_one_child_with_classes(test_page1, test_page2, test_page3):
+def test_site_pages_list_one_child_with_classes(test_page1, test_page2, test_page3):
     test_page2.parent = test_page1
     test_page2.save()
 
@@ -849,7 +849,7 @@ def test_blog_pages_list_one_child_with_classes(test_page1, test_page2, test_pag
     )
 
     assert (
-        djpress_tags.blog_pages_list(
+        djpress_tags.site_pages_list(
             ul_outer_class="ul-outer-class", li_class="li-class", a_class="a-class", ul_child_class="ul-child-class"
         )
         == expected_output
@@ -857,7 +857,7 @@ def test_blog_pages_list_one_child_with_classes(test_page1, test_page2, test_pag
 
 
 @pytest.mark.django_db
-def test_blog_pages_list_two_children(test_page1, test_page2, test_page3, test_page4):
+def test_site_pages_list_two_children(test_page1, test_page2, test_page3, test_page4):
     test_page3.parent = test_page1
     test_page3.save()
     test_page4.parent = test_page2
@@ -878,11 +878,11 @@ def test_blog_pages_list_two_children(test_page1, test_page2, test_page3, test_p
         "</ul>"
     )
 
-    assert djpress_tags.blog_pages_list() == expected_output
+    assert djpress_tags.site_pages_list() == expected_output
 
 
 @pytest.mark.django_db
-def test_blog_pages_list_two_children_with_classes(test_page1, test_page2, test_page3, test_page4):
+def test_site_pages_list_two_children_with_classes(test_page1, test_page2, test_page3, test_page4):
     test_page3.parent = test_page1
     test_page3.save()
     test_page4.parent = test_page2
@@ -904,7 +904,7 @@ def test_blog_pages_list_two_children_with_classes(test_page1, test_page2, test_
     )
 
     assert (
-        djpress_tags.blog_pages_list(
+        djpress_tags.site_pages_list(
             ul_outer_class="ul-outer-class", li_class="li-class", a_class="a-class", ul_child_class="ul-child-class"
         )
         == expected_output
@@ -912,7 +912,7 @@ def test_blog_pages_list_two_children_with_classes(test_page1, test_page2, test_
 
 
 @pytest.mark.django_db
-def test_blog_pages_list_child_grandchild(test_page1, test_page2, test_page3, test_page4):
+def test_site_pages_list_child_grandchild(test_page1, test_page2, test_page3, test_page4):
     test_page2.parent = test_page1
     test_page2.save()
     test_page3.parent = test_page2
@@ -933,11 +933,11 @@ def test_blog_pages_list_child_grandchild(test_page1, test_page2, test_page3, te
         "</ul>"
     )
 
-    assert djpress_tags.blog_pages_list() == expected_output
+    assert djpress_tags.site_pages_list() == expected_output
 
 
 @pytest.mark.django_db
-def test_blog_pages_list_child_grandchild_with_classes(test_page1, test_page2, test_page3, test_page4):
+def test_site_pages_list_child_grandchild_with_classes(test_page1, test_page2, test_page3, test_page4):
     test_page2.parent = test_page1
     test_page2.save()
     test_page3.parent = test_page2
@@ -959,7 +959,7 @@ def test_blog_pages_list_child_grandchild_with_classes(test_page1, test_page2, t
     )
 
     assert (
-        djpress_tags.blog_pages_list(
+        djpress_tags.site_pages_list(
             ul_outer_class="ul-outer-class", li_class="li-class", a_class="a-class", ul_child_class="ul-child-class"
         )
         == expected_output
@@ -967,7 +967,7 @@ def test_blog_pages_list_child_grandchild_with_classes(test_page1, test_page2, t
 
 
 @pytest.mark.django_db
-def test_blog_pages_list_child_greatgrandchild(test_page1, test_page2, test_page3, test_page4):
+def test_site_pages_list_child_greatgrandchild(test_page1, test_page2, test_page3, test_page4):
     test_page2.parent = test_page1
     test_page2.save()
     test_page3.parent = test_page2
@@ -993,11 +993,11 @@ def test_blog_pages_list_child_greatgrandchild(test_page1, test_page2, test_page
         "</ul>"
     )
 
-    assert djpress_tags.blog_pages_list() == expected_output
+    assert djpress_tags.site_pages_list() == expected_output
 
 
 @pytest.mark.django_db
-def test_blog_pages_list_child_greatgrandchild_with_classes(test_page1, test_page2, test_page3, test_page4):
+def test_site_pages_list_child_greatgrandchild_with_classes(test_page1, test_page2, test_page3, test_page4):
     test_page2.parent = test_page1
     test_page2.save()
     test_page3.parent = test_page2
@@ -1024,7 +1024,7 @@ def test_blog_pages_list_child_greatgrandchild_with_classes(test_page1, test_pag
     )
 
     assert (
-        djpress_tags.blog_pages_list(
+        djpress_tags.site_pages_list(
             ul_outer_class="ul-outer-class", li_class="li-class", a_class="a-class", ul_child_class="ul-child-class"
         )
         == expected_output
@@ -1032,7 +1032,7 @@ def test_blog_pages_list_child_greatgrandchild_with_classes(test_page1, test_pag
 
 
 @pytest.mark.django_db
-def test_blog_pages_list_child_change_order(test_page1, test_page2, test_page3, test_page4, test_page5):
+def test_site_pages_list_child_change_order(test_page1, test_page2, test_page3, test_page4, test_page5):
     test_page5.menu_order = 1
     test_page5.save()
     test_page1.menu_order = 2
@@ -1060,11 +1060,11 @@ def test_blog_pages_list_child_change_order(test_page1, test_page2, test_page3, 
         "</ul>"
     )
 
-    assert djpress_tags.blog_pages_list() == expected_output
+    assert djpress_tags.site_pages_list() == expected_output
 
 
 @pytest.mark.django_db
-def test_blog_pages_list_child_greatgreatgrandchild(test_page1, test_page2, test_page3, test_page4, test_page5):
+def test_site_pages_list_child_greatgreatgrandchild(test_page1, test_page2, test_page3, test_page4, test_page5):
     test_page2.parent = test_page1
     test_page2.save()
     test_page3.parent = test_page2
@@ -1096,16 +1096,16 @@ def test_blog_pages_list_child_greatgreatgrandchild(test_page1, test_page2, test
         "</ul>"
     )
 
-    assert djpress_tags.blog_pages_list() == expected_output
+    assert djpress_tags.site_pages_list() == expected_output
 
 
 @pytest.mark.django_db
-def test_blog_pages_no_pages():
-    assert djpress_tags.blog_pages() == ""
+def test_site_pages_no_pages():
+    assert djpress_tags.site_pages() == ""
 
 
 @pytest.mark.django_db
-def test_blog_pages(test_page1, test_page2):
+def test_site_pages(test_page1, test_page2):
     pages = Post.page_objects.all()
 
     assert test_page1 in pages
@@ -1119,9 +1119,9 @@ def test_blog_pages(test_page1, test_page2):
 
     expected_output_span = f"<span>{get_page_link(page=test_page1)}, {get_page_link(page=test_page2)}</span>"
 
-    assert djpress_tags.blog_pages() == expected_output_ul
-    assert djpress_tags.blog_pages(outer="div") == expected_output_div
-    assert djpress_tags.blog_pages(outer="span") == expected_output_span
+    assert djpress_tags.site_pages() == expected_output_ul
+    assert djpress_tags.site_pages(outer="div") == expected_output_div
+    assert djpress_tags.site_pages(outer="span") == expected_output_span
 
 
 @pytest.mark.django_db

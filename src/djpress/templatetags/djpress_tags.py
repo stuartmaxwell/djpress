@@ -117,8 +117,8 @@ def blog_categories(
 
 
 @register.simple_tag
-def blog_pages_list(ul_outer_class: str = "", li_class: str = "", a_class: str = "", ul_child_class: str = "") -> str:
-    """Returns an HTML list of the blog pages.
+def site_pages_list(ul_outer_class: str = "", li_class: str = "", a_class: str = "", ul_child_class: str = "") -> str:
+    """Returns an HTML list of the site's pages.
 
     The pages are sorted by menu order and then by title. Pages that have children have a nested list of children.
 
@@ -167,19 +167,19 @@ def blog_pages_list(ul_outer_class: str = "", li_class: str = "", a_class: str =
         ul_outer_class = f' class="{ul_outer_class}"'
 
     output += f"<ul{ul_outer_class}>"
-    output += helpers.get_blog_pages_list(pages, li_class=li_class, a_class=a_class, ul_child_class=ul_child_class)
+    output += helpers.get_site_pages_list(pages, li_class=li_class, a_class=a_class, ul_child_class=ul_child_class)
     output += "</ul>"
 
     return mark_safe(output)
 
 
 @register.simple_tag
-def blog_pages(
+def site_pages(
     outer: str = "ul",
     outer_class: str = "",
     link_class: str = "",
 ) -> str:
-    """Return the pages of the blog.
+    """Return the pages of the site.
 
     Args:
         outer: The outer HTML tag for the pages.
