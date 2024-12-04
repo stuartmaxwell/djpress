@@ -1,6 +1,6 @@
 # Sitemap
 
-DJ Press provides sitemap support for your blog content through Django's built-in sitemap framework. This allows search engines to more intelligently crawl your site by providing information about:
+DJ Press provides sitemap support for your site's content through Django's built-in sitemap framework. This allows search engines to more intelligently crawl your site by providing information about:
 
 - Blog posts
 - Static pages
@@ -50,7 +50,7 @@ DJ Press provides sitemap support for your blog content through Django's built-i
     ]
     ```
 
-That's it! Your site will now have a sitemap at `/sitemap.xml` that includes all your blog content.
+That's it! Your site will now have a sitemap at `/sitemap.xml` that includes all your site's content.
 
 ## What's Included
 

@@ -28,36 +28,36 @@ This is useful for building an index page with all posts:
 {% endfor %}
 ```
 
-## blog_title
+## site_title
 
-Returns the blog title as configured in the settings with the `BLOG_TITLE` variable. If no blog title has been configured, this will return the default title: "My DJ Press Blog".
+Returns the site title as configured in the settings with the `SITE_TITLE` variable. If no site title has been configured, this will return the default title: "My DJ Press Blog".
 
-**Returns:** the `BLOG_TITLE` value as a string.
+**Returns:** the `SITE_TITLE` value as a string.
 
-### blog_title Examples
+### site_title Examples
 
 This is useful for the HTML `title` tag:
 
 ```django
-<title>{% blog_title %}</title>
+<title>{% site_title %}</title>
 ```
 
-## blog_title_link
+## site_title_link
 
 This is used to return an HTML link to the index view of the blog.
 
 **Returns:** an HTML link to the index view marked as safe.
 
-### blog_title_link Arguments
+### site_title_link Arguments
 
 - `link_class` (optional): CSS class(es) to apply to the link.
 
-### blog_title_link Examples
+### site_title_link Examples
 
 Just the tag with no argument:
 
 ```django
-{% blog_title_link %}
+{% site_title_link %}
 ```
 
 Outputs the following:
@@ -69,7 +69,7 @@ Outputs the following:
 The tag with a positional argument:
 
 ```django
-{% blog_title_link "mycssclass" %}
+{% site_title_link "mycssclass" %}
 ```
 
 Outputs the following:
@@ -81,7 +81,7 @@ Outputs the following:
 The tag with a keyword argument:
 
 ```django
-{% blog_title_link link_class="mycssclass" %}
+{% site_title_link link_class="mycssclass" %}
 ```
 
 Outputs the following:
@@ -93,7 +93,7 @@ Outputs the following:
 The `link_class` argument can contain multiple CSS tags separated by spaces:
 
 ```django
-{% blog_title_link link_class="class1 class2" %}
+{% site_title_link link_class="class1 class2" %}
 ```
 
 Outputs the following:
@@ -102,9 +102,9 @@ Outputs the following:
 <a href="/" class="class1 class2">My DJ Press Blog</a>
 ```
 
-## blog_page_title
+## page_title
 
-Returns the title of the blog page, depending on the context of the page. A different title is returned for a category page, a blog page, author page, etc. This is useful to be used in the `<title>` tag of the template.
+Returns the title of the page, depending on the context of the page. A different title is returned for a category page, a blog page, author page, etc. This is useful to be used in the `<title>` tag of the template.
 
 **Returns:** A string with no HTML formatting.
 
@@ -118,7 +118,7 @@ Returns the title of the blog page, depending on the context of the page. A diff
 The tag with no options for a single blog page or post:
 
 ```django
-<title>{% blog_page_title %}</title>
+<title>{% page_title %}</title>
 ````
 
 Outputs the following:
@@ -127,10 +127,10 @@ Outputs the following:
 <title>My blog post title</title>
 ```
 
-The tag can be combined with the `blog_title` tag as well as using the `post_text` field.
+The tag can be combined with the `site_title` tag as well as using the `post_text` field.
 
 ```django
-<title>{% blog_page_title post_text=" | " %}{% blog_title %}</title>
+<title>{% page_title post_text=" | " %}{% site_title %}</title>
 ```
 
 Outputs the following:
@@ -142,7 +142,7 @@ Outputs the following:
 Or you can get creative with an emoji:
 
 ```django
-<title>{% blog_page_title pre_text="🚀 " post_text=" | " %}{% blog_title %}</title>
+<title>{% page_title pre_text="🚀 " post_text=" | " %}{% site_title %}</title>
 ```
 
 Outputs the following:
@@ -187,7 +187,7 @@ Outputs the following:
 </ul>
 ```
 
-Also see [`blog_pages`](#blog_pages) for a tag that produces similar output to the above but with just a single template tag.
+Also see [`site_pages`](#site_pages) for a tag that produces similar output to the above but with just a single template tag.
 
 ## get_categories
 
@@ -288,24 +288,24 @@ Outputs the same comma-separated list of categories, but wrapped in a `span` tag
 </span>
 ```
 
-## blog_pages
+## site_pages
 
-Get all blog pages as a single-level list, wrapped in HTML that can be configured with optional arguments.
+Get all site pages as a single-level list, wrapped in HTML that can be configured with optional arguments.
 
 **Returns:** all blog pages as HTML marked as safe.
 
-### blog_pages Arguments
+### site_pages Arguments
 
 - `outer` (optional): the outer tags that this should be wrapped in. Accepted options are "ul", "div", "span". Default is: "ul".
 - `outer_class` (optional): the CSS classes to apply to the outer tag. Default: "".
 - `link_class` (optional): the CSS classes to apply to the link tag. Default: "".
 
-### blog_pages Examples
+### site_pages Examples
 
 Just the tag, with no arguments.
 
 ```django
-{% blog_pages %}
+{% site_pages %}
 ```
 
 This will output the same HTML from the `get_pages` example.
@@ -324,7 +324,7 @@ This will output the same HTML from the `get_pages` example.
 Wrapped in a `div` tag with classes added, using positional arguments.
 
 ```django
-{% blog_pages "div" "class1" "class2" %}
+{% site_pages "div" "class1" "class2" %}
 ```
 
 Outputs a comma-separated list of pages, wrapped in a `div` tag.
@@ -339,7 +339,7 @@ Outputs a comma-separated list of pages, wrapped in a `div` tag.
 Wrapped in a `span` tag with classes added, using named arguments.
 
 ```django
-{% blog_pages outer="div" outer_class="class1" link_class="class2" %}
+{% site_pages outer="div" outer_class="class1" link_class="class2" %}
 ```
 
 Outputs the same comma-separated list of pages, but wrapped in a `span` tag.
@@ -351,25 +351,25 @@ Outputs the same comma-separated list of pages, but wrapped in a `span` tag.
 </span>
 ```
 
-## blog_pages_list
+## site_pages_list
 
-Get all published blog pages and output as a nested list to support parent pages.
+Get all published site pages and output as a nested list to support parent pages.
 
 Return: HTML which has been marked as safe.
 
-### blog_pages_list Arguments
+### site_pages_list Arguments
 
 - `ul_outer_class` (optional): The CSS class(es) for the outer unordered list.
 - `li_class` (optional): The CSS class(es) for the list item tags
 - `a_class` (optional): The CSS class(es) for the anchor tags.
 - `ul_child_class` (optional): The CSS class(es) for the nested unordered lists.
 
-### blog_pages_list Examples
+### site_pages_list Examples
 
 Just the tag, with no arguments.
 
 ```django
-{% blog_pages %}
+{% site_pages %}
 ```
 
 This will output the following HTML:
@@ -396,7 +396,7 @@ This will output the following HTML:
 Or arguments can be used to build a Bootstrap-like navbar menu.
 
 ```django
-{% blog_pages ul_outer_class="navbar-nav" li_class="nav-item" a_class="nav-link" ul_child_class="dropdown-menu" %}
+{% site_pages ul_outer_class="navbar-nav" li_class="nav-item" a_class="nav-link" ul_child_class="dropdown-menu" %}
 ```
 
 This will output the following HTML:

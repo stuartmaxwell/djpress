@@ -75,7 +75,7 @@ In your settings.py file, create a `DJPRESS_SETTINGS` dictionary. Here are some 
 ```python
 # DJPress settings
 DJPRESS_SETTINGS = {
-    "BLOG_TITLE": "My Awesome Blog",
+    "SITE_TITLE": "My Awesome Blog",
     "POST_PREFIX": "{{ year }}/{{ month }}",  # blog post URLs are prefixed with "year/month": /2024/10/blog-post-slug/
 }
 ```

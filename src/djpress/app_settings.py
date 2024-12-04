@@ -6,8 +6,6 @@ DJPRESS_SETTINGS = {
     "ARCHIVE_PREFIX": ("", str),
     "AUTHOR_ENABLED": (True, bool),
     "AUTHOR_PREFIX": ("author", str),
-    "BLOG_DESCRIPTION": ("", str),
-    "BLOG_TITLE": ("My DJ Press Blog", str),
     "CACHE_CATEGORIES": (True, bool),
     "CACHE_RECENT_PUBLISHED_POSTS": (False, bool),
     "CATEGORY_ENABLED": (True, bool),
@@ -23,6 +21,8 @@ DJPRESS_SETTINGS = {
     "RECENT_PUBLISHED_POSTS_COUNT": (20, int),
     "RSS_ENABLED": (True, bool),
     "RSS_PATH": ("rss", str),
+    "SITE_DESCRIPTION": ("", str),
+    "SITE_TITLE": ("My DJ Press Blog", str),
     "THEME": ("default", str),
     "TRUNCATE_TAG": ("<!--more-->", str),
 }

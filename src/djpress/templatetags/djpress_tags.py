@@ -67,28 +67,28 @@ def get_categories() -> models.QuerySet[Category] | None:
 
 
 @register.simple_tag
-def blog_title() -> str:
-    """Return the blog title.
+def site_title() -> str:
+    """Return the site title.
 
     Returns:
-        str: The blog title.
+        str: The site title.
     """
-    return djpress_settings.BLOG_TITLE
+    return djpress_settings.SITE_TITLE
 
 
 @register.simple_tag
-def blog_title_link(link_class: str = "") -> str:
-    """Return the blog title.
+def site_title_link(link_class: str = "") -> str:
+    """Return the site title.
 
     Args:
         link_class: The CSS class(es) for the link.
 
     Returns:
-        str: The blog title.
+        str: The site title.
     """
     link_class_html = f' class="{link_class}"' if link_class else ""
 
-    output = f'<a href="{reverse("djpress:index")}"{link_class_html}>{djpress_settings.BLOG_TITLE}</a>'
+    output = f'<a href="{reverse("djpress:index")}"{link_class_html}>{djpress_settings.SITE_TITLE}</a>'
 
     return mark_safe(output)
 
@@ -117,8 +117,8 @@ def blog_categories(
 
 
 @register.simple_tag
-def blog_pages_list(ul_outer_class: str = "", li_class: str = "", a_class: str = "", ul_child_class: str = "") -> str:
-    """Returns an HTML list of the blog pages.
+def site_pages_list(ul_outer_class: str = "", li_class: str = "", a_class: str = "", ul_child_class: str = "") -> str:
+    """Returns an HTML list of the site's pages.
 
     The pages are sorted by menu order and then by title. Pages that have children have a nested list of children.
 
@@ -167,19 +167,19 @@ def blog_pages_list(ul_outer_class: str = "", li_class: str = "", a_class: str =
         ul_outer_class = f' class="{ul_outer_class}"'
 
     output += f"<ul{ul_outer_class}>"
-    output += helpers.get_blog_pages_list(pages, li_class=li_class, a_class=a_class, ul_child_class=ul_child_class)
+    output += helpers.get_site_pages_list(pages, li_class=li_class, a_class=a_class, ul_child_class=ul_child_class)
     output += "</ul>"
 
     return mark_safe(output)
 
 
 @register.simple_tag
-def blog_pages(
+def site_pages(
     outer: str = "ul",
     outer_class: str = "",
     link_class: str = "",
 ) -> str:
-    """Return the pages of the blog.
+    """Return the pages of the site.
 
     Args:
         outer: The outer HTML tag for the pages.
@@ -187,7 +187,7 @@ def blog_pages(
         link_class: The CSS class(es) for the link.
 
     Returns:
-        str: The pages of the blog.
+        str: The pages of the site.
     """
     pages = Post.page_objects.get_published_pages()
 
@@ -222,7 +222,7 @@ def blog_pages(
 
 
 @register.simple_tag(takes_context=True)
-def blog_page_title(
+def page_title(
     context: Context,
     pre_text: str = "",
     post_text: str = "",
@@ -242,20 +242,20 @@ def blog_page_title(
     post: Post | None = context.get("post")
 
     if category:
-        page_title = category.title
+        title = category.title
 
     elif author:
-        page_title = get_author_display_name(author)
+        title = get_author_display_name(author)
 
     elif post:
-        page_title = post.title
+        title = post.title
     else:
-        page_title = ""
+        title = ""
 
-    if page_title:
-        page_title = f"{pre_text}{page_title}{post_text}"
+    if title:
+        title = f"{pre_text}{title}{post_text}"
 
-    return page_title
+    return title
 
 
 @register.simple_tag(takes_context=True)

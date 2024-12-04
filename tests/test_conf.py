@@ -11,7 +11,7 @@ from djpress.conf import check_djpress_settings
 def test_load_default_test_settings_example_project(settings):
     """Test that the default settings from the example project are loaded."""
 
-    assert settings.DJPRESS_SETTINGS["BLOG_TITLE"] == "My Test DJ Press Blog"
+    assert settings.DJPRESS_SETTINGS["SITE_TITLE"] == "My Test DJ Press Blog"
     assert settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"] == 3
     assert settings.DJPRESS_SETTINGS["AUTHOR_PREFIX"] == "test-url-author"
 
@@ -43,13 +43,13 @@ def test_leaky_test(settings):
 def test_override_settings_in_django_settings(settings):
     """Test that settings can be overridden in Django settings.py."""
     settings.DJPRESS_SETTINGS = {
-        "BLOG_TITLE": "Custom Blog Title",
+        "SITE_TITLE": "Custom Blog Title",
         "RECENT_PUBLISHED_POSTS_COUNT": 10,
     }
 
-    assert settings.DJPRESS_SETTINGS["BLOG_TITLE"] == "Custom Blog Title"
-    assert django_settings.DJPRESS_SETTINGS["BLOG_TITLE"] == "Custom Blog Title"
-    assert djpress_settings.BLOG_TITLE == "Custom Blog Title"
+    assert settings.DJPRESS_SETTINGS["SITE_TITLE"] == "Custom Blog Title"
+    assert django_settings.DJPRESS_SETTINGS["SITE_TITLE"] == "Custom Blog Title"
+    assert djpress_settings.SITE_TITLE == "Custom Blog Title"
     assert djpress_settings.RECENT_PUBLISHED_POSTS_COUNT == 10
 
 
