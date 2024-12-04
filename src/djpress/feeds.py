@@ -15,9 +15,9 @@ if TYPE_CHECKING:  # pragma: no cover
 class PostFeed(Feed):
     """RSS feed for blog posts."""
 
-    title = djpress_settings.BLOG_TITLE
+    title = djpress_settings.SITE_TITLE
     link = url_utils.get_rss_url()
-    description = djpress_settings.BLOG_DESCRIPTION
+    description = djpress_settings.SITE_DESCRIPTION
 
     def items(self: "PostFeed") -> "models.QuerySet":
         """Return the most recent posts."""

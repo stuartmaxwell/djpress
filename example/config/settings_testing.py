@@ -18,8 +18,8 @@ CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"
 
 # Changing these settings will affect lots of tests!
 DJPRESS_SETTINGS = {
-    "BLOG_TITLE": "My Test DJ Press Blog",
-    "BLOG_DESCRIPTION": "This is a test blog.",
+    "SITE_TITLE": "My Test DJ Press Blog",
+    "SITE_DESCRIPTION": "This is a test blog.",
     "ARCHIVE_PREFIX": "test-url-archives",
     "ARCHIVE_ENABLED": True,
     "AUTHOR_ENABLED": True,

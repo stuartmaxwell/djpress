@@ -59,18 +59,18 @@ def test_have_posts_multiple_posts(test_post1, test_long_post1):
     assert djpress_tags.have_posts(context) == [test_post1, test_long_post1]
 
 
-def test_blog_title(settings):
-    """Test the blog_title template tag.
+def test_site_title(settings):
+    """Test the site_title template tag.
 
     This can be changed on the fly.
     """
-    assert settings.DJPRESS_SETTINGS["BLOG_TITLE"] == "My Test DJ Press Blog"
-    assert djpress_tags.blog_title() == settings.DJPRESS_SETTINGS["BLOG_TITLE"]
+    assert settings.DJPRESS_SETTINGS["SITE_TITLE"] == "My Test DJ Press Blog"
+    assert djpress_tags.site_title() == settings.DJPRESS_SETTINGS["SITE_TITLE"]
 
     # Change the title
-    settings.DJPRESS_SETTINGS["BLOG_TITLE"] = "My New Blog Title"
-    assert settings.DJPRESS_SETTINGS["BLOG_TITLE"] == "My New Blog Title"
-    assert djpress_tags.blog_title() == settings.DJPRESS_SETTINGS["BLOG_TITLE"]
+    settings.DJPRESS_SETTINGS["SITE_TITLE"] = "My New Blog Title"
+    assert settings.DJPRESS_SETTINGS["SITE_TITLE"] == "My New Blog Title"
+    assert djpress_tags.site_title() == settings.DJPRESS_SETTINGS["SITE_TITLE"]
 
 
 @pytest.mark.django_db

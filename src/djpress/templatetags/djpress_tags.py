@@ -67,28 +67,28 @@ def get_categories() -> models.QuerySet[Category] | None:
 
 
 @register.simple_tag
-def blog_title() -> str:
-    """Return the blog title.
+def site_title() -> str:
+    """Return the site title.
 
     Returns:
-        str: The blog title.
+        str: The site title.
     """
-    return djpress_settings.BLOG_TITLE
+    return djpress_settings.SITE_TITLE
 
 
 @register.simple_tag
-def blog_title_link(link_class: str = "") -> str:
-    """Return the blog title.
+def site_title_link(link_class: str = "") -> str:
+    """Return the site title.
 
     Args:
         link_class: The CSS class(es) for the link.
 
     Returns:
-        str: The blog title.
+        str: The site title.
     """
     link_class_html = f' class="{link_class}"' if link_class else ""
 
-    output = f'<a href="{reverse("djpress:index")}"{link_class_html}>{djpress_settings.BLOG_TITLE}</a>'
+    output = f'<a href="{reverse("djpress:index")}"{link_class_html}>{djpress_settings.SITE_TITLE}</a>'
 
     return mark_safe(output)
 

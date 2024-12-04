@@ -28,36 +28,36 @@ This is useful for building an index page with all posts:
 {% endfor %}
 ```
 
-## blog_title
+## site_title
 
-Returns the blog title as configured in the settings with the `BLOG_TITLE` variable. If no blog title has been configured, this will return the default title: "My DJ Press Blog".
+Returns the site title as configured in the settings with the `SITE_TITLE` variable. If no site title has been configured, this will return the default title: "My DJ Press Blog".
 
-**Returns:** the `BLOG_TITLE` value as a string.
+**Returns:** the `SITE_TITLE` value as a string.
 
-### blog_title Examples
+### site_title Examples
 
 This is useful for the HTML `title` tag:
 
 ```django
-<title>{% blog_title %}</title>
+<title>{% site_title %}</title>
 ```
 
-## blog_title_link
+## site_title_link
 
 This is used to return an HTML link to the index view of the blog.
 
 **Returns:** an HTML link to the index view marked as safe.
 
-### blog_title_link Arguments
+### site_title_link Arguments
 
 - `link_class` (optional): CSS class(es) to apply to the link.
 
-### blog_title_link Examples
+### site_title_link Examples
 
 Just the tag with no argument:
 
 ```django
-{% blog_title_link %}
+{% site_title_link %}
 ```
 
 Outputs the following:
@@ -69,7 +69,7 @@ Outputs the following:
 The tag with a positional argument:
 
 ```django
-{% blog_title_link "mycssclass" %}
+{% site_title_link "mycssclass" %}
 ```
 
 Outputs the following:
@@ -81,7 +81,7 @@ Outputs the following:
 The tag with a keyword argument:
 
 ```django
-{% blog_title_link link_class="mycssclass" %}
+{% site_title_link link_class="mycssclass" %}
 ```
 
 Outputs the following:
@@ -93,7 +93,7 @@ Outputs the following:
 The `link_class` argument can contain multiple CSS tags separated by spaces:
 
 ```django
-{% blog_title_link link_class="class1 class2" %}
+{% site_title_link link_class="class1 class2" %}
 ```
 
 Outputs the following:
@@ -127,10 +127,10 @@ Outputs the following:
 <title>My blog post title</title>
 ```
 
-The tag can be combined with the `blog_title` tag as well as using the `post_text` field.
+The tag can be combined with the `site_title` tag as well as using the `post_text` field.
 
 ```django
-<title>{% blog_page_title post_text=" | " %}{% blog_title %}</title>
+<title>{% blog_page_title post_text=" | " %}{% site_title %}</title>
 ```
 
 Outputs the following:
@@ -142,7 +142,7 @@ Outputs the following:
 Or you can get creative with an emoji:
 
 ```django
-<title>{% blog_page_title pre_text="🚀 " post_text=" | " %}{% blog_title %}</title>
+<title>{% blog_page_title pre_text="🚀 " post_text=" | " %}{% site_title %}</title>
 ```
 
 Outputs the following:

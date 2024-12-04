@@ -6,13 +6,13 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% blog_page_title post_text="| " %}{% blog_title %}</title>
+    <title>{% blog_page_title post_text="| " %}{% site_title %}</title>
     <link rel="stylesheet" href="{% static 'default/css/style.css' %}">
     {% rss_link %}
   </head>
   <body>
     <header>
-      <h1>{% blog_title_link %}</h1>
+      <h1>{% site_title_link %}</h1>
       {% blog_pages %}
     </header>
 
