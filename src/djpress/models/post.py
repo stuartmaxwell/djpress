@@ -7,6 +7,7 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Max
+from django.db.transaction import on_commit
 from django.utils import timezone
 from django.utils.text import slugify
 
@@ -470,9 +471,9 @@ class Post(models.Model):
         self.full_clean()
         super().save(*args, **kwargs)
 
-        # If the post is a post and it's published, run the post_save_post hook
+        # If the post is a post and it's published, run the post_save_post hook after the transaction is committed
         if self.post_type == "post" and self.is_published:
-            registry.run_hook(Hooks.POST_SAVE_POST, self)
+            on_commit(lambda: registry.run_hook(Hooks.POST_SAVE_POST, self))
 
     def clean(self) -> None:
         """Custom validation for the Post model."""
