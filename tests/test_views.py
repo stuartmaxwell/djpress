@@ -213,7 +213,7 @@ def test_date_archives_year_no_posts(client, test_post1):
 def test_date_archives_month(client, settings, test_post1):
     assert settings.DJPRESS_SETTINGS["ARCHIVE_PREFIX"] == "test-url-archives"
     url = get_archives_url(test_post1.date.year, test_post1.date.month)
-    assert url == f"/test-url-archives/{test_post1.date.year}/{test_post1.date.month}/"
+    assert url == f"/test-url-archives/{test_post1.date.year}/{test_post1.date.month:02}/"
 
     response = client.get(url)
     assert response.status_code == 200
@@ -223,7 +223,7 @@ def test_date_archives_month(client, settings, test_post1):
 
     settings.DJPRESS_SETTINGS["ARCHIVE_PREFIX"] = ""
     url = get_archives_url(test_post1.date.year, test_post1.date.month)
-    assert url == f"/{test_post1.date.year}/{test_post1.date.month}/"
+    assert url == f"/{test_post1.date.year}/{test_post1.date.month:02}/"
 
     response = client.get(url)
     assert response.status_code == 200
@@ -256,7 +256,7 @@ def test_date_archives_month_no_posts(client, test_post1):
 def test_date_archives_day(client, settings, test_post1):
     assert settings.DJPRESS_SETTINGS["ARCHIVE_PREFIX"] == "test-url-archives"
     url = get_archives_url(test_post1.date.year, test_post1.date.month, test_post1.date.day)
-    assert url == f"/test-url-archives/{test_post1.date.year}/{test_post1.date.month}/{test_post1.date.day}/"
+    assert url == f"/test-url-archives/{test_post1.date.year}/{test_post1.date.month:02}/{test_post1.date.day:02}/"
 
     response = client.get(url)
     assert response.status_code == 200
@@ -266,7 +266,7 @@ def test_date_archives_day(client, settings, test_post1):
 
     settings.DJPRESS_SETTINGS["ARCHIVE_PREFIX"] = ""
     url = get_archives_url(test_post1.date.year, test_post1.date.month, test_post1.date.day)
-    assert url == f"/{test_post1.date.year}/{test_post1.date.month}/{test_post1.date.day}/"
+    assert url == f"/{test_post1.date.year}/{test_post1.date.month:02}/{test_post1.date.day:02}/"
 
     response = client.get(url)
     assert response.status_code == 200
@@ -277,7 +277,7 @@ def test_date_archives_day(client, settings, test_post1):
     assert settings.DJPRESS_SETTINGS["POST_PREFIX"] == "test-posts"
     settings.DJPRESS_SETTINGS["POST_PREFIX"] = "{{ year }}/{{ month }}/{{ day }}"
     url = get_archives_url(test_post1.date.year, test_post1.date.month, test_post1.date.day)
-    assert url == f"/{test_post1.date.year}/{test_post1.date.month}/{test_post1.date.day}/"
+    assert url == f"/{test_post1.date.year}/{test_post1.date.month:02}/{test_post1.date.day:02}/"
 
     response = client.get(url)
     assert response.status_code == 200
@@ -301,7 +301,7 @@ def test_conflict_day_archives_and_single_post(client, settings, test_post1):
     settings.DJPRESS_SETTINGS["ARCHIVE_PREFIX"] = ""
     settings.DJPRESS_SETTINGS["POST_PREFIX"] = "{{ year }}/{{ month }}"
     url = get_archives_url(test_post1.date.year, test_post1.date.month, test_post1.date.day)
-    assert url == f"/{test_post1.date.year}/{test_post1.date.month}/{test_post1.date.day}/"
+    assert url == f"/{test_post1.date.year}/{test_post1.date.month:02}/{test_post1.date.day:02}/"
 
     response = client.get(url)
     assert response.status_code == 200
@@ -322,7 +322,7 @@ def test_conflict_month_archives_and_single_post(client, settings, test_post1):
     settings.DJPRESS_SETTINGS["ARCHIVE_PREFIX"] = ""
     settings.DJPRESS_SETTINGS["POST_PREFIX"] = "{{ year }}"
     url = get_archives_url(test_post1.date.year, test_post1.date.month)
-    assert url == f"/{test_post1.date.year}/{test_post1.date.month}/"
+    assert url == f"/{test_post1.date.year}/{test_post1.date.month:02}/"
 
     response = client.get(url)
     assert response.status_code == 200

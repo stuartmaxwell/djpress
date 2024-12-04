@@ -1,6 +1,7 @@
 import pytest
 from djpress.plugins import PluginRegistry, DJPressPlugin, Hooks
 from djpress.plugins import registry
+from djpress.exceptions import PluginLoadError
 
 from djpress.conf import settings as djpress_settings
 
@@ -72,8 +73,35 @@ def test_run_hook_with_enum(clean_registry):
         return content + " modified"
 
     registry.register_hook(Hooks.PRE_RENDER_CONTENT, test_callback)
-    result = registry.run_hook(Hooks.PRE_RENDER_CONTENT, "test")
-    assert result == "test modified"
+    result = registry.run_hook(Hooks.PRE_RENDER_CONTENT, "test value")
+    assert result == "test value modified"
+
+
+# Tests for hook execution (strict)
+def test_run_hook_with_multiple_hooks(clean_registry):
+    """Test running hook with multiple hooks."""
+
+    def test_callback(content: str) -> str:
+        return content + " modified by test_callback"
+
+    def second_test_callback(content: str) -> str:
+        return content + " modified by second test_callback"
+
+    registry.register_hook(Hooks.PRE_RENDER_CONTENT, test_callback)
+    registry.register_hook(Hooks.PRE_RENDER_CONTENT, second_test_callback)
+    result = registry.run_hook(Hooks.PRE_RENDER_CONTENT, "test value")
+    assert result == "test value modified by test_callback modified by second test_callback"
+
+
+def test_run_hook_with_exception(clean_registry):
+    """Test running hook with an exception doesn't modify the value."""
+
+    def test_callback(content: str) -> str:
+        raise ValueError("Test error")
+
+    registry.register_hook(Hooks.PRE_RENDER_CONTENT, test_callback)
+    result = registry.run_hook(Hooks.PRE_RENDER_CONTENT, "test value")
+    assert result == "test value"
 
 
 def test_run_hook_with_string_fails(clean_registry):
@@ -274,6 +302,34 @@ def test_load_plugins_successful(clean_registry, monkeypatch):
     # Verify plugin was added
     assert len(registry.plugins) == 1
     assert isinstance(registry.plugins[0], TestPlugin)
+
+
+def test_load_plugins_exception(clean_registry, monkeypatch):
+    """Test plugin loading with exception."""
+
+    class TestPlugin(DJPressPlugin):
+        name = "test"
+
+        def setup(self, registry):
+            pass
+
+    # Mock the import and instantiate methods to return known values
+    def mock_import(self, path):
+        return TestPlugin
+
+    def mock_instantiate(self, plugin_class, path, settings):
+        raise RuntimeError("Plugin setup failed")
+
+    monkeypatch.setattr(PluginRegistry, "_import_plugin_class", mock_import)
+    monkeypatch.setattr(PluginRegistry, "_instantiate_plugin", mock_instantiate)
+
+    # Set up test settings
+    monkeypatch.setattr(djpress_settings, "PLUGINS", ["test_plugin"])
+    monkeypatch.setattr(djpress_settings, "PLUGIN_SETTINGS", {})
+
+    # Load plugins - will raise exception
+    with pytest.raises(PluginLoadError):
+        registry.load_plugins()
 
 
 def test_plugin_missing_name():

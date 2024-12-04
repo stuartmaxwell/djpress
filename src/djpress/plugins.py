@@ -7,6 +7,7 @@ from typing import Any
 from django.utils.module_loading import import_string
 
 from djpress.conf import settings as djpress_settings
+from djpress.exceptions import PluginLoadError
 
 
 # Hook definitions
@@ -74,7 +75,16 @@ class PluginRegistry:
 
         if hook_name in self.hooks:
             for callback in self.hooks[hook_name]:
-                value = callback(value, *args, **kwargs)
+                # Ruff warns us about performance issues running a try/except block in a loop, but I think this is
+                # acceptable since there won't be many hooks, and we don't want one crashing plugin to affect all the
+                # plugins. With this approach, if one fails, the `value` won't be modified and we'll continue to the
+                # next one.
+                try:
+                    callback_value = callback(value, *args, **kwargs)
+                    value = callback_value
+                except Exception:  # noqa: BLE001, PERF203, S112
+                    # Continue with the next callback
+                    continue
 
         return value
 
@@ -93,12 +103,16 @@ class PluginRegistry:
         plugin_names: list = djpress_settings.PLUGINS
         plugin_settings: dict = djpress_settings.PLUGIN_SETTINGS
 
-        for plugin_path in plugin_names:
-            plugin_class = self._import_plugin_class(plugin_path)
-            plugin = self._instantiate_plugin(plugin_class, plugin_path, plugin_settings)
-            self.plugins.append(plugin)
+        try:
+            for plugin_path in plugin_names:
+                plugin_class = self._import_plugin_class(plugin_path)
+                plugin = self._instantiate_plugin(plugin_class, plugin_path, plugin_settings)
+                self.plugins.append(plugin)
 
-        self._loaded = True
+            self._loaded = True
+        except Exception as exc:
+            msg = f"Failed to load plugins: {exc}"
+            raise PluginLoadError(msg) from exc
 
     def _import_plugin_class(self, plugin_path: str) -> type:
         """Import the plugin class from either custom path or standard location.

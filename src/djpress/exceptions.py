@@ -7,3 +7,7 @@ class PostNotFoundError(Exception):
 
 class PageNotFoundError(Exception):
     """Exception raised when the page is not found in the database."""
+
+
+class PluginLoadError(Exception):
+    """Raised when plugins cannot be loaded."""
