@@ -187,7 +187,7 @@ def site_pages(
         link_class: The CSS class(es) for the link.
 
     Returns:
-        str: The pages of the blog.
+        str: The pages of the site.
     """
     pages = Post.page_objects.get_published_pages()
 

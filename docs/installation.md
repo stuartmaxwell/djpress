@@ -27,7 +27,7 @@ urlpatterns = [
 ]
 ```
 
-If you want your blog to be in a subdirectory, e.g. `https://example.com/blog/`, use something like the following:
+If you want your site to be in a subdirectory, e.g. `https://example.com/blog/`, use something like the following:
 
 ```python
 from django.urls import path, include
