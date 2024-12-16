@@ -23,8 +23,9 @@ def create_groups(sender: AppConfig, **_) -> None:  # noqa: ANN003
     if sender.name != "djpress":
         return
 
-    # Get content type
+    # Get content types
     post_content_type = ContentType.objects.get_for_model(Post)
+    category_content_type = ContentType.objects.get_for_model(Category)
 
     # Get permissions
     standard_permissions = Permission.objects.filter(
@@ -35,10 +36,14 @@ def create_groups(sender: AppConfig, **_) -> None:  # noqa: ANN003
         content_type=post_content_type,
         codename="can_publish_post",
     )
+    category_permissions = Permission.objects.filter(
+        content_type=category_content_type,
+        codename__in=["add_category", "change_category", "delete_category"],
+    )
 
     # Create groups and assign permissions
     editor_group, _ = Group.objects.get_or_create(name="editor")
-    editor_group.permissions.add(publish_permission, *standard_permissions)
+    editor_group.permissions.add(publish_permission, *standard_permissions, *category_permissions)
 
     author_group, _ = Group.objects.get_or_create(name="author")
     author_group.permissions.add(publish_permission, *standard_permissions)
