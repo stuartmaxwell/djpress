@@ -1,7 +1,10 @@
 """Signals for djpress app."""
 
+from django.apps import AppConfig
+from django.contrib.auth.models import Group, Permission
+from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
-from django.db.models.signals import post_delete, post_save
+from django.db.models.signals import post_delete, post_migrate, post_save
 from django.dispatch import receiver
 
 from djpress.models.category import (
@@ -12,6 +15,36 @@ from djpress.models.post import (
     PUBLISHED_POSTS_CACHE_KEY,
     Post,
 )
+
+
+@receiver(post_migrate)
+def create_groups(sender: AppConfig, **_) -> None:  # noqa: ANN003
+    """Create groups and assign permissions."""
+    if sender.name != "djpress":
+        return
+
+    # Get content type
+    post_content_type = ContentType.objects.get_for_model(Post)
+
+    # Get permissions
+    standard_permissions = Permission.objects.filter(
+        content_type=post_content_type,
+        codename__in=["add_post", "change_post", "delete_post"],
+    )
+    publish_permission = Permission.objects.get(
+        content_type=post_content_type,
+        codename="can_publish_post",
+    )
+
+    # Create groups and assign permissions
+    editor_group, _ = Group.objects.get_or_create(name="editor")
+    editor_group.permissions.add(publish_permission, *standard_permissions)
+
+    author_group, _ = Group.objects.get_or_create(name="author")
+    author_group.permissions.add(publish_permission, *standard_permissions)
+
+    contributor_group, _ = Group.objects.get_or_create(name="contributor")
+    contributor_group.permissions.add(*standard_permissions)
 
 
 @receiver(post_save, sender=Category)
