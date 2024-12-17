@@ -10,6 +10,7 @@ complete:
 - [Themes](themes.md)
 - [Plugins](plugins.md)
 - [Sitemap](sitemap.md)
+- [Grous and Permissions](groups.md)
 
 ## Table of Contents
 
@@ -24,4 +25,5 @@ templatetags
 themes
 plugins
 sitemap
+groups
 ```

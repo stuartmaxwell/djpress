@@ -451,6 +451,10 @@ class Post(models.Model):
         verbose_name_plural = "posts"
         default_manager_name = "admin_objects"  # For Django internals/admin
 
+        permissions = [
+            ("can_publish_post", "Can publish post"),
+        ]
+
     def __str__(self: "Post") -> str:
         """Return the string representation of the post."""
         return self.title

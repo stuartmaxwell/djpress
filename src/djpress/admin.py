@@ -1,6 +1,8 @@
 """djpress admin configuration."""
 
 from django.contrib import admin
+from django.db.models.query import QuerySet
+from django.http import HttpRequest
 from django.utils import timezone
 from django.utils.html import format_html
 
@@ -85,6 +87,80 @@ class PostAdmin(admin.ModelAdmin):
         return obj.date.strftime("%Y-%m-%d %H:%M")
 
     formatted_date.short_description = "Date"
+
+    def get_queryset(self, request: HttpRequest) -> QuerySet[Post]:
+        """Limit the queryset based on user role.
+
+        - Superusers and Editors can see all posts.
+        - Contributors and Authors can only see their own posts.
+
+        Args:
+            request: The request object.
+
+        Returns:
+            A queryset of posts.
+        """
+        qs = super().get_queryset(request)
+
+        # Superusers can see all posts
+        if request.user.is_superuser:
+            return qs
+
+        # Editors can see all posts
+        if request.user.groups.filter(name="editor").exists():
+            return qs
+
+        # Authors and Contributors see only their own posts
+        return qs.filter(author=request.user)
+
+    def has_change_permission(self, request: HttpRequest, obj: Post = None) -> bool:
+        """Limit the change permission based on user role.
+
+        Args:
+            request: The request object.
+            obj: The post object.
+
+        Returns:
+            A boolean indicating if the user has change permission.
+        """
+        # First check if they have basic change permission
+        if not super().has_change_permission(request, obj):
+            return False
+
+        # Superusers can change any post
+        if request.user.is_superuser:
+            return True
+
+        # If no specific object, they have general change permission
+        if obj is None:
+            return True
+
+        # Editors can change any post
+        if request.user.groups.filter(name="editor").exists():
+            return True
+
+        # Others can only change their own posts
+        return obj.author == request.user
+
+    def get_readonly_fields(self, request: HttpRequest, _: Post = None) -> tuple[str, ...]:
+        """Limit the readonly fields based on user role.
+
+        Args:
+            request: The request object.
+            _: The post object.
+
+        Returns:
+            A tuple of readonly fields.
+        """
+        # Superusers can edit all fields
+        if request.user.is_superuser:
+            return self.readonly_fields
+
+        # Restrict status field if user can't publish
+        if not request.user.has_perm("djpress.can_publish_post"):
+            return (*self.readonly_fields, "status")
+
+        return self.readonly_fields
 
 
 @admin.register(PluginStorage)
