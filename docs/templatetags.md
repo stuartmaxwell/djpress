@@ -168,7 +168,7 @@ Get the pages and display as a list:
 <ul>
   {% for page in pages %}
     <li>
-      <a href="{% url 'djpress:single_post' page.slug %}>{{ page.title }}</a>
+      <a href="{% url 'djpress:single_post' page.slug %}">{{ page.title }}</a>
     </li>
   {% endfor %}
 </ul>
@@ -179,10 +179,10 @@ Outputs the following:
 ```html
 <ul>
   <li>
-    <a href="/about">About me</a>
+    <a href="/about/">About me</a>
   </li>
   <li>
-    <a href="/contact">Contact me</a>
+    <a href="/contact/">Contact me</a>
   </li>
 </ul>
 ```
@@ -206,7 +206,7 @@ Get the categories and display as a list:
 <ul>
   {% for category in categories %}
     <li>
-      <a href="{% url 'djpress:category_posts' category.slug %}>{{ category.title }}</a>
+      <a href="{% url 'djpress:category_posts' category.slug %}">{{ category.title }}</a>
     </li>
   {% endfor %}
 </ul>
@@ -217,10 +217,10 @@ Outputs the following:
 ```html
 <ul>
   <li>
-    <a href="/category/general">General</a>
+    <a href="/category/general/">General</a>
   </li>
   <li>
-    <a href="/category/news">News</a>
+    <a href="/category/news/">News</a>
   </li>
 </ul>
 ```
@@ -250,10 +250,10 @@ This will output the same HTML from the `get_categories` example.
 ```html
 <ul>
   <li>
-    <a href="/category/general" title="View all posts in the General category">General</a>
+    <a href="/category/general/" title="View all posts in the General category">General</a>
   </li>
   <li>
-    <a href="/category/news" title="View all posts in the General category">News</a>
+    <a href="/category/news/" title="View all posts in the General category">News</a>
   </li>
 </ul>
 ```
@@ -268,8 +268,8 @@ Outputs a comma-separated list of categories, wrapped in a `div` tag.
 
 ```html
 <div class="class1">
-  <a href="/category/general" title="View all posts in the General category" class="class2">General</a>,
-  <a href="/category/news" title="View all posts in the General category" class="class2">News</a>
+  <a href="/category/general/" title="View all posts in the General category" class="class2">General</a>,
+  <a href="/category/news/" title="View all posts in the General category" class="class2">News</a>
 </div>
 ```
 
@@ -283,8 +283,8 @@ Outputs the same comma-separated list of categories, but wrapped in a `span` tag
 
 ```html
 <span class="class1">
-  <a href="/category/general" title="View all posts in the General category" class="class2">General</a>,
-  <a href="/category/news" title="View all posts in the General category" class="class2">News</a>
+  <a href="/category/general/" title="View all posts in the General category" class="class2">General</a>,
+  <a href="/category/news/" title="View all posts in the General category" class="class2">News</a>
 </span>
 ```
 
@@ -313,10 +313,10 @@ This will output the same HTML from the `get_pages` example.
 ```html
 <ul>
   <li>
-    <a href="/about">About me</a>
+    <a href="/about/">About me</a>
   </li>
   <li>
-    <a href="/contact">Contact me</a>
+    <a href="/contact/">Contact me</a>
   </li>
 </ul>
 ```
@@ -331,8 +331,8 @@ Outputs a comma-separated list of pages, wrapped in a `div` tag.
 
 ```html
 <div class="class1">
-  <a href="/about" class="class2">About me</a>,
-  <a href="/contact" class="class2">Contact me</a>
+  <a href="/about/" class="class2">About me</a>,
+  <a href="/contact/" class="class2">Contact me</a>
 </div>
 ```
 
@@ -346,8 +346,8 @@ Outputs the same comma-separated list of pages, but wrapped in a `span` tag.
 
 ```html
 <span class="class1">
-  <a href="/about" class="class2">About me</a>,
-  <a href="/contact" class="class2">Contact me</a>
+  <a href="/about/" class="class2">About me</a>,
+  <a href="/contact/" class="class2">Contact me</a>
 </span>
 ```
 
@@ -377,18 +377,18 @@ This will output the following HTML:
 ```html
 <ul>
   <li>
-    <a href="/about">About me</a>
+    <a href="/about/">About me</a>
     <ul>
       <li>
-        <a href="/about/hobbies">Hobbies</a>
+        <a href="/about/hobbies/">Hobbies</a>
       </li>
       <li>
-        <a href="/about/resume">My Resume</a>
+        <a href="/about/resume/">My Resume</a>
       </li>
     </ul>
   </li>
   <li>
-    <a href="/contact">Contact me</a>
+    <a href="/contact/">Contact me</a>
   </li>
 </ul>
 ```
@@ -404,18 +404,18 @@ This will output the following HTML:
 ```html
 <ul class="navbar-nav">
   <li class="nav-item">
-    <a href="/about" title="View the About me page" class="nav-link">About me</a>
+    <a href="/about/" title="View the About me page" class="nav-link">About me</a>
     <ul>
       <li class="nav-item">
-        <a href="/about/hobbies" title="View the Hobbies page" class="nav-link">Hobbies</a>
+        <a href="/about/hobbies/" title="View the Hobbies page" class="nav-link">Hobbies</a>
       </li>
       <li class="nav-item">
-        <a href="/about/resume" title="View the My Resume page" class="nav-link">My Resume</a>
+        <a href="/about/resume/" title="View the My Resume page" class="nav-link">My Resume</a>
       </li>
     </ul>
   </li>
   <li class="nav-item">
-    <a href="/contact" title="View the Contact me page" class="nav-link">Contact me</a>
+    <a href="/contact/" title="View the Contact me page" class="nav-link">Contact me</a>
   </li>
 </ul>
 ```
