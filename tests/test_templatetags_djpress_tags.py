@@ -102,9 +102,7 @@ def test_get_post_title_no_post_context():
 
 @pytest.mark.django_db
 def test_post_title_posts(settings, test_post1):
-    """Test the post_title template tag.
-
-    This uses the `post.permalink` property to generate the link."""
+    """Test the post_title template tag."""
     # Context should have both a posts and a post to simulate the for post in posts loop
     context = Context({"posts": [test_post1], "post": test_post1})
 

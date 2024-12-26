@@ -563,37 +563,6 @@ class Post(models.Model):
         return get_post_url(self)
 
     @property
-    def permalink(self: "Post") -> str:
-        """Return the post's permalink.
-
-        The posts permalink is constructed of the following elements:
-        - The post prefix - this is configured in POST_PREFIX and could be an empty
-          string or a custom string.
-        - The post slug - this is a unique identifier for the post. TODO: should this be
-          a database unique constraint, or should we handle it in software instead?
-        """
-        # If the post type is a page, we return the full page path
-        if self.post_type == "page":
-            return self.full_page_path
-
-        prefix = djpress_settings.POST_PREFIX
-
-        # Replace placeholders in POST_PREFIX with actual values
-        replacements = {
-            "{{ year }}": self.date.strftime("%Y"),
-            "{{ month }}": self.date.strftime("%m"),
-            "{{ day }}": self.date.strftime("%d"),
-        }
-
-        for placeholder, value in replacements.items():
-            prefix = prefix.replace(placeholder, value)
-
-        # Ensure there's no leading or trailing slash, then join with the slug
-        url_parts = [part for part in prefix.split("/") if part] + [self.slug]
-
-        return "/".join(url_parts)
-
-    @property
     def full_page_path(self) -> str:
         """Return the full page path.
 
