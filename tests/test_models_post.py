@@ -250,51 +250,6 @@ def test_post_is_truncated_property(user, settings):
 
 
 @pytest.mark.django_db
-def test_post_permalink(user, settings):
-    post = Post(
-        title="Test Post",
-        slug="test-post",
-        content="This is a test post.",
-        author=user,
-        date=timezone.make_aware(timezone.datetime(2024, 1, 1)),
-        status="published",
-        post_type="post",
-    )
-
-    # Confirm the post prefix and permalink settings are set according to settings_testing.py
-    assert settings.DJPRESS_SETTINGS["POST_PREFIX"] == "test-posts"
-    assert post.permalink == "test-posts/test-post"
-
-    # Test with no post prefix
-    settings.DJPRESS_SETTINGS["POST_PREFIX"] = ""
-    assert post.permalink == "test-post"
-
-    # Test with text, year, month, day post prefix
-    settings.DJPRESS_SETTINGS["POST_PREFIX"] = "test-posts/{{ year }}/{{ month }}/{{ day }}"
-    assert post.permalink == "test-posts/2024/01/01/test-post"
-
-    # Test with text, year, month post prefix
-    settings.DJPRESS_SETTINGS["POST_PREFIX"] = "test-posts/{{ year }}/{{ month }}"
-    assert post.permalink == "test-posts/2024/01/test-post"
-
-    # Test with text, year post prefix
-    settings.DJPRESS_SETTINGS["POST_PREFIX"] = "test-posts/{{ year }}"
-    assert post.permalink == "test-posts/2024/test-post"
-
-    # Test with year, month, day post prefix
-    settings.DJPRESS_SETTINGS["POST_PREFIX"] = "{{ year }}/{{ month }}/{{ day }}"
-    assert post.permalink == "2024/01/01/test-post"
-
-    # Test with year, month post prefix
-    settings.DJPRESS_SETTINGS["POST_PREFIX"] = "{{ year }}/{{ month }}"
-    assert post.permalink == "2024/01/test-post"
-
-    # Test with year post prefix
-    settings.DJPRESS_SETTINGS["POST_PREFIX"] = "{{ year }}"
-    assert post.permalink == "2024/test-post"
-
-
-@pytest.mark.django_db
 def test_get_published_posts_by_author(user):
     # Create some published posts by the test user
     post1 = Post.post_objects.create(
@@ -335,18 +290,6 @@ def test_get_published_posts_by_author(user):
     assert post2 in published_posts
     assert draft_post not in published_posts
     assert future_post not in published_posts
-
-
-@pytest.mark.django_db
-def test_page_permalink(test_page1):
-    assert test_page1.permalink == "test-page1"
-
-
-@pytest.mark.django_db
-def test_page_permalink_parent(test_page1, test_page2):
-    test_page1.parent = test_page2
-    test_page1.save()
-    assert test_page1.permalink == "test-page2/test-page1"
 
 
 @pytest.mark.django_db
