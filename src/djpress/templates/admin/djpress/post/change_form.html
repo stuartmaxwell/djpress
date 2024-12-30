@@ -1,0 +1,50 @@
+{% extends "admin/change_form.html" %}
+{% load i18n admin_urls %}
+
+{% block field_sets %}
+  {% for fieldset in adminform %}
+    {% include "admin/includes/fieldset.html" %}
+    {% if fieldset.name == "Content" %}
+      <div class="submit-row">
+        <!-- Word Count Button -->
+        <input id="count-words-button" value="Count words" class="button" type="button" onclick="countWords()">
+        <script>
+          function countWords() {
+            const contentField = document.getElementById('id_content');
+            if (!contentField) return;
+
+            let content = contentField.value;
+            content = content.replace(/<[^>]*>/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim();
+
+            const wordCount = content ? content.split(' ').length : 0;
+            alert(`Word count: ${wordCount}`);
+          }
+        </script>
+      <!-- End Word Count Button -->
+      </div>
+    {% endif %}
+    {% if fieldset.name == "Post Settings" %}
+      <div class="submit-row">
+        <!-- Word Count Button -->
+        <input id="count-words-button" value="Count words" class="button" type="button" onclick="countWords()">
+        <script>
+          function countWords() {
+            const contentField = document.getElementById('id_content');
+            if (!contentField) return;
+
+            let content = contentField.value;
+            content = content.replace(/<[^>]*>/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim();
+
+            const wordCount = content ? content.split(' ').length : 0;
+            alert(`Word count: ${wordCount}`);
+          }
+        </script>
+        <!-- End Word Count Button -->
+      </div>
+    {% endif %}
+  {% endfor %}
+{% endblock %}

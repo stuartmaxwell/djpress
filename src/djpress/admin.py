@@ -28,6 +28,7 @@ class PostAdmin(admin.ModelAdmin):
     prepopulated_fields = {"slug": ("title",)}
     search_fields = ["title", "content", "slug"]
     readonly_fields = ["modified_date"]
+    change_form_template = "admin/djpress/post/change_form.html"
     fieldsets = [
         (
             None,
