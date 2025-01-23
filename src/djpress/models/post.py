@@ -13,7 +13,7 @@ from django.utils.text import slugify
 
 from djpress.conf import settings as djpress_settings
 from djpress.exceptions import PageNotFoundError, PostNotFoundError
-from djpress.models import Category
+from djpress.models import Category, Tag
 from djpress.plugins import Hooks, registry
 from djpress.utils import get_markdown_renderer
 
@@ -428,6 +428,7 @@ class Post(models.Model):
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="draft")
     post_type = models.CharField(max_length=10, choices=CONTENT_TYPE_CHOICES, default="post")
     categories = models.ManyToManyField(Category, blank=True, related_name="_posts")
+    tags = models.ManyToManyField(Tag, blank=True, related_name="_posts")
     menu_order = models.IntegerField(default=0)
     parent = models.ForeignKey(
         "self",
