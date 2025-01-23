@@ -133,3 +133,17 @@ def test_invalid_settings_author(settings):
         "AUTHOR_PREFIX cannot be empty if AUTHOR_ENABLED is True.",
         id="djpress.E003",
     )
+
+
+def test_invalid_settings_tag(settings):
+    """Test that invalid settings raise an ImproperlyConfigured error."""
+    settings.DJPRESS_SETTINGS = {
+        "TAG_ENABLED": True,
+        "TAG_PREFIX": "",
+    }
+    errors = check_djpress_settings()
+    assert len(errors) == 1
+    assert errors[0] == Error(
+        "TAG_PREFIX cannot be empty if TAG_ENABLED is True.",
+        id="djpress.E004",
+    )
