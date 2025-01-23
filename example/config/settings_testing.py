@@ -33,4 +33,6 @@ DJPRESS_SETTINGS = {
     "RECENT_PUBLISHED_POSTS_COUNT": 3,
     "POST_READ_MORE_TEXT": "Test read more...",
     "RSS_PATH": "test-rss",
+    "TAG_ENABLED": True,
+    "TAG_PREFIX": "test-url-tag",
 }

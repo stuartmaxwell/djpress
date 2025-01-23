@@ -5,7 +5,7 @@ from django.utils import timezone
 from django.contrib.auth.models import User
 
 from djpress.url_converters import SlugPathConverter
-from djpress.models import Category, Post
+from djpress.models import Category, Post, Tag
 from djpress.plugins import DJPressPlugin, registry
 
 from example.config import settings_testing
@@ -65,6 +65,21 @@ def category2():
 def category3():
     category = Category.objects.create(title="Development", slug="dev")
     return category
+
+
+@pytest.fixture
+def tag1():
+    return Tag.objects.create(title="Test Tag1", slug="test-tag1")
+
+
+@pytest.fixture
+def tag2():
+    return Tag.objects.create(title="Test Tag2", slug="test-tag2")
+
+
+@pytest.fixture
+def tag3():
+    return Tag.objects.create(title="Test Tag3", slug="test-tag3")
 
 
 @pytest.fixture

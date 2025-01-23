@@ -9,6 +9,7 @@ from djpress.url_utils import (
     get_path_regex,
     get_author_url,
     get_category_url,
+    get_tag_url,
     get_archives_url,
     get_page_url,
     get_post_url,
@@ -319,6 +320,29 @@ def test_get_category_url(settings, category1):
     assert url == expected_url
 
 
+@pytest.mark.django_db
+def test_get_tag_url(settings, tag1):
+    assert settings.APPEND_SLASH is True
+    assert settings.DJPRESS_SETTINGS["TAG_PREFIX"] == "test-url-tag"
+    expected_url = f"/test-url-tag/{tag1.slug}/"
+    url = get_tag_url(tag1)
+    assert url == expected_url
+
+    assert settings.APPEND_SLASH is True
+    settings.DJPRESS_SETTINGS["TAG_PREFIX"] = ""
+    assert settings.DJPRESS_SETTINGS["TAG_PREFIX"] == ""
+    expected_url = f"/{tag1.slug}/"
+    url = get_tag_url(tag1)
+    assert url == expected_url
+
+    settings.APPEND_SLASH = False
+    settings.DJPRESS_SETTINGS["TAG_PREFIX"] = "test-url-tag"
+    assert settings.DJPRESS_SETTINGS["TAG_PREFIX"] == "test-url-tag"
+    expected_url = f"/test-url-tag/{tag1.slug}"
+    url = get_tag_url(tag1)
+    assert url == expected_url
+
+
 def test_get_archives_url_year(settings):
     assert settings.DJPRESS_SETTINGS["ARCHIVE_PREFIX"] == "test-url-archives"
     assert settings.APPEND_SLASH is True
@@ -405,37 +429,37 @@ def test_get_post_url(settings, test_post1):
     assert url == expected_url
 
     settings.DJPRESS_SETTINGS["POST_PREFIX"] = "{{ year }}/{{ month }}/{{ day }}"
-    expected_url = f'/{test_post1.date.strftime("%Y")}/{test_post1.date.strftime("%m")}/{test_post1.date.strftime("%d")}/{test_post1.slug}/'
+    expected_url = f"/{test_post1.date.strftime('%Y')}/{test_post1.date.strftime('%m')}/{test_post1.date.strftime('%d')}/{test_post1.slug}/"
     url = get_post_url(test_post1)
     assert url == expected_url
 
     settings.DJPRESS_SETTINGS["POST_PREFIX"] = "{{year}}/{{month}}/{{day}}"
-    expected_url = f'/{test_post1.date.strftime("%Y")}/{test_post1.date.strftime("%m")}/{test_post1.date.strftime("%d")}/{test_post1.slug}/'
+    expected_url = f"/{test_post1.date.strftime('%Y')}/{test_post1.date.strftime('%m')}/{test_post1.date.strftime('%d')}/{test_post1.slug}/"
     url = get_post_url(test_post1)
     assert url == expected_url
 
     settings.DJPRESS_SETTINGS["POST_PREFIX"] = "{{y e a r}}/{{m onth}}/{{day }}"
-    expected_url = f'/{test_post1.date.strftime("%Y")}/{test_post1.date.strftime("%m")}/{test_post1.date.strftime("%d")}/{test_post1.slug}/'
+    expected_url = f"/{test_post1.date.strftime('%Y')}/{test_post1.date.strftime('%m')}/{test_post1.date.strftime('%d')}/{test_post1.slug}/"
     url = get_post_url(test_post1)
     assert url == expected_url
 
     settings.DJPRESS_SETTINGS["POST_PREFIX"] = "{{ year }}/{{ month }}"
-    expected_url = f'/{test_post1.date.strftime("%Y")}/{test_post1.date.strftime("%m")}/{test_post1.slug}/'
+    expected_url = f"/{test_post1.date.strftime('%Y')}/{test_post1.date.strftime('%m')}/{test_post1.slug}/"
     url = get_post_url(test_post1)
     assert url == expected_url
 
     settings.DJPRESS_SETTINGS["POST_PREFIX"] = "{{ year }}"
-    expected_url = f'/{test_post1.date.strftime("%Y")}/{test_post1.slug}/'
+    expected_url = f"/{test_post1.date.strftime('%Y')}/{test_post1.slug}/"
     url = get_post_url(test_post1)
     assert url == expected_url
 
     settings.DJPRESS_SETTINGS["POST_PREFIX"] = "post/{{ year }}/{{ month }}/{{ day }}"
-    expected_url = f'/post/{test_post1.date.strftime("%Y")}/{test_post1.date.strftime("%m")}/{test_post1.date.strftime("%d")}/{test_post1.slug}/'
+    expected_url = f"/post/{test_post1.date.strftime('%Y')}/{test_post1.date.strftime('%m')}/{test_post1.date.strftime('%d')}/{test_post1.slug}/"
     url = get_post_url(test_post1)
     assert url == expected_url
 
     settings.DJPRESS_SETTINGS["POST_PREFIX"] = "{{ year }}/{{ month }}/{{ day }}/post"
-    expected_url = f'/{test_post1.date.strftime("%Y")}/{test_post1.date.strftime("%m")}/{test_post1.date.strftime("%d")}/post/{test_post1.slug}/'
+    expected_url = f"/{test_post1.date.strftime('%Y')}/{test_post1.date.strftime('%m')}/{test_post1.date.strftime('%d')}/post/{test_post1.slug}/"
     url = get_post_url(test_post1)
     assert url == expected_url
 
