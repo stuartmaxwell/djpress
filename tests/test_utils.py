@@ -1,6 +1,6 @@
 import pytest
 
-from djpress.utils import get_author_display_name, get_markdown_renderer, get_template_name
+from djpress.utils import get_author_display_name, get_markdown_renderer, get_template_name, get_templates
 from django.contrib.auth.models import User
 from django.template.loader import TemplateDoesNotExist
 
@@ -122,3 +122,63 @@ def test_get_template_name(settings):
 
     with pytest.raises(TemplateDoesNotExist):
         get_template_name(templates)
+
+
+def test_get_templates(settings):
+    """Make sure the get_templates function returns the correct list of templates."""
+    settings.DJPRESS_SETTINGS["THEME"] = "test-theme"
+
+    # Test case - index view
+    templates = get_templates("index")
+    assert templates == [
+        "djpress/test-theme/home.html",
+        "djpress/test-theme/index.html",
+    ]
+
+    # Test case - archive_posts view
+    templates = get_templates("archive_posts")
+    assert templates == [
+        "djpress/test-theme/archives.html",
+        "djpress/test-theme/index.html",
+    ]
+
+    # Test case - category_posts view
+    templates = get_templates("category_posts")
+    assert templates == [
+        "djpress/test-theme/category.html",
+        "djpress/test-theme/index.html",
+    ]
+
+    # Test case - tag_posts view
+    templates = get_templates("tag_posts")
+    assert templates == [
+        "djpress/test-theme/tag.html",
+        "djpress/test-theme/index.html",
+    ]
+
+    # Test case - author_posts view
+    templates = get_templates("author_posts")
+    assert templates == [
+        "djpress/test-theme/author.html",
+        "djpress/test-theme/index.html",
+    ]
+
+    # Test case - single_post view
+    templates = get_templates("single_post")
+    assert templates == [
+        "djpress/test-theme/single.html",
+        "djpress/test-theme/index.html",
+    ]
+
+    # Test case - single_page view
+    templates = get_templates("single_page")
+    assert templates == [
+        "djpress/test-theme/page.html",
+        "djpress/test-theme/index.html",
+    ]
+
+    # Test case - non-existent view
+    templates = get_templates("non_existent")
+    assert templates == [
+        "djpress/test-theme/index.html",
+    ]
