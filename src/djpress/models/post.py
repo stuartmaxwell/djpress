@@ -13,7 +13,8 @@ from django.utils.text import slugify
 
 from djpress.conf import settings as djpress_settings
 from djpress.exceptions import PageNotFoundError, PostNotFoundError
-from djpress.models import Category, Tag
+from djpress.models.category import Category
+from djpress.models.tag import Tag
 from djpress.plugins import Hooks, registry
 from djpress.utils import get_markdown_renderer
 
