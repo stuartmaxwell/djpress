@@ -189,6 +189,8 @@ def get_path_regex(path_match: str) -> str:
         regex = regex_page()
     if path_match == "category":
         regex = regex_category()
+    if path_match == "tag":
+        regex = regex_tag()
     if path_match == "author":
         regex = regex_author()
 
