@@ -87,4 +87,12 @@ def check_djpress_settings(**_) -> None:  # noqa: ANN003
             ),
         )
 
+    if settings.TAG_ENABLED and not settings.TAG_PREFIX:
+        errors.append(
+            Error(
+                "TAG_PREFIX cannot be empty if TAG_ENABLED is True.",
+                id="djpress.E004",
+            ),
+        )
+
     return errors

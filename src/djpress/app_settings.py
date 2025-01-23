@@ -8,6 +8,7 @@ DJPRESS_SETTINGS = {
     "AUTHOR_PREFIX": ("author", str),
     "CACHE_CATEGORIES": (True, bool),
     "CACHE_RECENT_PUBLISHED_POSTS": (False, bool),
+    "CACHE_TAGS": (False, bool),
     "CATEGORY_ENABLED": (True, bool),
     "CATEGORY_PREFIX": ("category", str),
     "MARKDOWN_EXTENSION_CONFIGS": ({}, dict),
@@ -23,6 +24,8 @@ DJPRESS_SETTINGS = {
     "RSS_PATH": ("rss", str),
     "SITE_DESCRIPTION": ("", str),
     "SITE_TITLE": ("My DJ Press Blog", str),
+    "TAG_ENABLED": (True, bool),
+    "TAG_PREFIX": ("tag", str),
     "THEME": ("default", str),
     "TRUNCATE_TAG": ("<!--more-->", str),
 }

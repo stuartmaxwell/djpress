@@ -332,6 +332,22 @@ class PostsManager(models.Manager):
         """
         return self.get_published_posts().filter(categories=category)
 
+    def get_published_posts_by_tags(
+        self: "PostsManager",
+        tags: list[Tag],
+    ) -> models.QuerySet:
+        """Return all published posts for a given list of tags.
+
+        Checks if each tag is valid. If any tag is invalid, we raise a ValueError.
+        """
+        # Check if each eag is valid
+        for tag in tags:
+            if not Tag.objects.filter(slug=tag.slug).exists():
+                msg = f"Tag {tag.slug} is not valid."
+                raise ValueError(msg)
+
+        return self.get_published_posts().filter(tags__in=tags).distinct()
+
     def get_published_posts_by_author(
         self: "PostsManager",
         author: User,
