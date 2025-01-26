@@ -333,21 +333,23 @@ class PostsManager(models.Manager):
         """
         return self.get_published_posts().filter(categories=category)
 
+    # Adjust based on your needs
+
     def get_published_posts_by_tags(
         self: "PostsManager",
         tags: list[Tag],
     ) -> models.QuerySet:
         """Return all published posts for a given list of tags.
 
-        Checks if each tag is valid. If any tag is invalid, we raise a ValueError.
+        Only posts that belong to all the tags in the list should be returned.
         """
-        # Check if each eag is valid
-        for tag in tags:
-            if not Tag.objects.filter(slug=tag.slug).exists():
-                msg = f"Tag {tag.slug} is not valid."
-                raise ValueError(msg)
+        if len(tags) > djpress_settings.MAX_TAGS_PER_QUERY:
+            return self.none()
 
-        return self.get_published_posts().filter(tags__in=tags).distinct()
+        queryset = self.get_published_posts()
+        for tag in tags:
+            queryset = queryset.filter(tags=tag)
+        return queryset.distinct()
 
     def get_published_posts_by_author(
         self: "PostsManager",
