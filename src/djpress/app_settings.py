@@ -14,6 +14,7 @@ DJPRESS_SETTINGS = {
     "MARKDOWN_EXTENSION_CONFIGS": ({}, dict),
     "MARKDOWN_EXTENSIONS": ([], list),
     "MARKDOWN_RENDERER": ("djpress.markdown_renderer.default_renderer", str),
+    "MAX_TAGS_PER_QUERY": (5, int),
     "MICROFORMATS_ENABLED": (True, bool),
     "PLUGINS": ([], list),
     "PLUGIN_SETTINGS": ({}, dict),
