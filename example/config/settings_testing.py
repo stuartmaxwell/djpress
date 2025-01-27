@@ -30,6 +30,7 @@ DJPRESS_SETTINGS = {
     "TRUNCATE_TAG": "<!--test-more-->",
     "CACHE_RECENT_PUBLISHED_POSTS": False,
     "CACHE_CATEGORIES": True,
+    "CACHE_TAGS": False,
     "RECENT_PUBLISHED_POSTS_COUNT": 3,
     "POST_READ_MORE_TEXT": "Test read more...",
     "RSS_PATH": "test-rss",
