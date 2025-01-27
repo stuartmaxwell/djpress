@@ -39,7 +39,7 @@ def test_group_permissions(post_content_type: ContentType) -> None:
 
 
 @pytest.mark.django_db
-def test_grou_category_permissions(post_content_type: ContentType) -> None:
+def test_group_category_permissions(post_content_type: ContentType) -> None:
     editor = Group.objects.get(name="editor")
     author = Group.objects.get(name="author")
     contributor = Group.objects.get(name="contributor")
