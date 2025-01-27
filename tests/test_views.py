@@ -9,7 +9,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from djpress.models import Post
-from djpress.url_utils import get_archives_url, get_author_url, get_category_url
+from djpress.url_utils import get_archives_url, get_author_url, get_category_url, get_tag_url
 
 
 @pytest.mark.django_db
@@ -163,6 +163,51 @@ def test_category_with_category_enabled_false(client, settings):
     assert settings.DJPRESS_SETTINGS["CATEGORY_ENABLED"] == True
     settings.DJPRESS_SETTINGS["CATEGORY_ENABLED"] = False
     url = "/test-url-category/non-existent-category/"
+    response = client.get(url)
+    assert response.status_code == 404
+
+
+@pytest.mark.django_db
+def test_tag_with_no_posts_view(client, tag1):
+    url = get_tag_url(tag1)
+    print(url)
+    response = client.get(url)
+    assert response.status_code == 200
+    assert "tags" in response.context
+    assert b"No posts available" in response.content
+    assert "posts" in response.context
+    assert isinstance(response.context["posts"], Iterable)
+
+
+@pytest.mark.django_db
+def test_tag_with_posts_view(client, test_post1, tag1):
+    test_post1.tags.add(tag1)
+    url = get_tag_url(tag1)
+    print(url)
+    response = client.get(url)
+    assert response.status_code == 200
+    assert "tags" in response.context
+    assert b"No posts available" not in response.content
+    assert "posts" in response.context
+    assert isinstance(response.context["posts"], Iterable)
+
+
+@pytest.mark.django_db
+def test_tag_with_tag_enabled_false(client, settings):
+    """This will try to get a page from the database that does not exist."""
+    assert settings.DJPRESS_SETTINGS["TAG_ENABLED"] == True
+
+    url = "/test-url-tag/any-tag/"
+
+    settings.DJPRESS_SETTINGS["TAG_ENABLED"] = False
+    response = client.get(url)
+    assert response.status_code == 404
+
+    settings.DJPRESS_SETTINGS["TAG_ENABLED"] = True
+    response = client.get(url)
+    assert response.status_code == 200
+
+    settings.DJPRESS_SETTINGS["TAG_PREFIX"] = ""
     response = client.get(url)
     assert response.status_code == 404
 

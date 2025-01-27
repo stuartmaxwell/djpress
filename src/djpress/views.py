@@ -225,16 +225,10 @@ def tag_posts(request: HttpRequest, slug: str) -> HttpResponse:
     # Create a list of slugs from the slug
     slugs = slug.split("+")
 
-    try:
-        posts = Paginator(
-            Post.post_objects.get_published_posts_by_tags(slugs),
-            djpress_settings.RECENT_PUBLISHED_POSTS_COUNT,
-        )
-    except ValueError as exc:
-        # Get the message from the exception
-        msg = exc.args[0]
-        raise Http404(msg) from exc
-
+    posts = Paginator(
+        Post.post_objects.get_published_posts_by_tags(slugs),
+        djpress_settings.RECENT_PUBLISHED_POSTS_COUNT,
+    )
     page_number = request.GET.get("page")
     page = posts.get_page(page_number)
 

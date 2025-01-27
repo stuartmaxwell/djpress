@@ -337,13 +337,26 @@ class PostsManager(models.Manager):
 
     def get_published_posts_by_tags(
         self: "PostsManager",
-        tags: list[Tag],
+        tag_slugs: list[str],
     ) -> models.QuerySet:
         """Return all published posts for a given list of tags.
 
         Only posts that belong to all the tags in the list should be returned.
+
+        Args:
+            tag_slugs (list[str]): A list of the string representations of tags (i.e. slugs).
+
+        Returns:
+            models.QuerySet: A queryset of posts that belong to all the tags in the list.
         """
-        if len(tags) > djpress_settings.MAX_TAGS_PER_QUERY:
+        if len(tag_slugs) > djpress_settings.MAX_TAGS_PER_QUERY:
+            return self.none()
+
+        # Get all tags first
+        tags = Tag.objects.filter(slug__in=tag_slugs)
+
+        # If we didn't find all tags, return empty queryset
+        if tags.count() != len(tag_slugs):
             return self.none()
 
         queryset = self.get_published_posts()
