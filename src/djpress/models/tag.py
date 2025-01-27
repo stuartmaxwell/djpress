@@ -30,14 +30,14 @@ class TagManager(models.Manager):
         if djpress_settings.CACHE_TAGS:
             return self._get_cached_tags()
 
-        return self
+        return self.get_queryset()
 
     def _get_cached_tags(self) -> models.QuerySet:
         """Return the cached tags queryset."""
         queryset = cache.get(TAG_CACHE_KEY)
 
         if queryset is None:
-            queryset = self
+            queryset = self.get_queryset()
             cache.set(TAG_CACHE_KEY, queryset, timeout=None)
 
         return queryset
@@ -131,12 +131,19 @@ class Tag(models.Model):
 
     @property
     def posts(self) -> models.QuerySet:
-        """Return only published posts."""
-        return self._posts
+        """Return only published posts.
+
+        TODO: duplicated logic for what a published post is. Need a better way of managing this.
+        """
+        return self._posts.filter(
+            post_type="post",
+            status="published",
+            date__lte=timezone.now(),
+        )
 
     @property
     def has_posts(self) -> bool:
-        """Return True if the category has published posts."""
+        """Return True if the tag has published posts."""
         return self.posts.exists()
 
     @property
