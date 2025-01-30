@@ -65,13 +65,12 @@ BUILDDIR      := "docs/_build"
 
 # Run coverage
 @cov:
-    {{uv}} coverage run -m pytest
-    {{uv}} coverage report -m
+    {{uv}} -m pytest --cov
 
 # Run coverage
 @cov-html:
-    {{uv}} coverage run -m pytest
-    {{uv}} coverage html
+    {{uv}} -m pytest --cov --cov-report=html --cov-context=test
+    echo Coverage report: file://`pwd`/htmlcov/index.html
 
 # Sync the package
 @sync:
