@@ -324,6 +324,7 @@ test = [
     { name = "djpress-example-plugin" },
     { name = "nox" },
     { name = "pytest" },
+    { name = "pytest-cov" },
     { name = "pytest-coverage" },
     { name = "pytest-django" },
 ]
@@ -344,6 +345,7 @@ requires-dist = [
     { name = "myst-parser", marker = "extra == 'docs'", specifier = ">=4.0.0" },
     { name = "nox", marker = "extra == 'test'", specifier = ">=2024.4.15" },
     { name = "pytest", marker = "extra == 'test'", specifier = ">=8.3.3" },
+    { name = "pytest-cov", marker = "extra == 'test'", specifier = ">=6.0.0" },
     { name = "pytest-coverage", marker = "extra == 'test'", specifier = ">=0.0" },
     { name = "pytest-django", marker = "extra == 'test'", specifier = ">=4.9.0" },
     { name = "sphinx", marker = "extra == 'docs'", specifier = ">=8.1.3" },

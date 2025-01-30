@@ -51,6 +51,7 @@ test = [
   "django-debug-toolbar>=4.4.0",
   "nox>=2024.4.15",
   "djpress-example-plugin",
+  "pytest-cov>=6.0.0",
 ]
 docs = [
   "cogapp>=3.4.1",
@@ -90,6 +91,9 @@ convention = "google"
 pythonpath = ". example"
 DJANGO_SETTINGS_MODULE = "config.settings_testing"
 python_files = "tests.py test_*.py *_tests.py"
+
+[tool.coverage.html]
+show_contexts = true
 
 [tool.coverage.run]
 branch = true
