@@ -4,12 +4,13 @@ from django.core.paginator import Paginator
 from django.template import Context, Template
 from django.urls import reverse
 
-from djpress.models import Category, Post
+from djpress.models import Category, Post, Tag
 from djpress.templatetags import djpress_tags
 from djpress.templatetags.helpers import (
     post_read_more_link,
     categories_html,
     get_page_link,
+    tags_html,
 )
 from djpress.utils import get_author_display_name
 from djpress.exceptions import PageNotFoundError
@@ -86,6 +87,21 @@ def test_get_categories(category1, category2, category3):
     assert category3 in djpress_categories
 
     assert list(djpress_categories) == list(categories)  # type: ignore
+
+
+@pytest.mark.django_db
+def test_get_tags(tag1, tag2, tag3):
+    tags = Tag.objects.get_tags().order_by("title")
+    djpresstags = djpress_tags.get_tags()
+
+    assert tag1 in tags
+    assert tag2 in tags
+    assert tag3 in tags
+    assert tag1 in djpresstags
+    assert tag2 in djpresstags
+    assert tag3 in djpresstags
+
+    assert list(djpresstags) == list(tags)
 
 
 @pytest.mark.django_db
@@ -548,7 +564,7 @@ def test_post_content_with_posts(test_long_post1):
     # Context should have both a posts and a post to simulate the for post in posts loop
     context = Context({"posts": [test_long_post1], "post": test_long_post1})
 
-    expected_output = f"{test_long_post1.truncated_content_markdown}" f"{post_read_more_link(test_long_post1)}"
+    expected_output = f"{test_long_post1.truncated_content_markdown}{post_read_more_link(test_long_post1)}"
 
     assert djpress_tags.post_content(context) == expected_output
 
@@ -773,6 +789,21 @@ def test_blog_categories(category1, category2):
 @pytest.mark.django_db
 def test_blog_categories_no_categories():
     assert djpress_tags.blog_categories() == ""
+
+
+@pytest.mark.django_db
+def test_blog_tags(tag1, tag2):
+    tags = Tag.objects.all()
+
+    assert tag1 in tags
+    assert tag2 in tags
+
+    assert djpress_tags.blog_tags() == tags_html(tags=tags, outer="ul", outer_class="", link_class="")
+
+
+@pytest.mark.django_db
+def test_blog_tags_no_tags():
+    assert djpress_tags.blog_tags() == ""
 
 
 @pytest.mark.django_db
@@ -1109,9 +1140,7 @@ def test_site_pages(test_page1, test_page2):
     assert test_page1 in pages
     assert test_page2 in pages
 
-    expected_output_ul = (
-        f"<ul><li>{get_page_link(page=test_page1)}</li>" f"<li>{get_page_link(page=test_page2)}</li></ul>"
-    )
+    expected_output_ul = f"<ul><li>{get_page_link(page=test_page1)}</li><li>{get_page_link(page=test_page2)}</li></ul>"
 
     expected_output_div = f"<div>{get_page_link(page=test_page1)}, {get_page_link(page=test_page2)}</div>"
 
@@ -1283,7 +1312,7 @@ def test_pagination_links_one_page(settings, test_post1, test_post2, test_long_p
     context = Context({"posts": page})
 
     previous_output = ""
-    current_output = f'<span class="current">' f"Page {page.number} of {page.paginator.num_pages}" f"</span>"
+    current_output = f'<span class="current">Page {page.number} of {page.paginator.num_pages}</span>'
     next_output = ""
 
     expected_output = f'<div class="pagination">{previous_output} {current_output} {next_output}</div>'
@@ -1311,7 +1340,7 @@ def test_pagination_links_two_pages(settings, test_post1, test_post2, test_long_
     context = Context({"posts": page})
 
     previous_output = ""
-    current_output = f'<span class="current">' f"Page {page.number} of {page.paginator.num_pages}" f"</span>"
+    current_output = f'<span class="current">Page {page.number} of {page.paginator.num_pages}</span>'
     next_output = (
         f'<span class="next">'
         f'<a href="?page={page.next_page_number()}">next</a> '
@@ -1329,7 +1358,7 @@ def test_pagination_links_two_pages(settings, test_post1, test_post2, test_long_
     context = Context({"posts": page})
 
     previous_output = ""
-    current_output = f'<span class="current">' f"Page {page.number} of {page.paginator.num_pages}" f"</span>"
+    current_output = f'<span class="current">Page {page.number} of {page.paginator.num_pages}</span>'
     next_output = (
         f'<span class="next">'
         f'<a href="?page={page.next_page_number()}">next</a> '
@@ -1352,7 +1381,7 @@ def test_pagination_links_two_pages(settings, test_post1, test_post2, test_long_
         f'<a href="?page={page.previous_page_number()}">previous</a>'
         f"</span>"
     )
-    current_output = f'<span class="current">' f"Page {page.number} of {page.paginator.num_pages}" f"</span>"
+    current_output = f'<span class="current">Page {page.number} of {page.paginator.num_pages}</span>'
     next_output = ""
 
     expected_output = f'<div class="pagination">{previous_output} {current_output} {next_output}</div>'
@@ -1380,7 +1409,7 @@ def test_pagination_links_three_pages(settings, test_post1, test_post2, test_lon
     context = Context({"posts": page})
 
     previous_output = ""
-    current_output = f'<span class="current">' f"Page {page.number} of {page.paginator.num_pages}" f"</span>"
+    current_output = f'<span class="current">Page {page.number} of {page.paginator.num_pages}</span>'
     next_output = (
         f'<span class="next">'
         f'<a href="?page={page.next_page_number()}">next</a> '
@@ -1398,7 +1427,7 @@ def test_pagination_links_three_pages(settings, test_post1, test_post2, test_lon
     context = Context({"posts": page})
 
     previous_output = ""
-    current_output = f'<span class="current">' f"Page {page.number} of {page.paginator.num_pages}" f"</span>"
+    current_output = f'<span class="current">Page {page.number} of {page.paginator.num_pages}</span>'
     next_output = (
         f'<span class="next">'
         f'<a href="?page={page.next_page_number()}">next</a> '
@@ -1421,7 +1450,7 @@ def test_pagination_links_three_pages(settings, test_post1, test_post2, test_lon
         f'<a href="?page={page.previous_page_number()}">previous</a>'
         f"</span>"
     )
-    current_output = f'<span class="current">' f"Page {page.number} of {page.paginator.num_pages}" f"</span>"
+    current_output = f'<span class="current">Page {page.number} of {page.paginator.num_pages}</span>'
     next_output = (
         f'<span class="next">'
         f'<a href="?page={page.next_page_number()}">next</a> '
@@ -1444,7 +1473,7 @@ def test_pagination_links_three_pages(settings, test_post1, test_post2, test_lon
         f'<a href="?page={page.previous_page_number()}">previous</a>'
         f"</span>"
     )
-    current_output = f'<span class="current">' f"Page {page.number} of {page.paginator.num_pages}" f"</span>"
+    current_output = f'<span class="current">Page {page.number} of {page.paginator.num_pages}</span>'
     next_output = ""
 
     expected_output = f'<div class="pagination">{previous_output} {current_output} {next_output}</div>'

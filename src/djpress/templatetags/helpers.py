@@ -5,7 +5,7 @@ from django.db import models
 from django.utils.safestring import mark_safe
 
 from djpress.conf import settings as djpress_settings
-from djpress.models import Category, Post
+from djpress.models import Category, Post, Tag
 
 
 def categories_html(
@@ -54,6 +54,52 @@ def categories_html(
     return output
 
 
+def tags_html(
+    tags: models.QuerySet,
+    outer: str,
+    outer_class: str,
+    link_class: str,
+) -> str:
+    """Return the HTML for the tags.
+
+    Note this isn't a template tag, but a helper function for the other template tags
+
+    Args:
+        tags: The tags.
+        outer: The outer HTML tag for the tags.
+        outer_class: The CSS class(es) for the outer tag.
+        link_class: The CSS class(es) for the link.
+
+    Returns:
+        str: The HTML for the tags.
+    """
+    output = ""
+
+    outer_class_html = f' class="{outer_class}"' if outer_class else ""
+
+    if outer == "ul":
+        output += f"<ul{outer_class_html}>"
+        for tag in tags:
+            output += f"<li>{tag_link(tag, link_class)}</li>"
+        output += "</ul>"
+
+    if outer == "div":
+        output += f"<div{outer_class_html}>"
+        for tag in tags:
+            output += f"{tag_link(tag, link_class)}, "
+        output = output[:-2]  # Remove the trailing comma and space
+        output += "</div>"
+
+    if outer == "span":
+        output += f"<span{outer_class_html}>"
+        for tag in tags:
+            output += f"{tag_link(tag, link_class)}, "
+        output = output[:-2]  # Remove the trailing comma and space
+        output += "</span>"
+
+    return output
+
+
 def category_link(category: Category, link_class: str = "") -> str:
     """Return the category link.
 
@@ -84,6 +130,35 @@ def category_link(category: Category, link_class: str = "") -> str:
         f'<a href="{category_url}" title="View all posts in the {category.title} '
         f'category"{link_class_html}>{category.title}</a>'
     )
+
+
+def tag_link(tag: "Tag", link_class: str = "") -> str:
+    """Return the tag link.
+
+    This is not intended to be used as a template tag. It is used by the other
+    template tags in this module to generate the tag links.
+
+    Args:
+        tag: The tag.
+        link_class: The CSS class(es) for the link.
+    """
+    tag_url = tag.url
+
+    link_classes = ""
+
+    # Add p-category if microformats are enabled
+    if djpress_settings.MICROFORMATS_ENABLED:
+        link_classes += "p-category "
+
+    # Add the user-defined link class
+    link_classes += link_class
+
+    # Trim any trailing spaces
+    link_classes = link_classes.strip()
+
+    link_class_html = f' class="{link_classes}"' if link_classes else ""
+
+    return f'<a href="{tag_url}" title="View all posts tagged with {tag.title}"{link_class_html}>{tag.title}</a>'
 
 
 def get_page_link(page: Post, link_class: str = "") -> str:

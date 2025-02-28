@@ -11,7 +11,7 @@ from django.utils.safestring import mark_safe
 from djpress import url_utils
 from djpress.conf import settings as djpress_settings
 from djpress.exceptions import PageNotFoundError
-from djpress.models import Category, Post
+from djpress.models import Category, Post, Tag
 from djpress.templatetags import helpers
 from djpress.utils import get_author_display_name
 
@@ -67,6 +67,16 @@ def get_categories() -> models.QuerySet[Category] | None:
 
 
 @register.simple_tag
+def get_tags() -> models.QuerySet[Tag]:
+    """Return all tags as a queryset.
+
+    Returns:
+        models.QuerySet[Tag]: All tags.
+    """
+    return Tag.objects.get_tags().order_by("title")
+
+
+@register.simple_tag
 def site_title() -> str:
     """Return the site title.
 
@@ -114,6 +124,29 @@ def blog_categories(
         return ""
 
     return mark_safe(helpers.categories_html(categories, outer, outer_class, link_class))
+
+
+@register.simple_tag
+def blog_tags(
+    outer: str = "ul",
+    outer_class: str = "",
+    link_class: str = "",
+) -> str:
+    """Return the tags of the blog.
+
+    Args:
+        outer: The outer HTML tag for the tags.
+        outer_class: The CSS class(es) for the outer tag.
+        link_class: The CSS class(es) for the link.
+
+    Returns:
+        str: The tags of the blog.
+    """
+    tags = Tag.objects.get_tags().order_by("title")
+    if not tags:
+        return ""
+
+    return mark_safe(helpers.tags_html(tags, outer, outer_class, link_class))
 
 
 @register.simple_tag
@@ -419,9 +452,7 @@ def post_author(context: Context, link_class: str = "") -> str:
     link_class_html = f' class="{link_class}"' if link_class else ""
 
     output = (
-        f'<a href="{author_url}" title="View all posts by '
-        f'{author_display_name}"{link_class_html}>'
-        f"{author_html}</a>"
+        f'<a href="{author_url}" title="View all posts by {author_display_name}"{link_class_html}>{author_html}</a>'
     )
 
     return mark_safe(output)
@@ -690,6 +721,37 @@ def post_categories(
         return ""
 
     return mark_safe(helpers.categories_html(categories, outer, outer_class, link_class))
+
+
+@register.simple_tag(takes_context=True)
+def post_tags(
+    context: Context,
+    outer: str = "ul",
+    outer_class: str = "",
+    link_class: str = "",
+) -> str:
+    """Return the tags of a post.
+
+    Each tag is a link to the tag page.
+
+    Args:
+        context: The context.
+        outer: The outer HTML tag for the tags.
+        outer_class: The CSS class(es) for the outer tag.
+        link_class: The CSS class(es) for the link.
+
+    Returns:
+        str: The tags of the post.
+    """
+    post: Post | None = context.get("post")
+    if not post:
+        return ""
+
+    tags = post.tags.all()
+    if not tags:
+        return ""
+
+    return mark_safe(helpers.tags_html(tags, outer, outer_class, link_class))
 
 
 @register.simple_tag(takes_context=True)
