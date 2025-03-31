@@ -233,7 +233,7 @@ Get a list of all categories wrapped in HTML that can be configured with optiona
 
 ### blog_categories Arguments
 
-- `outer` (optional): the outer tags that this should be wrapped in. Accepted options are "ul", "div", "span". Default is: "ul".
+- `outer_tag` (optional): the outer tags that this should be wrapped in. Accepted options are "ul", "div", "span". Default is: "ul".
 - `outer_class` (optional): the CSS classes to apply to the outer tag. Default: "".
 - `link_class` (optional): the CSS classes to apply to the link tag. Default: "".
 
@@ -245,7 +245,7 @@ Just the tag, with no arguments.
 {% blog_categories %}
 ```
 
-This will output the same HTML from the `get_categories` example.
+This will output:
 
 ```html
 <ul>
@@ -276,7 +276,7 @@ Outputs a comma-separated list of categories, wrapped in a `div` tag.
 Wrapped in a `span` tag with classes added, using named arguments.
 
 ```django
-{% blog_categories outer="div" outer_class="class1" link_class="class2" %}
+{% blog_categories outer_tag="span" outer_class="class1" link_class="class2" %}
 ```
 
 Outputs the same comma-separated list of categories, but wrapped in a `span` tag.
@@ -286,6 +286,117 @@ Outputs the same comma-separated list of categories, but wrapped in a `span` tag
   <a href="/category/general/" title="View all posts in the General category" class="class2">General</a>,
   <a href="/category/news/" title="View all posts in the General category" class="class2">News</a>
 </span>
+```
+
+## blog_tags
+
+Get a list of all tags wrapped in HTML that can be configured with optional arguments.
+
+**Returns:** all tags as HTML which has been marked as safe.
+
+### blog_tags Arguments
+
+- `outer_tag` (optional): the outer tags that this should be wrapped in. Accepted options are "ul", "div", "span". Default is: "ul".
+- `outer_class` (optional): the CSS classes to apply to the outer tag. Default: "".
+- `link_class` (optional): the CSS classes to apply to the link tag. Default: "".
+
+### blog_tags Examples
+
+Just the tag, with no arguments.
+
+```django
+{% blog_tags %}
+```
+
+Outputs a list of all tags:
+
+```html
+<ul>
+  <li>
+    <a href="/tag/python/" title="View all posts tagged with Python">Python</a>
+  </li>
+  <li>
+    <a href="/tag/django/" title="View all posts tagged with Django">Django</a>
+  </li>
+</ul>
+```
+
+Wrapped in a `div` tag with classes added, using positional arguments.
+
+```django
+{% blog_tags "div" "tag-list" "tag-link" %}
+```
+
+Outputs a comma-separated list of tags, wrapped in a `div` tag.
+
+```html
+<div class="tag-list">
+  <a href="/tag/python/" title="View all posts tagged with Python" class="tag-link">Python</a>,
+  <a href="/tag/django/" title="View all posts tagged with Django" class="tag-link">Django</a>
+</div>
+```
+
+Wrapped in a `span` tag with classes added, using named arguments.
+
+```django
+{% blog_tags outer_tag="span" outer_class="tag-list" link_class="tag-link" %}
+```
+
+Outputs the same comma-separated list of tags, but wrapped in a `span` tag.
+
+```html
+<span class="tag-list">
+  <a href="/tag/python/" title="View all posts tagged with Python" class="tag-link">Python</a>,
+  <a href="/tag/django/" title="View all posts tagged with Django" class="tag-link">Django</a>
+</span>
+```
+
+## tags_with_counts
+
+Get a list of all tags with post counts wrapped in HTML that can be configured with optional arguments.
+
+**Returns:** all tags with post counts as HTML which has been marked as safe.
+
+### tags_with_counts Arguments
+
+- `outer_tag` (optional): the outer tags that this should be wrapped in. Accepted options are "ul", "div", "span". Default is: "ul".
+- `outer_class` (optional): the CSS classes to apply to the outer tag. Default: "".
+- `link_class` (optional): the CSS classes to apply to the link tag. Default: "".
+
+### tags_with_counts Examples
+
+Just the tag, with no arguments.
+
+```django
+{% tags_with_counts %}
+```
+
+Outputs a list of all tags with post counts:
+
+```html
+<ul>
+  <li>
+    <a href="/tag/python/" title="View all posts tagged with Python">Python</a> (5)
+  </li>
+  <li>
+    <a href="/tag/django/" title="View all posts tagged with Django">Django</a> (3)
+  </li>
+</ul>
+```
+
+Wrapped in a `div` tag with classes added.
+
+```django
+{% tags_with_counts outer_tag="div" outer_class="tag-cloud" link_class="tag" %}
+```
+
+Outputs a comma-separated list of tags with post counts, wrapped in a `div` tag.
+
+```html
+<div class="tag-cloud">
+  <a href="/tag/python/" title="View all posts tagged with Python" class="tag">Python</a> (5),
+  <a href="/tag/django/" title="View all posts tagged with Django" class="tag">Django</a> (3)
+</div>
 ```
 
 ## site_pages
@@ -369,7 +480,7 @@ Return: HTML which has been marked as safe.
 Just the tag, with no arguments.
 
 ```django
-{% site_pages %}
+{% site_pages_list %}
 ```
 
 This will output the following HTML:
@@ -850,7 +961,7 @@ Returns a list of links to the categories of the current post.
 
 ### post_categories Arguments
 
-- `outer` (optional): The HTML tag to use for the outer container. Default is "ul".
+- `outer_tag` (optional): The HTML tag to use for the outer container. Default is "ul".
 - `outer_class` (optional): CSS class(es) to apply to the outer container.
 - `link_class` (optional): CSS class(es) to apply to each category link.
 
@@ -875,7 +986,7 @@ Outputs:
 The tag with all options provided as arguments and using a `div` for the outer tag:
 
 ```django
-{% post_categories outer="div" outer_class="post-categories" link_class="category-link" %}
+{% post_categories outer_tag="div" outer_class="post-categories" link_class="category-link" %}
 ```
 
 Outputs the following HTML:
@@ -889,7 +1000,7 @@ Outputs the following HTML:
 The tag with a `span` for the outer tag:
 
 ```django
-{% post_categories outer="span" %}
+{% post_categories outer_tag="span" %}
 ```
 
 Outputs the following HTML:
@@ -897,6 +1008,69 @@ Outputs the following HTML:
 ```html
 <span>
   <a href="/general/" title="View all posts in the General category">General</a>
+</span>
+```
+
+## post_tags
+
+Returns a list of links to the tags of the current post.
+
+**Returns:** An HTML string containing a list of tag links for the current post.
+
+### post_tags Arguments
+
+- `outer_tag` (optional): The HTML tag to use for the outer container. Default is "ul".
+- `outer_class` (optional): CSS class(es) to apply to the outer container.
+- `link_class` (optional): CSS class(es) to apply to each tag link.
+
+### post_tags Examples
+
+Just the tag with no arguments:
+
+```django
+{% post_tags %}
+```
+
+Outputs:
+
+```html
+<ul>
+  <li>
+    <a href="/tag/python/" title="View all posts tagged with Python">Python</a>
+  </li>
+  <li>
+    <a href="/tag/django/" title="View all posts tagged with Django">Django</a>
+  </li>
+</ul>
+```
+
+The tag with all options provided as arguments and using a `div` for the outer tag:
+
+```django
+{% post_tags outer_tag="div" outer_class="post-tags" link_class="tag-link" %}
+```
+
+Outputs the following HTML:
+
+```html
+<div class="post-tags">
+  <a href="/tag/python/" title="View all posts tagged with Python" class="tag-link">Python</a>,
+  <a href="/tag/django/" title="View all posts tagged with Django" class="tag-link">Django</a>
+</div>
+```
+
+The tag with a `span` for the outer tag:
+
+```django
+{% post_tags outer_tag="span" %}
+```
+
+Outputs the following HTML:
+
+```html
+<span>
+  <a href="/tag/python/" title="View all posts tagged with Python">Python</a>,
+  <a href="/tag/django/" title="View all posts tagged with Django">Django</a>
 </span>
 ```
 
