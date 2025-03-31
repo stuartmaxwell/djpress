@@ -19,6 +19,7 @@
     <main>
 
       {% category_title "h1" pre_text="View Posts in the " post_text=" Category" %}
+      {% tag_title "h1" pre_text="View Posts Tagged with " %}
       {% author_name "h1" pre_text="View Posts by " %}
 
       {% if post %}
@@ -33,7 +34,8 @@
           {% post_content outer_tag="section" %}
 
           <footer>
-            <p>Categories: {% post_categories "span" "badge" %}</p>
+            <p>Categories: {% post_categories outer_tag="span" link_class="badge" %}</p>
+            <p>Tags: {% post_tags outer_tag="span" link_class="badge" %}</p>
           </footer>
 
         {% end_post_wrap %}
@@ -54,7 +56,8 @@
             {% post_content outer_tag="section" %}
 
             <footer>
-              <p>Categories: {% post_categories "span" "badge" %}</p>
+              <p>Categories: {% post_categories outer_tag="span" link_class="badge" %}</p>
+              <p>Tags: {% post_tags outer_tag="span"  link_class="badge" %}</p>
             </footer>
 
           {% end_post_wrap %}

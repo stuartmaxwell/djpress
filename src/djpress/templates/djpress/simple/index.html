@@ -27,6 +27,12 @@
           <li><a href="{{ post.url }}">{{ post.title }}</a></li>
         {% endfor %}
       </ul>
+
+      <h3>Categories:</h3>
+      {% blog_categories %}
+
+      <h3>Tags:</h3>
+      {% tags_with_counts %}
     </nav>
 
     <main>
@@ -43,7 +49,8 @@
           {% post_content outer_tag="section" %}
 
           <footer>
-            <p>Categories: {% post_categories "span" "badge" %}</p>
+            <p>Categories: {% post_categories outer_tag="span" link_class="badge" %}</p>
+            <p>Tags: {% post_tags outer_tag="span" link_class="badge" %}</p>
           </footer>
 
         {% end_post_wrap %}
@@ -64,7 +71,8 @@
             {% post_content outer_tag="section" %}
 
             <footer>
-              <p>Categories: {% post_categories "span" "badge" %}</p>
+              <p>Categories: {% post_categories outer_tag="span" link_class="badge" %}</p>
+              <p>Tags: {% post_tags outer_tag="span"  link_class="badge" %}</p>
             </footer>
 
           {% end_post_wrap %}
