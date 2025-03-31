@@ -102,7 +102,7 @@ omit = ["*/tests/*", "*/migrations/*"]
 
 [tool.bumpver]
 current_version = "0.15.3"
-version_pattern = "MAJOR.MINOR.PATCH"
+version_pattern = "MAJOR.MINOR.PATCH[PYTAGNUM]"
 commit_message = "👍 bump version {old_version} -> {new_version}"
 commit = true
 push = true
