@@ -17,6 +17,7 @@ class Hooks(Enum):
     PRE_RENDER_CONTENT = "pre_render_content"
     POST_RENDER_CONTENT = "post_render_content"
     POST_SAVE_POST = "post_save_post"
+    ADMIN_POST_BUTTONS = "admin_post_buttons"
 
 
 class PluginRegistry:

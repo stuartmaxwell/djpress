@@ -3,11 +3,14 @@
 from django.contrib import admin
 from django.db.models.query import QuerySet
 from django.http import HttpRequest
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 
 # Register the models here.
 from djpress.models import Category, PluginStorage, Post, Tag
+from djpress.plugins import Hooks, registry
 
 
 @admin.register(Tag)
@@ -36,7 +39,7 @@ class PostAdmin(admin.ModelAdmin):
     list_filter = ["post_type", "date", "author"]
     prepopulated_fields = {"slug": ("title",)}
     search_fields = ["title", "content", "slug"]
-    readonly_fields = ["modified_date"]
+    readonly_fields = ["modified_date", "plugin_buttons"]
     fieldsets = [
         (
             None,
@@ -76,7 +79,119 @@ class PostAdmin(admin.ModelAdmin):
                 "description": "These settings only apply to pages",
             },
         ),
+        (
+            "Plugin Actions",
+            {
+                "fields": ("plugin_buttons",),
+                "description": "Actions provided by plugins",
+                "classes": ("collapse",),
+            },
+        ),
     ]
+
+    class Media:
+        """Media class for the admin form."""
+
+        js = ("admin/js/vendor/jquery/jquery.min.js",)
+
+    def plugin_buttons(self, obj: Post) -> str:
+        """Render buttons for plugin actions.
+
+        Args:
+            obj (Post): The post object.
+
+        Returns:
+            str: HTML for plugin action buttons.
+        """
+        if obj.pk is None:  # Skip for new posts
+            return "Save the post first to see plugin actions."
+
+        # Make sure plugins are loaded
+        if not registry._loaded:  # noqa: SLF001
+            registry.load_plugins()
+
+        # Get button definitions from plugins
+        button_data = registry.run_hook(Hooks.ADMIN_POST_BUTTONS, [])
+
+        # If no buttons were returned, show a message
+        if not button_data or not isinstance(button_data, list):
+            return "No plugin actions available."
+
+        buttons_html = []
+        for button in button_data:
+            if not isinstance(button, dict) or "name" not in button or "plugin_name" not in button:
+                continue
+
+            # Build the action URL
+            url = reverse(
+                "djpress:plugin_action",
+                kwargs={
+                    "plugin_name": button["plugin_name"],
+                    "post_id": obj.pk,
+                },
+            )
+
+            # Create the button HTML
+            btn_label = button.get("label", button["name"])
+            btn_style = button.get("style", "primary")
+            css_class = f"button button-{btn_style} plugin-action-btn"
+            action_url = f"{url}?action={button['name']}"
+            btn_html = (
+                f'<a href="{action_url}" class="{css_class}" '
+                f'data-plugin="{button["plugin_name"]}" data-action="{button["name"]}">{btn_label}</a>'
+            )
+            buttons_html.append(btn_html)
+
+        # Add some simple JavaScript to handle button clicks
+        js = """
+        <script>
+        (function($) {
+            $(document).ready(function() {
+                $('.plugin-action-btn').click(function(e) {
+                    e.preventDefault();
+                    var url = $(this).attr('href');
+
+                    // Show loading state
+                    var originalText = $(this).text();
+                    $(this).text('Loading...');
+                    $(this).addClass('disabled');
+
+                    // Make the AJAX request
+                    $.ajax({
+                        url: url,
+                        type: 'GET',
+                        dataType: 'json',
+                        success: function(data) {
+                            if (data.result && data.result.message) {
+                                alert(data.result.message);
+                            } else {
+                                alert('Action completed successfully!');
+                            }
+                            // Reload the page to see changes
+                            location.reload();
+                        },
+                        error: function(xhr) {
+                            var msg = 'An error occurred';
+                            if (xhr.responseJSON && xhr.responseJSON.message) {
+                                msg = xhr.responseJSON.message;
+                            }
+                            alert(msg);
+                        },
+                        complete: function() {
+                            // Reset button state
+                            $('.plugin-action-btn').removeClass('disabled');
+                            $('.plugin-action-btn').text(originalText);
+                        }
+                    });
+                });
+            });
+        })(django.jQuery);
+        </script>
+        """
+
+        if buttons_html:
+            return mark_safe('<div class="plugin-actions">' + " ".join(buttons_html) + js + "</div>")
+        return "No plugin actions available."
 
     @admin.display(
         boolean=True,

@@ -7,15 +7,17 @@ that returns a single post.
 import logging
 import re
 
+from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
-from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBadRequest
-from django.shortcuts import render
+from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBadRequest, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
 
 from djpress.conf import settings as djpress_settings
 from djpress.exceptions import PageNotFoundError, PostNotFoundError
 from djpress.feeds import PostFeed
 from djpress.models import Category, Post
+from djpress.plugins import Hooks, registry
 from djpress.url_utils import get_path_regex
 from djpress.utils import get_template_name, validate_date_parts
 
@@ -359,4 +361,58 @@ def single_page(request: HttpRequest, path: str) -> HttpResponse:
         request=request,
         template_name=template,
         context=context,
+    )
+
+
+@staff_member_required
+def plugin_action(request: HttpRequest, plugin_name: str, post_id: int) -> HttpResponse:
+    """Handle a plugin action request from the admin interface.
+
+    This view is called when a user clicks a plugin action button in the admin.
+    It runs the registered plugin's action function and returns the result.
+
+    Args:
+        request (HttpRequest): The request object.
+        plugin_name (str): The name of the plugin.
+        post_id (int): The ID of the post.
+
+    Returns:
+        HttpResponse: The response, either a JSON response with results or a redirect.
+    """
+    # Load the post
+    post = get_object_or_404(Post, id=post_id)
+
+    # Make sure the plugins are loaded
+    if not registry._loaded:  # noqa: SLF001
+        registry.load_plugins()
+
+    # Get the action from the request parameters
+    action = request.GET.get("action", "")
+
+    # Run the hook and get results
+    result = registry.run_hook(
+        Hooks.ADMIN_POST_BUTTONS,
+        {"post": post, "plugin_name": plugin_name, "action": action},
+    )
+
+    # If hook didn't find a matching plugin to handle this action, return error
+    if result is None or result == {"post": post, "plugin_name": plugin_name, "action": action}:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": f'No plugin handler found for "{plugin_name}" action "{action}"',
+            },
+            status=404,
+        )
+
+    # If hook returned a redirect URL, redirect there
+    if isinstance(result, dict) and "redirect_url" in result:
+        return redirect(result["redirect_url"])
+
+    # Otherwise return results as JSON
+    return JsonResponse(
+        {
+            "success": True,
+            "result": result,
+        },
     )
