@@ -1,8 +1,8 @@
 # Installation
 
-> Note: If you choose to use this package prior to version 1.x being release, please pin your requirements to a specific minor version, e.g. `djpress~=0.11.0`
+> Note: If you choose to use this package prior to version 1.x being release, please pin your requirements to a specific minor version, e.g. `djpress~=0.16.0`
 
-- Install `djpress` by adding it to your requirements file, e.g. `djpress~=0.15.0` (see versioning note, above).
+- Install `djpress` by adding it to your requirements file, e.g. `djpress~=0.16.0` (see versioning note, above).
 - Add it to your `INSTALLED_APPS` in Django:
 
 ```python

@@ -1,6 +1,6 @@
 # DJ Press
 
-A blog application for Django sites, inspired by classic WordPress.
+A blog application for Django sites, inspired by classic WordPress, [available on PyPI](https://pypi.org/project/djpress/).
 
 > Warning - very alpha.
 
@@ -23,11 +23,11 @@ This package uses semantic versioning, but until we reach version 1.x.x, the fol
 - MINOR version indicates that an incompatible or breaking change has been introduced.
 - PATCH version indicates a bug fix or a backward compatible change.
 
-If you choose to use this package prior to version 1.x being release, please pin your requirements to a specific minor version, e.g. `djpress~=0.11.0`
+If you choose to use this package prior to version 1.x being release, please pin your requirements to a specific minor version, e.g. `djpress~=0.16.0`
 
 ## Installation
 
-- Install `djpress` by adding it to your requirements file, e.g. `djpress~=0.11.0` (see versioning note, above).
+- Install `djpress` by adding it to your requirements file, e.g. `djpress~=0.16.0` (see versioning note, above).
 - Add it to your `INSTALLED_APPS` in Django:
 
 ```python
