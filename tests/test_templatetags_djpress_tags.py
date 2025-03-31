@@ -675,7 +675,7 @@ def test_post_categories_ul(settings, test_post1):
 
     expected_output = f'<ul><li><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="p-category">Test Category1</a></li></ul>'
 
-    assert djpress_tags.post_categories(context, "ul") == expected_output
+    assert djpress_tags.post_categories(context, outer_tag="ul") == expected_output
 
 
 @pytest.mark.django_db
@@ -687,7 +687,7 @@ def test_post_categories_ul_class1(settings, test_post1):
 
     expected_output = f'<ul><li><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="p-category class1">Test Category1</a></li></ul>'
 
-    assert djpress_tags.post_categories(context, outer="ul", link_class="class1") == expected_output
+    assert djpress_tags.post_categories(context, outer_tag="ul", link_class="class1") == expected_output
 
 
 @pytest.mark.django_db
@@ -699,7 +699,7 @@ def test_post_categories_ul_class1_class2(settings, test_post1):
 
     expected_output = f'<ul><li><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="p-category class1 class2">Test Category1</a></li></ul>'
 
-    assert djpress_tags.post_categories(context, outer="ul", link_class="class1 class2") == expected_output
+    assert djpress_tags.post_categories(context, outer_tag="ul", link_class="class1 class2") == expected_output
 
 
 @pytest.mark.django_db
@@ -711,7 +711,7 @@ def test_post_categories_div(settings, test_post1):
 
     expected_output = f'<div><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="p-category">Test Category1</a></div>'
 
-    assert djpress_tags.post_categories(context, outer="div") == expected_output
+    assert djpress_tags.post_categories(context, outer_tag="div") == expected_output
 
 
 @pytest.mark.django_db
@@ -723,7 +723,7 @@ def test_post_categories_div_class1(settings, test_post1):
 
     expected_output = f'<div><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="p-category class1">Test Category1</a></div>'
 
-    assert djpress_tags.post_categories(context, outer="div", link_class="class1") == expected_output
+    assert djpress_tags.post_categories(context, outer_tag="div", link_class="class1") == expected_output
 
 
 @pytest.mark.django_db
@@ -735,7 +735,7 @@ def test_post_categories_div_class1_class2(settings, test_post1):
 
     expected_output = f'<div><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="p-category class1 class2">Test Category1</a></div>'
 
-    assert djpress_tags.post_categories(context, outer="div", link_class="class1 class2") == expected_output
+    assert djpress_tags.post_categories(context, outer_tag="div", link_class="class1 class2") == expected_output
 
 
 @pytest.mark.django_db
@@ -747,7 +747,7 @@ def test_post_categories_span(settings, test_post1):
 
     expected_output = f'<span><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="p-category">Test Category1</a></span>'
 
-    assert djpress_tags.post_categories(context, outer="span") == expected_output
+    assert djpress_tags.post_categories(context, outer_tag="span") == expected_output
 
 
 @pytest.mark.django_db
@@ -759,7 +759,7 @@ def test_post_categories_span_class1(settings, test_post1):
 
     expected_output = f'<span><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="p-category class1">Test Category1</a></span>'
 
-    assert djpress_tags.post_categories(context, outer="span", link_class="class1") == expected_output
+    assert djpress_tags.post_categories(context, outer_tag="span", link_class="class1") == expected_output
 
 
 @pytest.mark.django_db
@@ -771,7 +771,7 @@ def test_post_categories_span_class1_class2(settings, test_post1):
 
     expected_output = f'<span><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="p-category class1 class2">Test Category1</a></span>'
 
-    assert djpress_tags.post_categories(context, outer="span", link_class="class1 class2") == expected_output
+    assert djpress_tags.post_categories(context, outer_tag="span", link_class="class1 class2") == expected_output
 
 
 @pytest.mark.django_db
@@ -782,7 +782,7 @@ def test_blog_categories(category1, category2):
     assert category2 in categories
 
     assert djpress_tags.blog_categories() == categories_html(
-        categories=categories, outer="ul", outer_class="", link_class=""
+        categories=categories, outer_tag="ul", outer_class="", link_class=""
     )
 
 
@@ -798,12 +798,55 @@ def test_blog_tags(tag1, tag2):
     assert tag1 in tags
     assert tag2 in tags
 
-    assert djpress_tags.blog_tags() == tags_html(tags=tags, outer="ul", outer_class="", link_class="")
+    assert djpress_tags.blog_tags() == tags_html(tags=tags, outer_tag="ul", outer_class="", link_class="")
 
 
 @pytest.mark.django_db
 def test_blog_tags_no_tags():
     assert djpress_tags.blog_tags() == ""
+
+
+@pytest.mark.django_db
+def test_tags_with_counts(test_post1, test_post2, tag1, tag2, tag3):
+    test_post1.tags.add(tag1)
+    test_post2.tags.add(tag2)
+
+    # Only tags 1 and 2 have posts, tag3 is empty
+    result = djpress_tags.tags_with_counts()
+
+    # Should only show tags with published posts
+    assert tag1.title in result
+    assert tag2.title in result
+    assert tag3.title not in result
+
+    # Should show post counts
+    assert "(1)" in result
+
+    # Test with show_empty=True
+    result = djpress_tags.tags_with_counts(show_empty=True)
+    assert tag1.title in result
+    assert tag2.title in result
+    assert tag3.title in result
+    assert "(0)" in result
+
+
+@pytest.mark.django_db
+def test_tag_title(rf, tag1):
+    # Create a request with tags in context
+    request = rf.get("/")
+    context = Context({"tags": [tag1.slug]})
+
+    # Test with default parameters
+    result = djpress_tags.tag_title(context)
+    assert result == tag1.title
+
+    # Test with outer tag and class
+    result = djpress_tags.tag_title(context, outer="h1", outer_class="test-class")
+    assert f'<h1 class="test-class">{tag1.title}</h1>' == result
+
+    # Test with pre and post text
+    result = djpress_tags.tag_title(context, pre_text="Posts tagged with: ", post_text="!")
+    assert f"Posts tagged with: {tag1.title}!" == result
 
 
 @pytest.mark.django_db

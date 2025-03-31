@@ -1,4 +1,3 @@
-from myst_parser.parsers.parse_html import Tag
 import pytest
 
 from django.contrib.auth.models import User
@@ -32,7 +31,9 @@ def test_categories_html(category1, category2, category3):
         f'<li><a href="/{settings.CATEGORY_PREFIX}/{category3.slug}/" title="View all posts in the {category3.title} category" class="p-category {link_class}">{category3.title}</a></li>'
         "</ul>"
     )
-    assert categories_html(categories, outer=outer, outer_class=outer_class, link_class=link_class) == expected_output
+    assert (
+        categories_html(categories, outer_tag=outer, outer_class=outer_class, link_class=link_class) == expected_output
+    )
 
     # Test case 2
     outer = "ul"
@@ -45,7 +46,9 @@ def test_categories_html(category1, category2, category3):
         f'<li><a href="/{settings.CATEGORY_PREFIX}/{category3.slug}/" title="View all posts in the {category3.title} category" class="p-category">{category3.title}</a></li>'
         "</ul>"
     )
-    assert categories_html(categories, outer=outer, outer_class=outer_class, link_class=link_class) == expected_output
+    assert (
+        categories_html(categories, outer_tag=outer, outer_class=outer_class, link_class=link_class) == expected_output
+    )
 
     # Test case 3
     outer = "div"
@@ -58,7 +61,9 @@ def test_categories_html(category1, category2, category3):
         f'<a href="/{settings.CATEGORY_PREFIX}/{category3.slug}/" title="View all posts in the {category3.title} category" class="p-category {link_class}">{category3.title}</a>'
         "</div>"
     )
-    assert categories_html(categories, outer=outer, outer_class=outer_class, link_class=link_class) == expected_output
+    assert (
+        categories_html(categories, outer_tag=outer, outer_class=outer_class, link_class=link_class) == expected_output
+    )
 
     # Test case 4
     outer = "div"
@@ -71,7 +76,9 @@ def test_categories_html(category1, category2, category3):
         f'<a href="/{settings.CATEGORY_PREFIX}/{category3.slug}/" title="View all posts in the {category3.title} category" class="p-category">{category3.title}</a>'
         "</div>"
     )
-    assert categories_html(categories, outer=outer, outer_class=outer_class, link_class=link_class) == expected_output
+    assert (
+        categories_html(categories, outer_tag=outer, outer_class=outer_class, link_class=link_class) == expected_output
+    )
 
     # Test case 5
     outer = "span"
@@ -84,7 +91,9 @@ def test_categories_html(category1, category2, category3):
         f'<a href="/{settings.CATEGORY_PREFIX}/{category3.slug}/" title="View all posts in the {category3.title} category" class="p-category {link_class}">{category3.title}</a>'
         "</span>"
     )
-    assert categories_html(categories, outer=outer, outer_class=outer_class, link_class=link_class) == expected_output
+    assert (
+        categories_html(categories, outer_tag=outer, outer_class=outer_class, link_class=link_class) == expected_output
+    )
 
     # Test case 6
     outer = "span"
@@ -97,7 +106,9 @@ def test_categories_html(category1, category2, category3):
         f'<a href="/{settings.CATEGORY_PREFIX}/{category3.slug}/" title="View all posts in the {category3.title} category" class="p-category">{category3.title}</a>'
         "</span>"
     )
-    assert categories_html(categories, outer=outer, outer_class=outer_class, link_class=link_class) == expected_output
+    assert (
+        categories_html(categories, outer_tag=outer, outer_class=outer_class, link_class=link_class) == expected_output
+    )
 
 
 @pytest.mark.django_db
@@ -118,7 +129,7 @@ def test_tags_html(settings, tag1, tag2, tag3):
         f'<li><a href="/{settings.DJPRESS_SETTINGS["TAG_PREFIX"]}/{tag3.slug}/" title="View all posts tagged with {tag3.title}" class="p-category {link_class}">{tag3.title}</a></li>'
         "</ul>"
     )
-    assert tags_html(tags, outer=outer, outer_class=outer_class, link_class=link_class) == expected_output
+    assert tags_html(tags, outer_tag=outer, outer_class=outer_class, link_class=link_class) == expected_output
 
     # Test case 2
     outer = "ul"
@@ -131,7 +142,7 @@ def test_tags_html(settings, tag1, tag2, tag3):
         f'<li><a href="/{settings.DJPRESS_SETTINGS["TAG_PREFIX"]}/{tag3.slug}/" title="View all posts tagged with {tag3.title}" class="p-category">{tag3.title}</a></li>'
         "</ul>"
     )
-    assert tags_html(tags, outer=outer, outer_class=outer_class, link_class=link_class) == expected_output
+    assert tags_html(tags, outer_tag=outer, outer_class=outer_class, link_class=link_class) == expected_output
 
     # Test case 3
     outer = "div"
@@ -144,7 +155,7 @@ def test_tags_html(settings, tag1, tag2, tag3):
         f'<a href="/{settings.DJPRESS_SETTINGS["TAG_PREFIX"]}/{tag3.slug}/" title="View all posts tagged with {tag3.title}" class="p-category {link_class}">{tag3.title}</a>'
         "</div>"
     )
-    assert tags_html(tags, outer=outer, outer_class=outer_class, link_class=link_class) == expected_output
+    assert tags_html(tags, outer_tag=outer, outer_class=outer_class, link_class=link_class) == expected_output
 
     # Test case 4
     outer = "div"
@@ -157,7 +168,7 @@ def test_tags_html(settings, tag1, tag2, tag3):
         f'<a href="/{settings.DJPRESS_SETTINGS["TAG_PREFIX"]}/{tag3.slug}/" title="View all posts tagged with {tag3.title}" class="p-category">{tag3.title}</a>'
         "</div>"
     )
-    assert tags_html(tags, outer=outer, outer_class=outer_class, link_class=link_class) == expected_output
+    assert tags_html(tags, outer_tag=outer, outer_class=outer_class, link_class=link_class) == expected_output
 
     # Test case 5
     outer = "span"
@@ -170,7 +181,7 @@ def test_tags_html(settings, tag1, tag2, tag3):
         f'<a href="/{settings.DJPRESS_SETTINGS["TAG_PREFIX"]}/{tag3.slug}/" title="View all posts tagged with {tag3.title}" class="p-category {link_class}">{tag3.title}</a>'
         "</span>"
     )
-    assert tags_html(tags, outer=outer, outer_class=outer_class, link_class=link_class) == expected_output
+    assert tags_html(tags, outer_tag=outer, outer_class=outer_class, link_class=link_class) == expected_output
 
     # Test case 6
     outer = "span"
@@ -183,7 +194,7 @@ def test_tags_html(settings, tag1, tag2, tag3):
         f'<a href="/{settings.DJPRESS_SETTINGS["TAG_PREFIX"]}/{tag3.slug}/" title="View all posts tagged with {tag3.title}" class="p-category">{tag3.title}</a>'
         "</span>"
     )
-    assert tags_html(tags, outer=outer, outer_class=outer_class, link_class=link_class) == expected_output
+    assert tags_html(tags, outer_tag=outer, outer_class=outer_class, link_class=link_class) == expected_output
 
     # Test case 7
     outer = "span"
@@ -197,7 +208,7 @@ def test_tags_html(settings, tag1, tag2, tag3):
         f'<a href="/{settings.DJPRESS_SETTINGS["TAG_PREFIX"]}/{tag3.slug}/" title="View all posts tagged with {tag3.title}">{tag3.title}</a>'
         "</span>"
     )
-    assert tags_html(tags, outer=outer, outer_class=outer_class, link_class=link_class) == expected_output
+    assert tags_html(tags, outer_tag=outer, outer_class=outer_class, link_class=link_class) == expected_output
 
     # Test case 8
     outer = "span"
@@ -210,7 +221,7 @@ def test_tags_html(settings, tag1, tag2, tag3):
         f'<a href="/{settings.DJPRESS_SETTINGS["TAG_PREFIX"]}/{tag3.slug}/" title="View all posts tagged with {tag3.title}" class="{link_class}">{tag3.title}</a>'
         "</span>"
     )
-    assert tags_html(tags, outer=outer, outer_class=outer_class, link_class=link_class) == expected_output
+    assert tags_html(tags, outer_tag=outer, outer_class=outer_class, link_class=link_class) == expected_output
 
 
 @pytest.mark.django_db

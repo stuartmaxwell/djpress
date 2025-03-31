@@ -193,11 +193,11 @@ def test_tag_with_posts_view(client, test_post1, tag1):
 
 
 @pytest.mark.django_db
-def test_tag_with_tag_enabled_false(client, settings):
-    """This will try to get a page from the database that does not exist."""
+def test_tag_with_tag_enabled_false(client, settings, tag1):
+    """This will try to get a page when TAG_ENABLED is false."""
     assert settings.DJPRESS_SETTINGS["TAG_ENABLED"] == True
 
-    url = "/test-url-tag/any-tag/"
+    url = "/test-url-tag/" + tag1.slug + "/"
 
     settings.DJPRESS_SETTINGS["TAG_ENABLED"] = False
     response = client.get(url)
