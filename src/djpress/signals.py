@@ -15,6 +15,10 @@ from djpress.models.post import (
     PUBLISHED_POSTS_CACHE_KEY,
     Post,
 )
+from djpress.models.tag import (
+    TAG_CACHE_KEY,
+    Tag,
+)
 
 
 @receiver(post_migrate)
@@ -70,3 +74,13 @@ def invalidate_published_content_cache(**_) -> None:  # noqa: ANN003
     We invalidate the cache when a post is saved or deleted.
     """
     cache.delete(PUBLISHED_POSTS_CACHE_KEY)
+
+
+@receiver(post_save, sender=Tag)
+@receiver(post_delete, sender=Tag)
+def invalidate_tag_cache(**_) -> None:  # noqa: ANN003
+    """Invalidate the tag cache.
+
+    We invalidate the cache when a tag is saved or deleted.
+    """
+    cache.delete(TAG_CACHE_KEY)

@@ -22,7 +22,7 @@ from djpress.utils import get_template_name, validate_date_parts
 logger = logging.getLogger(__name__)
 
 
-def dispatcher(request: HttpRequest, path: str) -> HttpResponse | None:
+def dispatcher(request: HttpRequest, path: str) -> HttpResponse | None:  # noqa: C901, PLR0911
     """Dispatch the request to the appropriate view based on the path."""
     # 1. Check for special URLs first
     if djpress_settings.RSS_ENABLED and (path in (djpress_settings.RSS_PATH, f"{djpress_settings.RSS_PATH}/")):
@@ -57,14 +57,21 @@ def dispatcher(request: HttpRequest, path: str) -> HttpResponse | None:
             category_slug = category_match.group("slug")
             return category_posts(request, slug=category_slug)
 
-    # 5. Check if it matches the author regex
+    # 5. Check if it matches the tag regex
+    if djpress_settings.TAG_ENABLED and djpress_settings.TAG_PREFIX:
+        tag_match = re.fullmatch(get_path_regex("tag"), path)
+        if tag_match:
+            tag_slug = tag_match.group("slug")
+            return tag_posts(request, slug=tag_slug)
+
+    # 6. Check if it matches the author regex
     if djpress_settings.AUTHOR_ENABLED and djpress_settings.AUTHOR_PREFIX:
         author_match = re.fullmatch(get_path_regex("author"), path)
         if author_match:
             author_username = author_match.group("author")
             return author_posts(request, author=author_username)
 
-    # 6. Any other path is considered a page
+    # 7. Any other path is considered a page
     page_match = re.fullmatch(get_path_regex("page"), path)
     page_path = page_match.group("path")
     return single_page(request, path=page_path)
@@ -192,6 +199,43 @@ def category_posts(request: HttpRequest, slug: str) -> HttpResponse:
         request=request,
         template_name=template,
         context={"posts": page, "category": category},
+    )
+
+
+def tag_posts(request: HttpRequest, slug: str) -> HttpResponse:
+    """View for posts by tag.
+
+    Tags differ from categories in that they can be concatenated together to return posts that have all the tags.
+
+    The slug that is passed to this view is either a single tag, or a list of tags separated by a "+".
+
+    Args:
+        request (HttpRequest): The request object.
+        slug (str): The tag slug.
+
+    Returns:
+        HttpResponse: The response.
+
+    Context:
+        posts (Page): The published posts for the tag as a Page object.
+        tag (Tag): The tag object.
+    """
+    template: str = get_template_name(view_name="tag_posts")
+
+    # Create a list of slugs from the slug
+    slugs = slug.split("+")
+
+    posts = Paginator(
+        Post.post_objects.get_published_posts_by_tags(slugs),
+        djpress_settings.RECENT_PUBLISHED_POSTS_COUNT,
+    )
+    page_number = request.GET.get("page")
+    page = posts.get_page(page_number)
+
+    return render(
+        request=request,
+        template_name=template,
+        context={"posts": page, "tags": slugs},
     )
 
 

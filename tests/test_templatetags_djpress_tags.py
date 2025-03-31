@@ -4,12 +4,13 @@ from django.core.paginator import Paginator
 from django.template import Context, Template
 from django.urls import reverse
 
-from djpress.models import Category, Post
+from djpress.models import Category, Post, Tag
 from djpress.templatetags import djpress_tags
 from djpress.templatetags.helpers import (
     post_read_more_link,
     categories_html,
     get_page_link,
+    tags_html,
 )
 from djpress.utils import get_author_display_name
 from djpress.exceptions import PageNotFoundError
@@ -86,6 +87,21 @@ def test_get_categories(category1, category2, category3):
     assert category3 in djpress_categories
 
     assert list(djpress_categories) == list(categories)  # type: ignore
+
+
+@pytest.mark.django_db
+def test_get_tags(tag1, tag2, tag3):
+    tags = Tag.objects.get_tags().order_by("title")
+    djpresstags = djpress_tags.get_tags()
+
+    assert tag1 in tags
+    assert tag2 in tags
+    assert tag3 in tags
+    assert tag1 in djpresstags
+    assert tag2 in djpresstags
+    assert tag3 in djpresstags
+
+    assert list(djpresstags) == list(tags)
 
 
 @pytest.mark.django_db
@@ -548,7 +564,7 @@ def test_post_content_with_posts(test_long_post1):
     # Context should have both a posts and a post to simulate the for post in posts loop
     context = Context({"posts": [test_long_post1], "post": test_long_post1})
 
-    expected_output = f"{test_long_post1.truncated_content_markdown}" f"{post_read_more_link(test_long_post1)}"
+    expected_output = f"{test_long_post1.truncated_content_markdown}{post_read_more_link(test_long_post1)}"
 
     assert djpress_tags.post_content(context) == expected_output
 
@@ -659,7 +675,7 @@ def test_post_categories_ul(settings, test_post1):
 
     expected_output = f'<ul><li><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="p-category">Test Category1</a></li></ul>'
 
-    assert djpress_tags.post_categories(context, "ul") == expected_output
+    assert djpress_tags.post_categories(context, outer_tag="ul") == expected_output
 
 
 @pytest.mark.django_db
@@ -671,7 +687,7 @@ def test_post_categories_ul_class1(settings, test_post1):
 
     expected_output = f'<ul><li><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="p-category class1">Test Category1</a></li></ul>'
 
-    assert djpress_tags.post_categories(context, outer="ul", link_class="class1") == expected_output
+    assert djpress_tags.post_categories(context, outer_tag="ul", link_class="class1") == expected_output
 
 
 @pytest.mark.django_db
@@ -683,7 +699,7 @@ def test_post_categories_ul_class1_class2(settings, test_post1):
 
     expected_output = f'<ul><li><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="p-category class1 class2">Test Category1</a></li></ul>'
 
-    assert djpress_tags.post_categories(context, outer="ul", link_class="class1 class2") == expected_output
+    assert djpress_tags.post_categories(context, outer_tag="ul", link_class="class1 class2") == expected_output
 
 
 @pytest.mark.django_db
@@ -695,7 +711,7 @@ def test_post_categories_div(settings, test_post1):
 
     expected_output = f'<div><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="p-category">Test Category1</a></div>'
 
-    assert djpress_tags.post_categories(context, outer="div") == expected_output
+    assert djpress_tags.post_categories(context, outer_tag="div") == expected_output
 
 
 @pytest.mark.django_db
@@ -707,7 +723,7 @@ def test_post_categories_div_class1(settings, test_post1):
 
     expected_output = f'<div><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="p-category class1">Test Category1</a></div>'
 
-    assert djpress_tags.post_categories(context, outer="div", link_class="class1") == expected_output
+    assert djpress_tags.post_categories(context, outer_tag="div", link_class="class1") == expected_output
 
 
 @pytest.mark.django_db
@@ -719,7 +735,7 @@ def test_post_categories_div_class1_class2(settings, test_post1):
 
     expected_output = f'<div><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="p-category class1 class2">Test Category1</a></div>'
 
-    assert djpress_tags.post_categories(context, outer="div", link_class="class1 class2") == expected_output
+    assert djpress_tags.post_categories(context, outer_tag="div", link_class="class1 class2") == expected_output
 
 
 @pytest.mark.django_db
@@ -731,7 +747,7 @@ def test_post_categories_span(settings, test_post1):
 
     expected_output = f'<span><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="p-category">Test Category1</a></span>'
 
-    assert djpress_tags.post_categories(context, outer="span") == expected_output
+    assert djpress_tags.post_categories(context, outer_tag="span") == expected_output
 
 
 @pytest.mark.django_db
@@ -743,7 +759,7 @@ def test_post_categories_span_class1(settings, test_post1):
 
     expected_output = f'<span><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="p-category class1">Test Category1</a></span>'
 
-    assert djpress_tags.post_categories(context, outer="span", link_class="class1") == expected_output
+    assert djpress_tags.post_categories(context, outer_tag="span", link_class="class1") == expected_output
 
 
 @pytest.mark.django_db
@@ -755,7 +771,7 @@ def test_post_categories_span_class1_class2(settings, test_post1):
 
     expected_output = f'<span><a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="p-category class1 class2">Test Category1</a></span>'
 
-    assert djpress_tags.post_categories(context, outer="span", link_class="class1 class2") == expected_output
+    assert djpress_tags.post_categories(context, outer_tag="span", link_class="class1 class2") == expected_output
 
 
 @pytest.mark.django_db
@@ -766,13 +782,64 @@ def test_blog_categories(category1, category2):
     assert category2 in categories
 
     assert djpress_tags.blog_categories() == categories_html(
-        categories=categories, outer="ul", outer_class="", link_class=""
+        categories=categories, outer_tag="ul", outer_class="", link_class=""
     )
 
 
 @pytest.mark.django_db
 def test_blog_categories_no_categories():
     assert djpress_tags.blog_categories() == ""
+
+
+@pytest.mark.django_db
+def test_blog_tags(tag1, tag2):
+    tags = Tag.objects.all()
+
+    assert tag1 in tags
+    assert tag2 in tags
+
+    assert djpress_tags.blog_tags() == tags_html(tags=tags, outer_tag="ul", outer_class="", link_class="")
+
+
+@pytest.mark.django_db
+def test_blog_tags_no_tags():
+    assert djpress_tags.blog_tags() == ""
+
+
+@pytest.mark.django_db
+def test_tags_with_counts(test_post1, test_post2, tag1, tag2, tag3):
+    test_post1.tags.add(tag1)
+    test_post2.tags.add(tag2)
+
+    # Only tags 1 and 2 have posts, tag3 is empty
+    result = djpress_tags.tags_with_counts()
+
+    # Should only show tags with published posts
+    assert tag1.title in result
+    assert tag2.title in result
+    assert tag3.title not in result
+
+    # Should show post counts
+    assert "(1)" in result
+
+
+@pytest.mark.django_db
+def test_tag_title(rf, tag1):
+    # Create a request with tags in context
+    request = rf.get("/")
+    context = Context({"tags": [tag1.slug]})
+
+    # Test with default parameters
+    result = djpress_tags.tag_title(context)
+    assert result == tag1.title
+
+    # Test with outer tag and class
+    result = djpress_tags.tag_title(context, outer="h1", outer_class="test-class")
+    assert f'<h1 class="test-class">{tag1.title}</h1>' == result
+
+    # Test with pre and post text
+    result = djpress_tags.tag_title(context, pre_text="Posts tagged with: ", post_text="!")
+    assert f"Posts tagged with: {tag1.title}!" == result
 
 
 @pytest.mark.django_db
@@ -1109,9 +1176,7 @@ def test_site_pages(test_page1, test_page2):
     assert test_page1 in pages
     assert test_page2 in pages
 
-    expected_output_ul = (
-        f"<ul><li>{get_page_link(page=test_page1)}</li>" f"<li>{get_page_link(page=test_page2)}</li></ul>"
-    )
+    expected_output_ul = f"<ul><li>{get_page_link(page=test_page1)}</li><li>{get_page_link(page=test_page2)}</li></ul>"
 
     expected_output_div = f"<div>{get_page_link(page=test_page1)}, {get_page_link(page=test_page2)}</div>"
 
@@ -1283,7 +1348,7 @@ def test_pagination_links_one_page(settings, test_post1, test_post2, test_long_p
     context = Context({"posts": page})
 
     previous_output = ""
-    current_output = f'<span class="current">' f"Page {page.number} of {page.paginator.num_pages}" f"</span>"
+    current_output = f'<span class="current">Page {page.number} of {page.paginator.num_pages}</span>'
     next_output = ""
 
     expected_output = f'<div class="pagination">{previous_output} {current_output} {next_output}</div>'
@@ -1311,7 +1376,7 @@ def test_pagination_links_two_pages(settings, test_post1, test_post2, test_long_
     context = Context({"posts": page})
 
     previous_output = ""
-    current_output = f'<span class="current">' f"Page {page.number} of {page.paginator.num_pages}" f"</span>"
+    current_output = f'<span class="current">Page {page.number} of {page.paginator.num_pages}</span>'
     next_output = (
         f'<span class="next">'
         f'<a href="?page={page.next_page_number()}">next</a> '
@@ -1329,7 +1394,7 @@ def test_pagination_links_two_pages(settings, test_post1, test_post2, test_long_
     context = Context({"posts": page})
 
     previous_output = ""
-    current_output = f'<span class="current">' f"Page {page.number} of {page.paginator.num_pages}" f"</span>"
+    current_output = f'<span class="current">Page {page.number} of {page.paginator.num_pages}</span>'
     next_output = (
         f'<span class="next">'
         f'<a href="?page={page.next_page_number()}">next</a> '
@@ -1352,7 +1417,7 @@ def test_pagination_links_two_pages(settings, test_post1, test_post2, test_long_
         f'<a href="?page={page.previous_page_number()}">previous</a>'
         f"</span>"
     )
-    current_output = f'<span class="current">' f"Page {page.number} of {page.paginator.num_pages}" f"</span>"
+    current_output = f'<span class="current">Page {page.number} of {page.paginator.num_pages}</span>'
     next_output = ""
 
     expected_output = f'<div class="pagination">{previous_output} {current_output} {next_output}</div>'
@@ -1380,7 +1445,7 @@ def test_pagination_links_three_pages(settings, test_post1, test_post2, test_lon
     context = Context({"posts": page})
 
     previous_output = ""
-    current_output = f'<span class="current">' f"Page {page.number} of {page.paginator.num_pages}" f"</span>"
+    current_output = f'<span class="current">Page {page.number} of {page.paginator.num_pages}</span>'
     next_output = (
         f'<span class="next">'
         f'<a href="?page={page.next_page_number()}">next</a> '
@@ -1398,7 +1463,7 @@ def test_pagination_links_three_pages(settings, test_post1, test_post2, test_lon
     context = Context({"posts": page})
 
     previous_output = ""
-    current_output = f'<span class="current">' f"Page {page.number} of {page.paginator.num_pages}" f"</span>"
+    current_output = f'<span class="current">Page {page.number} of {page.paginator.num_pages}</span>'
     next_output = (
         f'<span class="next">'
         f'<a href="?page={page.next_page_number()}">next</a> '
@@ -1421,7 +1486,7 @@ def test_pagination_links_three_pages(settings, test_post1, test_post2, test_lon
         f'<a href="?page={page.previous_page_number()}">previous</a>'
         f"</span>"
     )
-    current_output = f'<span class="current">' f"Page {page.number} of {page.paginator.num_pages}" f"</span>"
+    current_output = f'<span class="current">Page {page.number} of {page.paginator.num_pages}</span>'
     next_output = (
         f'<span class="next">'
         f'<a href="?page={page.next_page_number()}">next</a> '
@@ -1444,7 +1509,7 @@ def test_pagination_links_three_pages(settings, test_post1, test_post2, test_lon
         f'<a href="?page={page.previous_page_number()}">previous</a>'
         f"</span>"
     )
-    current_output = f'<span class="current">' f"Page {page.number} of {page.paginator.num_pages}" f"</span>"
+    current_output = f'<span class="current">Page {page.number} of {page.paginator.num_pages}</span>'
     next_output = ""
 
     expected_output = f'<div class="pagination">{previous_output} {current_output} {next_output}</div>'
@@ -1737,3 +1802,143 @@ def test_post_wrapper_single_post_with_tag_and_class(settings):
     template = Template(template_text)
     expected_output = '<div class="blog-post"><p>This is test post 1.</p></div>'
     assert template.render(context) == expected_output
+
+
+@pytest.mark.django_db
+def test_post_tags_no_tags(test_post1):
+    """Test post_tags when a post has no tags."""
+    test_post1.tags.clear()
+    context = Context({"post": test_post1})
+    assert djpress_tags.post_tags(context) == ""
+
+
+@pytest.mark.django_db
+def test_post_tags_no_posts():
+    """Test post_tags when there are no posts."""
+    context = Context({"post": None})
+    assert djpress_tags.post_tags(context) == ""
+
+
+@pytest.mark.django_db
+def test_tags_with_counts_outer_div(test_post1, test_post2, tag1, tag2):
+    """Test tags_with_counts with div as outer tag."""
+    test_post1.tags.add(tag1)
+    test_post2.tags.add(tag2)
+
+    result = djpress_tags.tags_with_counts(outer_tag="div", outer_class="tag-list")
+
+    assert '<div class="tag-list">' in result
+    assert tag1.title in result
+    assert tag2.title in result
+    assert "(1)" in result
+
+
+@pytest.mark.django_db
+def test_tags_with_counts_incorrect_outer_div(test_post1, test_post2, tag1, tag2):
+    """Test tags_with_counts with incorrect outer tag."""
+    test_post1.tags.add(tag1)
+    test_post2.tags.add(tag2)
+
+    result = djpress_tags.tags_with_counts(outer_tag="main", outer_class="tag-list")
+
+    assert result == ""
+
+
+@pytest.mark.django_db
+def test_tags_with_counts_outer_span(test_post1, test_post2, tag1, tag2):
+    """Test tags_with_counts with span as outer tag."""
+    test_post1.tags.add(tag1)
+    test_post2.tags.add(tag2)
+
+    result = djpress_tags.tags_with_counts(outer_tag="span", outer_class="tag-list")
+
+    assert '<span class="tag-list">' in result
+    assert tag1.title in result
+    assert tag2.title in result
+    assert "(1)" in result
+
+
+@pytest.mark.django_db
+def test_tags_with_counts_empty():
+    """Test tags_with_counts when there are no tags with published posts."""
+    result = djpress_tags.tags_with_counts()
+    assert result == ""
+
+
+@pytest.mark.django_db
+def test_site_title_link(settings):
+    """Test the site_title_link template tag."""
+    # Default case
+    result = djpress_tags.site_title_link()
+    expected = f'<a href="{reverse("djpress:index")}">{settings.DJPRESS_SETTINGS["SITE_TITLE"]}</a>'
+    assert result == expected
+
+    # With link class
+    result = djpress_tags.site_title_link(link_class="site-title")
+    expected = f'<a href="{reverse("djpress:index")}" class="site-title">{settings.DJPRESS_SETTINGS["SITE_TITLE"]}</a>'
+    assert result == expected
+
+
+@pytest.mark.django_db
+def test_tag_title_multiple_tags(rf, tag1, tag2):
+    """Test tag_title with multiple tags in context."""
+    # Create a request with multiple tags in context
+    request = rf.get("/")
+    context = Context({"tags": [tag1.slug, tag2.slug]})
+
+    # Test with default parameters
+    result = djpress_tags.tag_title(context)
+    expected = f"{tag1.title}, {tag2.title}"
+    assert result == expected
+
+    # Test with pre and post text
+    result = djpress_tags.tag_title(context, pre_text="Posts tagged with: ", post_text="!")
+    expected = f"Posts tagged with: {tag1.title}, {tag2.title}!"
+    assert result == expected
+
+
+@pytest.mark.django_db
+def test_tag_title_no_tags():
+    """Test tag_title when there are no tags in context."""
+    context = Context({})
+    result = djpress_tags.tag_title(context)
+    assert result == ""
+
+
+@pytest.mark.django_db
+def test_post_wrapper_tag_arguments(settings):
+    """Test post_wrapper_tag with various argument combinations."""
+    # Test with tag and class in different order
+    template_text = (
+        "{% load djpress_tags %}{% post_wrap class='blog-post' tag='div' %}<p>Test content</p>{% end_post_wrap %}"
+    )
+    context = Context({})
+
+    template = Template(template_text)
+    expected_output = '<div class="h-entry blog-post"><p>Test content</p></div>'
+    assert template.render(context) == expected_output
+
+    # Test with double quotes for arguments
+    template_text = (
+        '{% load djpress_tags %}{% post_wrap class="blog-post" tag="section" %}<p>Test content</p>{% end_post_wrap %}'
+    )
+    template = Template(template_text)
+    expected_output = '<section class="h-entry blog-post"><p>Test content</p></section>'
+    assert template.render(context) == expected_output
+
+    # Test with more than two arguments (which should be ignored)
+    template_text = '{% load djpress_tags %}{% post_wrap "article" "post-class" "extra-arg" %}<p>Test content</p>{% end_post_wrap %}'
+    template = Template(template_text)
+    expected_output = '<article class="h-entry post-class"><p>Test content</p></article>'
+    assert template.render(context) == expected_output
+
+
+@pytest.mark.django_db
+def test_get_pagination_range_no_page_in_context():
+    """Test get_pagination_range when there's no page object in the context."""
+    context = Context({})
+    assert djpress_tags.get_pagination_range(context) == range(0)
+
+    # Test with non-Page object in posts
+    context = Context({"posts": "not a Page object"})
+    assert djpress_tags.get_pagination_range(context) == range(0)

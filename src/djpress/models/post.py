@@ -13,7 +13,8 @@ from django.utils.text import slugify
 
 from djpress.conf import settings as djpress_settings
 from djpress.exceptions import PageNotFoundError, PostNotFoundError
-from djpress.models import Category
+from djpress.models.category import Category
+from djpress.models.tag import Tag
 from djpress.plugins import Hooks, registry
 from djpress.utils import get_markdown_renderer
 
@@ -332,6 +333,37 @@ class PostsManager(models.Manager):
         """
         return self.get_published_posts().filter(categories=category)
 
+    # Adjust based on your needs
+
+    def get_published_posts_by_tags(
+        self: "PostsManager",
+        tag_slugs: list[str],
+    ) -> models.QuerySet:
+        """Return all published posts for a given list of tags.
+
+        Only posts that belong to all the tags in the list should be returned.
+
+        Args:
+            tag_slugs (list[str]): A list of the string representations of tags (i.e. slugs).
+
+        Returns:
+            models.QuerySet: A queryset of posts that belong to all the tags in the list.
+        """
+        if len(tag_slugs) > djpress_settings.MAX_TAGS_PER_QUERY:
+            return self.none()
+
+        # Get all tags first
+        tags = Tag.objects.filter(slug__in=tag_slugs)
+
+        # If we didn't find all tags, return empty queryset
+        if tags.count() != len(tag_slugs):
+            return self.none()
+
+        queryset = self.get_published_posts()
+        for tag in tags:
+            queryset = queryset.filter(tags=tag)
+        return queryset.distinct()
+
     def get_published_posts_by_author(
         self: "PostsManager",
         author: User,
@@ -428,6 +460,7 @@ class Post(models.Model):
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="draft")
     post_type = models.CharField(max_length=10, choices=CONTENT_TYPE_CHOICES, default="post")
     categories = models.ManyToManyField(Category, blank=True, related_name="_posts")
+    tags = models.ManyToManyField(Tag, blank=True, related_name="_posts")
     menu_order = models.IntegerField(default=0)
     parent = models.ForeignKey(
         "self",

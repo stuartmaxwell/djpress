@@ -109,6 +109,9 @@ def get_templates(view_name: str) -> list[str]:
     if view_name == "category_posts":
         template = f"djpress/{theme}/category.html"
 
+    if view_name == "tag_posts":
+        template = f"djpress/{theme}/tag.html"
+
     if view_name == "author_posts":
         template = f"djpress/{theme}/author.html"
 

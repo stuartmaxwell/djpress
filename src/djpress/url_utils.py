@@ -6,7 +6,7 @@ from django.conf import settings as django_settings
 from django.contrib.auth.models import User
 
 from djpress.conf import settings as djpress_settings
-from djpress.models.post import Category, Post
+from djpress.models.post import Category, Post, Tag
 
 
 def regex_post() -> str:
@@ -141,6 +141,31 @@ def regex_category() -> str:
     return regex
 
 
+def regex_tag() -> str:
+    """Generate the regex path for the tag view.
+
+    Needs to match the following patterns:
+
+    - slug
+    - slug1+slug2
+    - slug1+slug2+slug3
+    - etc...
+
+    The entire slug is captured in the slug group - i.e. if there's one tag, the slug is just that tag, but if there's
+    more than one tag, the slug is all the tags joined by a plus sign.
+
+    The tag URL must have the TAG_PREFIX. If not, an error occurs on startup: E004. See conf.py for details.
+    """
+    # Regex explanation:
+    # - (?P<slug> )   This is a named capture group called slug
+    # - [\w-]+        This matches any word character (alphanumeric or underscore) or a hyphen, one or more times
+    # - (?:\+[\w-]+)* This is a non-capturing group that matches a plus sign followed by any word character or hyphen,
+    #                 one or more times. This group can be repeated zero or more times.
+    regex = r"(?P<slug>[\w-]+(?:\+[\w-]+)*)"
+
+    return rf"{re.escape(djpress_settings.TAG_PREFIX)}/{regex}"
+
+
 def regex_author() -> str:
     """Generate the regex path for the author view."""
     # Regex explanation:
@@ -164,6 +189,8 @@ def get_path_regex(path_match: str) -> str:
         regex = regex_page()
     if path_match == "category":
         regex = regex_category()
+    if path_match == "tag":
+        regex = regex_tag()
     if path_match == "author":
         regex = regex_author()
 
@@ -190,6 +217,19 @@ def get_author_url(user: User) -> str:
 def get_category_url(category: "Category") -> str:
     """Return the URL for the category."""
     url = f"/{category.permalink}"
+
+    if django_settings.APPEND_SLASH:
+        return f"{url}/"
+
+    return url
+
+
+def get_tag_url(tag: "Tag") -> str:
+    """Return the URL for a single tag."""
+    if djpress_settings.TAG_ENABLED and djpress_settings.TAG_PREFIX:
+        url = f"/{djpress_settings.TAG_PREFIX}/{tag.slug}"
+    else:
+        url = f"/{tag.slug}"
 
     if django_settings.APPEND_SLASH:
         return f"{url}/"

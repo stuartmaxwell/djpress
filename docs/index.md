@@ -10,7 +10,8 @@ complete:
 - [Themes](themes.md)
 - [Plugins](plugins.md)
 - [Sitemap](sitemap.md)
-- [Grous and Permissions](groups.md)
+- [Groups and Permissions](groups.md)
+- [Tags](tags.md)
 
 ## Table of Contents
 
@@ -26,4 +27,5 @@ themes
 plugins
 sitemap
 groups
+tags
 ```

@@ -117,6 +117,18 @@ BUILDDIR      := "docs/_build"
     uv run bumpver update --minor {{ ARGS }}
     uv sync
 
+# Use Bumpver to create a minor beta version. Use just bump-minor-beta -d to view a dry-run.
+@bump-minor-beta *ARGS:
+    uv run bumpver update --minor --tag beta {{ ARGS }}
+    uv sync
+
+# Use Bumpver to create a minor beta version increment. Use just bump-minor-beta-inc -d to view a dry-run.
+@bump-minor-beta-inc *ARGS:
+    uv run bumpver update --tag-num {{ ARGS }}
+    uv sync
+
+
+
 # Create a new GitHub release - this requires Python 3.11 or newer, and the GitHub CLI must be installed and configured
 version := `echo "from tomllib import load; print(load(open('pyproject.toml', 'rb'))['project']['version'])" | uv run - `
 

@@ -11,7 +11,7 @@ from django.utils.safestring import mark_safe
 from djpress import url_utils
 from djpress.conf import settings as djpress_settings
 from djpress.exceptions import PageNotFoundError
-from djpress.models import Category, Post
+from djpress.models import Category, Post, Tag
 from djpress.templatetags import helpers
 from djpress.utils import get_author_display_name
 
@@ -67,6 +67,16 @@ def get_categories() -> models.QuerySet[Category] | None:
 
 
 @register.simple_tag
+def get_tags() -> models.QuerySet[Tag]:
+    """Return all tags as a queryset.
+
+    Returns:
+        models.QuerySet[Tag]: All tags.
+    """
+    return Tag.objects.get_tags().order_by("title")
+
+
+@register.simple_tag
 def site_title() -> str:
     """Return the site title.
 
@@ -95,14 +105,14 @@ def site_title_link(link_class: str = "") -> str:
 
 @register.simple_tag
 def blog_categories(
-    outer: str = "ul",
+    outer_tag: str = "ul",
     outer_class: str = "",
     link_class: str = "",
 ) -> str:
     """Return the categories of the blog.
 
     Args:
-        outer: The outer HTML tag for the categories.
+        outer_tag: The outer HTML tag for the categories.
         outer_class: The CSS class(es) for the outer tag.
         link_class: The CSS class(es) for the link.
 
@@ -113,7 +123,96 @@ def blog_categories(
     if not categories:
         return ""
 
-    return mark_safe(helpers.categories_html(categories, outer, outer_class, link_class))
+    # Explicitly pass outer_tag parameter for clarity
+    return mark_safe(
+        helpers.categories_html(
+            categories=categories,
+            outer_tag=outer_tag,
+            outer_class=outer_class,
+            link_class=link_class,
+        ),
+    )
+
+
+@register.simple_tag
+def blog_tags(
+    outer_tag: str = "ul",
+    outer_class: str = "",
+    link_class: str = "",
+) -> str:
+    """Return the tags of the blog.
+
+    Args:
+        outer_tag: The outer HTML tag for the tags.
+        outer_class: The CSS class(es) for the outer tag.
+        link_class: The CSS class(es) for the link.
+
+    Returns:
+        str: The tags of the blog.
+    """
+    tags = Tag.objects.get_tags().order_by("title")
+    if not tags:
+        return ""
+
+    # Explicitly pass outer_tag parameter for clarity
+    return mark_safe(helpers.tags_html(tags=tags, outer_tag=outer_tag, outer_class=outer_class, link_class=link_class))
+
+
+@register.simple_tag
+def tags_with_counts(
+    outer_tag: str = "ul",
+    outer_class: str = "",
+    link_class: str = "",
+) -> str:
+    """Return the tags of the blog with post counts.
+
+    Each tag shows the tag name followed by the number of posts in parentheses.
+    Only tags that have published posts are included.
+
+    Args:
+        outer_tag: The outer HTML tag for the tags: "ul", "div", or "span".
+        outer_class: The CSS class(es) for the outer tag.
+        link_class: The CSS class(es) for the link.
+
+    Returns:
+        str: The tags of the blog with post counts.
+    """
+    tags = Tag.objects.get_tags_with_published_posts().order_by("title")
+
+    if not tags:
+        return ""
+
+    # If outer_tag is not one of the allowed tags, return an empty string.
+    if outer_tag not in ["ul", "div", "span"]:
+        return ""
+
+    output = ""
+    outer_class_html = f' class="{outer_class}"' if outer_class else ""
+
+    if outer_tag == "ul":
+        output += f"<ul{outer_class_html}>"
+        for tag in tags:
+            count = tag.posts.count()
+            output += f"<li>{helpers.tag_link(tag, link_class)} ({count})</li>"
+        output += "</ul>"
+
+    if outer_tag == "div":
+        output += f"<div{outer_class_html}>"
+        for tag in tags:
+            count = tag.posts.count()
+            output += f"{helpers.tag_link(tag, link_class)} ({count}), "
+        output = output[:-2]  # Remove the trailing comma and space
+        output += "</div>"
+
+    if outer_tag == "span":
+        output += f"<span{outer_class_html}>"
+        for tag in tags:
+            count = tag.posts.count()
+            output += f"{helpers.tag_link(tag, link_class)} ({count}), "
+        output = output[:-2]  # Remove the trailing comma and space
+        output += "</span>"
+
+    return mark_safe(output)
 
 
 @register.simple_tag
@@ -419,9 +518,7 @@ def post_author(context: Context, link_class: str = "") -> str:
     link_class_html = f' class="{link_class}"' if link_class else ""
 
     output = (
-        f'<a href="{author_url}" title="View all posts by '
-        f'{author_display_name}"{link_class_html}>'
-        f"{author_html}</a>"
+        f'<a href="{author_url}" title="View all posts by {author_display_name}"{link_class_html}>{author_html}</a>'
     )
 
     return mark_safe(output)
@@ -616,6 +713,58 @@ def category_title(
 
 
 @register.simple_tag(takes_context=True)
+def tag_title(
+    context: Context,
+    outer: str = "",
+    outer_class: str = "",
+    pre_text: str = "",
+    post_text: str = "",
+) -> str:
+    """Return the title of the current tag.
+
+    Expects there to be 'tags' in the context set to a list of tag slugs. In the tag views,
+    this will show the tag or tags being displayed. If there's no tags in the context,
+    returns an empty string.
+
+    Args:
+        context: The context.
+        outer: The outer HTML tag for the tag title.
+        outer_class: The CSS class(es) for the outer tag.
+        pre_text: The text to prepend to the tag title.
+        post_text: The text to append to the tag title.
+
+    Returns:
+        str: The title of the tag formatted with the outer tag and class if
+        provided.
+    """
+    tag_slugs: list | None = context.get("tags")
+
+    if not tag_slugs:
+        return ""
+
+    allowed_outer_tags = ["h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "span"]
+    outer_class_html = f' class="{outer_class}"' if outer_class else ""
+
+    # Get tag titles from the slugs
+    tags = [Tag.objects.get_tag_by_slug(slug) for slug in tag_slugs]
+    tag_titles = [tag.title for tag in tags]
+
+    # Join multiple tags with commas
+    output = ", ".join(tag_titles) if len(tag_titles) > 1 else tag_titles[0]
+
+    if pre_text:
+        output = f"{pre_text}{output}"
+
+    if post_text:
+        output = f"{output}{post_text}"
+
+    if outer in allowed_outer_tags:
+        return mark_safe(f"<{outer}{outer_class_html}>{output}</{outer}>")
+
+    return output
+
+
+@register.simple_tag(takes_context=True)
 def author_name(
     context: Context,
     outer: str = "",
@@ -664,7 +813,7 @@ def author_name(
 @register.simple_tag(takes_context=True)
 def post_categories(
     context: Context,
-    outer: str = "ul",
+    outer_tag: str = "ul",
     outer_class: str = "",
     link_class: str = "",
 ) -> str:
@@ -674,7 +823,7 @@ def post_categories(
 
     Args:
         context: The context.
-        outer: The outer HTML tag for the categories.
+        outer_tag: The outer HTML tag for the categories.
         outer_class: The CSS class(es) for the outer tag.
         link_class: The CSS class(es) for the link.
 
@@ -689,7 +838,47 @@ def post_categories(
     if not categories:
         return ""
 
-    return mark_safe(helpers.categories_html(categories, outer, outer_class, link_class))
+    # Explicitly pass outer_tag parameter for clarity
+    return mark_safe(
+        helpers.categories_html(
+            categories=categories,
+            outer_tag=outer_tag,
+            outer_class=outer_class,
+            link_class=link_class,
+        ),
+    )
+
+
+@register.simple_tag(takes_context=True)
+def post_tags(
+    context: Context,
+    outer_tag: str = "ul",
+    outer_class: str = "",
+    link_class: str = "",
+) -> str:
+    """Return the tags of a post.
+
+    Each tag is a link to the tag page.
+
+    Args:
+        context: The context.
+        outer_tag: The outer HTML tag for the tags.
+        outer_class: The CSS class(es) for the outer tag.
+        link_class: The CSS class(es) for the link.
+
+    Returns:
+        str: The tags of the post.
+    """
+    post: Post | None = context.get("post")
+    if not post:
+        return ""
+
+    tags = post.tags.all()
+    if not tags:
+        return ""
+
+    # Explicitly pass outer_tag parameter for clarity
+    return mark_safe(helpers.tags_html(tags=tags, outer_tag=outer_tag, outer_class=outer_class, link_class=link_class))
 
 
 @register.simple_tag(takes_context=True)

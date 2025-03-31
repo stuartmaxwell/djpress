@@ -7,7 +7,16 @@ from django.utils import timezone
 from django.utils.html import format_html
 
 # Register the models here.
-from djpress.models import Category, PluginStorage, Post
+from djpress.models import Category, PluginStorage, Post, Tag
+
+
+@admin.register(Tag)
+class TagAdmin(admin.ModelAdmin):
+    """Tag admin configuration."""
+
+    list_display = ["title", "slug"]
+    prepopulated_fields = {"slug": ("title",)}
+    search_fields = ["title", "slug"]
 
 
 @admin.register(Category)
@@ -56,7 +65,7 @@ class PostAdmin(admin.ModelAdmin):
         (
             "Post Settings",
             {
-                "fields": ("categories",),
+                "fields": ("categories", "tags"),
                 "description": "These settings only apply to posts",
             },
         ),

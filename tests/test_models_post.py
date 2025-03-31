@@ -1269,3 +1269,88 @@ def test_get_day_last_modified(test_post1, test_post2, test_post3):
         Post.post_objects.get_day_last_modified(test_post1.date.year, test_post1.date.month, test_post1.date.day)
         == test_post1.modified_date
     )
+
+
+@pytest.mark.django_db
+def test_get_published_posts_by_tags(test_post1, test_post2, test_post3, tag1, tag2, tag3):
+    test_post1.tags.add(tag1)
+    assert Post.post_objects.get_published_posts_by_tags([tag1.slug]).count() == 1
+    assert Post.post_objects.get_published_posts_by_tags([tag2.slug]).count() == 0
+    assert Post.post_objects.get_published_posts_by_tags([tag1.slug, tag2.slug]).count() == 0
+    assert Post.post_objects.get_published_posts_by_tags([tag1.slug, tag2.slug, tag3.slug]).count() == 0
+
+    test_post2.tags.add(tag2)
+    assert Post.post_objects.get_published_posts_by_tags([tag1.slug]).count() == 1
+    assert Post.post_objects.get_published_posts_by_tags([tag2.slug]).count() == 1
+    assert Post.post_objects.get_published_posts_by_tags([tag1.slug, tag2.slug]).count() == 0
+    assert Post.post_objects.get_published_posts_by_tags([tag1.slug, tag2.slug, tag3.slug]).count() == 0
+
+    test_post1.tags.add(tag2)
+    assert Post.post_objects.get_published_posts_by_tags([tag1.slug]).count() == 1
+    assert Post.post_objects.get_published_posts_by_tags([tag2.slug]).count() == 2
+    assert Post.post_objects.get_published_posts_by_tags([tag1.slug, tag2.slug]).count() == 1
+    assert Post.post_objects.get_published_posts_by_tags([tag1.slug, tag2.slug, tag3.slug]).count() == 0
+
+    test_post2.tags.add(tag1)
+    assert Post.post_objects.get_published_posts_by_tags([tag1.slug]).count() == 2
+    assert Post.post_objects.get_published_posts_by_tags([tag2.slug]).count() == 2
+    assert Post.post_objects.get_published_posts_by_tags([tag1.slug, tag2.slug]).count() == 2
+    assert Post.post_objects.get_published_posts_by_tags([tag1.slug, tag2.slug, tag3.slug]).count() == 0
+
+    test_post3.tags.add(tag1)
+    assert Post.post_objects.get_published_posts_by_tags([tag1.slug]).count() == 3
+    assert Post.post_objects.get_published_posts_by_tags([tag2.slug]).count() == 2
+    assert Post.post_objects.get_published_posts_by_tags([tag1.slug, tag2.slug]).count() == 2
+    assert Post.post_objects.get_published_posts_by_tags([tag1.slug, tag2.slug, tag3.slug]).count() == 0
+
+    test_post3.tags.add(tag2)
+    assert Post.post_objects.get_published_posts_by_tags([tag1.slug]).count() == 3
+    assert Post.post_objects.get_published_posts_by_tags([tag2.slug]).count() == 3
+    assert Post.post_objects.get_published_posts_by_tags([tag1.slug, tag2.slug]).count() == 3
+    assert Post.post_objects.get_published_posts_by_tags([tag1.slug, tag2.slug, tag3.slug]).count() == 0
+
+    test_post3.tags.add(tag3)
+    assert Post.post_objects.get_published_posts_by_tags([tag1.slug]).count() == 3
+    assert Post.post_objects.get_published_posts_by_tags([tag2.slug]).count() == 3
+    assert Post.post_objects.get_published_posts_by_tags([tag1.slug, tag2.slug]).count() == 3
+    assert Post.post_objects.get_published_posts_by_tags([tag1.slug, tag2.slug, tag3.slug]).count() == 1
+
+    test_post1.tags.add(tag3)
+    assert Post.post_objects.get_published_posts_by_tags([tag1.slug]).count() == 3
+    assert Post.post_objects.get_published_posts_by_tags([tag2.slug]).count() == 3
+    assert Post.post_objects.get_published_posts_by_tags([tag1.slug, tag2.slug]).count() == 3
+    assert Post.post_objects.get_published_posts_by_tags([tag1.slug, tag2.slug, tag3.slug]).count() == 2
+
+
+@pytest.mark.django_db
+def test_get_published_posts_by_tags_missing_tag(test_post1, test_post2, tag1, tag2):
+    test_post1.tags.add(tag1)
+    test_post1.tags.add(tag2)
+    test_post2.tags.add(tag1)
+    test_post2.tags.add(tag2)
+
+    assert Post.post_objects.get_published_posts_by_tags([tag1.slug]).count() == 2
+    assert Post.post_objects.get_published_posts_by_tags([tag2.slug]).count() == 2
+    assert Post.post_objects.get_published_posts_by_tags([tag1.slug, tag2.slug]).count() == 2
+
+    assert Post.post_objects.get_published_posts_by_tags(["invalid-tag"]).count() == 0
+    assert Post.post_objects.get_published_posts_by_tags([tag1.slug, "invalid-tag"]).count() == 0
+    assert Post.post_objects.get_published_posts_by_tags([tag1.slug, tag2.slug, "invalid-tag"]).count() == 0
+
+
+@pytest.mark.django_db
+def test_max_tags_per_query(settings, test_post1, test_post2, test_post3, tag1, tag2, tag3):
+    test_post1.tags.add(tag1)
+    test_post1.tags.add(tag2)
+    test_post1.tags.add(tag3)
+    assert Post.post_objects.get_published_posts_by_tags([tag1.slug]).count() == 1
+    assert Post.post_objects.get_published_posts_by_tags([tag2.slug]).count() == 1
+    assert Post.post_objects.get_published_posts_by_tags([tag3.slug]).count() == 1
+    assert Post.post_objects.get_published_posts_by_tags([tag1.slug, tag2.slug]).count() == 1
+    assert Post.post_objects.get_published_posts_by_tags([tag1.slug, tag2.slug, tag3.slug]).count() == 1
+
+    settings.DJPRESS_SETTINGS["MAX_TAGS_PER_QUERY"] = 2
+    assert Post.post_objects.get_published_posts_by_tags([tag1.slug, tag2.slug]).count() == 1
+    assert Post.post_objects.get_published_posts_by_tags([tag1.slug, tag3.slug]).count() == 1
+    assert Post.post_objects.get_published_posts_by_tags([tag2.slug, tag3.slug]).count() == 1
+    assert Post.post_objects.get_published_posts_by_tags([tag1.slug, tag2.slug, tag3.slug]).count() == 0

@@ -113,7 +113,7 @@ Multiple tags can be combined so that only posts with all tags are displayed:
 
 - /{{ TAG_PREFIX }}/{{ tag_slug }}+{{ tag_slug }}
 
-The prefix is configurable with the {{ TAG_PREFIX }} setting, but is not optional:
+The prefix is configurable with the `{{ TAG_PREFIX }}` setting, but is not optional:
 
 - /topic/{{ tag_slug }}
 - /t/{{ tag_slug }}
