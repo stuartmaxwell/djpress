@@ -1,6 +1,8 @@
 # DJ Press Documentation
 
-Welcome to the documentation site for DJ Press. This is a work in progress, but the following key areas are mostly
+Welcome to the documentation site for DJ Press: a blog application for Django sites, inspired by classic WordPress. [Available on PyPI](https://pypi.org/project/djpress/).
+
+This is a work in progress, but the following key areas are mostly
 complete:
 
 - [Installation](installation.md)
