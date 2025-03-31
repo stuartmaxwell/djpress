@@ -44,16 +44,24 @@ def create_groups(sender: AppConfig, **_) -> None:  # noqa: ANN003
         content_type=category_content_type,
         codename__in=["add_category", "change_category", "delete_category"],
     )
+    tag_permissions = Permission.objects.filter(
+        content_type=ContentType.objects.get_for_model(Tag),
+        codename__in=["add_tag", "change_tag", "delete_tag"],
+    )
+    tag_add_permission = Permission.objects.get(
+        content_type=ContentType.objects.get_for_model(Tag),
+        codename="add_tag",
+    )
 
     # Create groups and assign permissions
     editor_group, _ = Group.objects.get_or_create(name="editor")
-    editor_group.permissions.add(publish_permission, *standard_permissions, *category_permissions)
+    editor_group.permissions.add(publish_permission, *standard_permissions, *category_permissions, *tag_permissions)
 
     author_group, _ = Group.objects.get_or_create(name="author")
-    author_group.permissions.add(publish_permission, *standard_permissions)
+    author_group.permissions.add(publish_permission, *standard_permissions, tag_add_permission)
 
     contributor_group, _ = Group.objects.get_or_create(name="contributor")
-    contributor_group.permissions.add(*standard_permissions)
+    contributor_group.permissions.add(*standard_permissions, tag_add_permission)
 
 
 @receiver(post_save, sender=Category)
