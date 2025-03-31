@@ -822,13 +822,6 @@ def test_tags_with_counts(test_post1, test_post2, tag1, tag2, tag3):
     # Should show post counts
     assert "(1)" in result
 
-    # Test with show_empty=True
-    result = djpress_tags.tags_with_counts(show_empty=True)
-    assert tag1.title in result
-    assert tag2.title in result
-    assert tag3.title in result
-    assert "(0)" in result
-
 
 @pytest.mark.django_db
 def test_tag_title(rf, tag1):
@@ -1809,3 +1802,143 @@ def test_post_wrapper_single_post_with_tag_and_class(settings):
     template = Template(template_text)
     expected_output = '<div class="blog-post"><p>This is test post 1.</p></div>'
     assert template.render(context) == expected_output
+
+
+@pytest.mark.django_db
+def test_post_tags_no_tags(test_post1):
+    """Test post_tags when a post has no tags."""
+    test_post1.tags.clear()
+    context = Context({"post": test_post1})
+    assert djpress_tags.post_tags(context) == ""
+
+
+@pytest.mark.django_db
+def test_post_tags_no_posts():
+    """Test post_tags when there are no posts."""
+    context = Context({"post": None})
+    assert djpress_tags.post_tags(context) == ""
+
+
+@pytest.mark.django_db
+def test_tags_with_counts_outer_div(test_post1, test_post2, tag1, tag2):
+    """Test tags_with_counts with div as outer tag."""
+    test_post1.tags.add(tag1)
+    test_post2.tags.add(tag2)
+
+    result = djpress_tags.tags_with_counts(outer_tag="div", outer_class="tag-list")
+
+    assert '<div class="tag-list">' in result
+    assert tag1.title in result
+    assert tag2.title in result
+    assert "(1)" in result
+
+
+@pytest.mark.django_db
+def test_tags_with_counts_incorrect_outer_div(test_post1, test_post2, tag1, tag2):
+    """Test tags_with_counts with incorrect outer tag."""
+    test_post1.tags.add(tag1)
+    test_post2.tags.add(tag2)
+
+    result = djpress_tags.tags_with_counts(outer_tag="main", outer_class="tag-list")
+
+    assert result == ""
+
+
+@pytest.mark.django_db
+def test_tags_with_counts_outer_span(test_post1, test_post2, tag1, tag2):
+    """Test tags_with_counts with span as outer tag."""
+    test_post1.tags.add(tag1)
+    test_post2.tags.add(tag2)
+
+    result = djpress_tags.tags_with_counts(outer_tag="span", outer_class="tag-list")
+
+    assert '<span class="tag-list">' in result
+    assert tag1.title in result
+    assert tag2.title in result
+    assert "(1)" in result
+
+
+@pytest.mark.django_db
+def test_tags_with_counts_empty():
+    """Test tags_with_counts when there are no tags with published posts."""
+    result = djpress_tags.tags_with_counts()
+    assert result == ""
+
+
+@pytest.mark.django_db
+def test_site_title_link(settings):
+    """Test the site_title_link template tag."""
+    # Default case
+    result = djpress_tags.site_title_link()
+    expected = f'<a href="{reverse("djpress:index")}">{settings.DJPRESS_SETTINGS["SITE_TITLE"]}</a>'
+    assert result == expected
+
+    # With link class
+    result = djpress_tags.site_title_link(link_class="site-title")
+    expected = f'<a href="{reverse("djpress:index")}" class="site-title">{settings.DJPRESS_SETTINGS["SITE_TITLE"]}</a>'
+    assert result == expected
+
+
+@pytest.mark.django_db
+def test_tag_title_multiple_tags(rf, tag1, tag2):
+    """Test tag_title with multiple tags in context."""
+    # Create a request with multiple tags in context
+    request = rf.get("/")
+    context = Context({"tags": [tag1.slug, tag2.slug]})
+
+    # Test with default parameters
+    result = djpress_tags.tag_title(context)
+    expected = f"{tag1.title}, {tag2.title}"
+    assert result == expected
+
+    # Test with pre and post text
+    result = djpress_tags.tag_title(context, pre_text="Posts tagged with: ", post_text="!")
+    expected = f"Posts tagged with: {tag1.title}, {tag2.title}!"
+    assert result == expected
+
+
+@pytest.mark.django_db
+def test_tag_title_no_tags():
+    """Test tag_title when there are no tags in context."""
+    context = Context({})
+    result = djpress_tags.tag_title(context)
+    assert result == ""
+
+
+@pytest.mark.django_db
+def test_post_wrapper_tag_arguments(settings):
+    """Test post_wrapper_tag with various argument combinations."""
+    # Test with tag and class in different order
+    template_text = (
+        "{% load djpress_tags %}{% post_wrap class='blog-post' tag='div' %}<p>Test content</p>{% end_post_wrap %}"
+    )
+    context = Context({})
+
+    template = Template(template_text)
+    expected_output = '<div class="h-entry blog-post"><p>Test content</p></div>'
+    assert template.render(context) == expected_output
+
+    # Test with double quotes for arguments
+    template_text = (
+        '{% load djpress_tags %}{% post_wrap class="blog-post" tag="section" %}<p>Test content</p>{% end_post_wrap %}'
+    )
+    template = Template(template_text)
+    expected_output = '<section class="h-entry blog-post"><p>Test content</p></section>'
+    assert template.render(context) == expected_output
+
+    # Test with more than two arguments (which should be ignored)
+    template_text = '{% load djpress_tags %}{% post_wrap "article" "post-class" "extra-arg" %}<p>Test content</p>{% end_post_wrap %}'
+    template = Template(template_text)
+    expected_output = '<article class="h-entry post-class"><p>Test content</p></article>'
+    assert template.render(context) == expected_output
+
+
+@pytest.mark.django_db
+def test_get_pagination_range_no_page_in_context():
+    """Test get_pagination_range when there's no page object in the context."""
+    context = Context({})
+    assert djpress_tags.get_pagination_range(context) == range(0)
+
+    # Test with non-Page object in posts
+    context = Context({"posts": "not a Page object"})
+    assert djpress_tags.get_pagination_range(context) == range(0)

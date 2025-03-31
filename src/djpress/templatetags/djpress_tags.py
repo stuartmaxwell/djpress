@@ -182,6 +182,10 @@ def tags_with_counts(
     if not tags:
         return ""
 
+    # If outer_tag is not one of the allowed tags, return an empty string.
+    if outer_tag not in ["ul", "div", "span"]:
+        return ""
+
     output = ""
     outer_class_html = f' class="{outer_class}"' if outer_class else ""
 
@@ -192,7 +196,7 @@ def tags_with_counts(
             output += f"<li>{helpers.tag_link(tag, link_class)} ({count})</li>"
         output += "</ul>"
 
-    elif outer_tag == "div":
+    if outer_tag == "div":
         output += f"<div{outer_class_html}>"
         for tag in tags:
             count = tag.posts.count()
@@ -200,7 +204,7 @@ def tags_with_counts(
         output = output[:-2]  # Remove the trailing comma and space
         output += "</div>"
 
-    elif outer_tag == "span":
+    if outer_tag == "span":
         output += f"<span{outer_class_html}>"
         for tag in tags:
             count = tag.posts.count()
