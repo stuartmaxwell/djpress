@@ -4,24 +4,21 @@ There are two type of views - those that return a collection of posts, and then 
 that returns a single post.
 """
 
-import logging
 import re
 
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBadRequest, JsonResponse
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import render
 
 from djpress.conf import settings as djpress_settings
 from djpress.exceptions import PageNotFoundError, PostNotFoundError
 from djpress.feeds import PostFeed
 from djpress.models import Category, Post
-from djpress.plugins import Hooks, registry
+from djpress.plugins import registry
 from djpress.url_utils import get_path_regex
 from djpress.utils import get_template_name, validate_date_parts
-
-logger = logging.getLogger(__name__)
 
 
 def dispatcher(request: HttpRequest, path: str) -> HttpResponse | None:  # noqa: C901, PLR0911
@@ -365,8 +362,8 @@ def single_page(request: HttpRequest, path: str) -> HttpResponse:
 
 
 @staff_member_required
-def plugin_action(request: HttpRequest, plugin_name: str, post_id: int) -> HttpResponse:
-    """Handle a plugin action request from the admin interface.
+def post_admin_button_action(request: HttpRequest, plugin_name: str, post_id: int) -> HttpResponse:
+    """Handle a plugin action request from a post button in the admin interface.
 
     This view is called when a user clicks a plugin action button in the admin.
     It runs the registered plugin's action function and returns the result.
@@ -379,24 +376,20 @@ def plugin_action(request: HttpRequest, plugin_name: str, post_id: int) -> HttpR
     Returns:
         HttpResponse: The response, either a JSON response with results or a redirect.
     """
-    # Load the post
-    post = get_object_or_404(Post, id=post_id)
-
-    # Make sure the plugins are loaded
-    if not registry._loaded:  # noqa: SLF001
-        registry.load_plugins()
-
     # Get the action from the request parameters
     action = request.GET.get("action", "")
 
-    # Run the hook and get results
-    result = registry.run_hook(
-        Hooks.ADMIN_POST_BUTTONS,
-        {"post": post, "plugin_name": plugin_name, "action": action},
-    )
+    if not registry._loaded:  # noqa: SLF001
+        registry.load_plugins()
+
+    # Get the plugin by name
+    plugin = registry.get_plugin(plugin_name)
+
+    # Use getattr to dynamically get the method specified by the action parameter
+    result = getattr(plugin, action)(post_id) if hasattr(plugin, action) and callable(getattr(plugin, action)) else None
 
     # If hook didn't find a matching plugin to handle this action, return error
-    if result is None or result == {"post": post, "plugin_name": plugin_name, "action": action}:
+    if result is None:
         return JsonResponse(
             {
                 "success": False,
@@ -404,10 +397,6 @@ def plugin_action(request: HttpRequest, plugin_name: str, post_id: int) -> HttpR
             },
             status=404,
         )
-
-    # If hook returned a redirect URL, redirect there
-    if isinstance(result, dict) and "redirect_url" in result:
-        return redirect(result["redirect_url"])
 
     # Otherwise return results as JSON
     return JsonResponse(

@@ -1,9 +1,6 @@
 """An example DJ Press plugin."""
 
-import random
-from typing import Any
-
-from djpress.plugins import DJPressPlugin, Hooks, PluginRegistry
+from djpress.plugins import DJPressPlugin, PluginRegistry
 
 
 class Plugin(DJPressPlugin):
@@ -19,8 +16,7 @@ class Plugin(DJPressPlugin):
         """
         registry.register_hook("pre_render_content", self.add_greeting)
         registry.register_hook("post_render_content", self.add_goodbye)
-        registry.register_hook(Hooks.ADMIN_POST_BUTTONS, self.register_admin_buttons)
-        registry.register_hook(Hooks.ADMIN_POST_BUTTONS, self.handle_admin_button_action)
+        registry.register_hook("admin_post_buttons", self.word_count_button)
 
     def add_greeting(self, content: str) -> str:
         """Add a greeting to the content.
@@ -50,89 +46,21 @@ class Plugin(DJPressPlugin):
         goodbye = self.config.get("pre_text", "Goodbye!")
         return f"{content}<hr><p>{goodbye} This was added by <code>djpress_example_plugin</code>!</p>"
 
-    def register_admin_buttons(self, buttons: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        """Register admin buttons for the plugin.
+    # Register a button in the admin post edit screen. The name of the button must match the
+    # name of the function that handles the action.
+    word_count_button = {
+        "name": "count_words",
+        "plugin_name": "djpress_example_plugin",
+        "label": "Count Words",
+        "style": "info",
+    }
 
-        This hook registers button definitions that will be displayed in the admin.
+    def count_words(self, post_id: int) -> str:
+        """Count the words in a post."""
+        from djpress.models import Post
 
-        Args:
-            buttons (List[Dict[str, Any]]): Current list of buttons.
+        post = Post.objects.get(pk=post_id)
 
-        Returns:
-            List[Dict[str, Any]]: Updated list of buttons with our additions.
-        """
-        if not isinstance(buttons, list):
-            buttons = []
+        word_count = len(post.content.split())
 
-        # Add a button to generate a random tag
-        buttons.append(
-            {
-                "name": "add_random_tag",
-                "plugin_name": self.name,
-                "label": "Add Random Tag",
-                "style": "success",
-            },
-        )
-
-        # Add a button to count words
-        buttons.append(
-            {
-                "name": "count_words",
-                "plugin_name": self.name,
-                "label": "Count Words",
-                "style": "info",
-            },
-        )
-
-        return buttons
-
-    def handle_admin_button_action(self, data: dict[str, Any]) -> dict[str, Any]:
-        """Handle admin button actions.
-
-        This hook processes button clicks from the admin interface.
-
-        Args:
-            data (Dict[str, Any]): Data containing post and plugin info.
-
-        Returns:
-            Dict[str, Any]: Result data to return to the admin.
-        """
-        # Check if this is a button action call
-        if not isinstance(data, dict) or "post" not in data or "plugin_name" not in data:
-            return data
-
-        # Check if this is for our plugin
-        if data["plugin_name"] != self.name:
-            return data
-
-        post = data["post"]
-
-        # Add a random tag action
-        if "add_random_tag" in data.get("action", ""):
-            random_tags = ["example", "plugin", "demo", "testing", "random", "sample"]
-            # This is just a demo, not security-critical
-            random_tag = random.choice(random_tags)  # noqa: S311
-
-            # Check if tag exists and add it
-            from djpress.models import Tag
-
-            tag, _ = Tag.objects.get_or_create(title=random_tag, slug=random_tag)
-            post.tags.add(tag)
-            post.save()
-
-            return {
-                "success": True,
-                "message": f"Added random tag: {random_tag}",
-            }
-
-        # Count words action
-        if "count_words" in data.get("action", ""):
-            word_count = len(post.content.split())
-
-            return {
-                "success": True,
-                "message": f"Word count: {word_count} words",
-                "word_count": word_count,
-            }
-
-        return data
+        return f"Word count: {word_count} words"

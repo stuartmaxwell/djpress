@@ -115,6 +115,24 @@ class PluginRegistry:
             msg = f"Failed to load plugins: {exc}"
             raise PluginLoadError(msg) from exc
 
+    def get_plugin(self, plugin_name: str) -> "DJPressPlugin | None":
+        """Get a plugin by name.
+
+        Args:
+            plugin_name (str): The name of the plugin to retrieve.
+
+        Returns:
+            DJPressPlugin | None: The plugin instance if found, None otherwise.
+        """
+        if not self._loaded:
+            self.load_plugins()
+
+        for plugin in self.plugins:
+            if plugin.name == plugin_name:
+                return plugin
+
+        return None
+
     def _import_plugin_class(self, plugin_path: str) -> type:
         """Import the plugin class from either custom path or standard location.
 

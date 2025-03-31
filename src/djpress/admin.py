@@ -83,8 +83,7 @@ class PostAdmin(admin.ModelAdmin):
             "Plugin Actions",
             {
                 "fields": ("plugin_buttons",),
-                "description": "Actions provided by plugins",
-                "classes": ("collapse",),
+                "description": "Plugins can add actions on the saved post object here.",
             },
         ),
     ]
@@ -110,21 +109,20 @@ class PostAdmin(admin.ModelAdmin):
         if not registry._loaded:  # noqa: SLF001
             registry.load_plugins()
 
-        # Get button definitions from plugins
-        button_data = registry.run_hook(Hooks.ADMIN_POST_BUTTONS, [])
+        admin_post_buttons = registry.hooks.get(Hooks.ADMIN_POST_BUTTONS, [])
 
         # If no buttons were returned, show a message
-        if not button_data or not isinstance(button_data, list):
+        if not admin_post_buttons or not isinstance(admin_post_buttons, list):
             return "No plugin actions available."
 
         buttons_html = []
-        for button in button_data:
+        for button in admin_post_buttons:
             if not isinstance(button, dict) or "name" not in button or "plugin_name" not in button:
                 continue
 
             # Build the action URL
             url = reverse(
-                "djpress:plugin_action",
+                "djpress:post_admin_button_action",
                 kwargs={
                     "plugin_name": button["plugin_name"],
                     "post_id": obj.pk,
@@ -162,13 +160,11 @@ class PostAdmin(admin.ModelAdmin):
                         type: 'GET',
                         dataType: 'json',
                         success: function(data) {
-                            if (data.result && data.result.message) {
-                                alert(data.result.message);
+                            if (data.success && data.result) {
+                                alert(data.result);
                             } else {
                                 alert('Action completed successfully!');
                             }
-                            // Reload the page to see changes
-                            location.reload();
                         },
                         error: function(xhr) {
                             var msg = 'An error occurred';
