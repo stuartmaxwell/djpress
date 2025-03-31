@@ -10,7 +10,7 @@ from djpress.models import Category, Post, Tag
 
 def categories_html(
     categories: models.QuerySet,
-    outer: str,
+    outer_tag: str,
     outer_class: str,
     link_class: str,
 ) -> str:
@@ -20,7 +20,7 @@ def categories_html(
 
     Args:
         categories: The categories.
-        outer: The outer HTML tag for the categories.
+        outer_tag: The outer HTML tag for the categories.
         outer_class: The CSS class(es) for the outer tag.
         link_class: The CSS class(es) for the link.
 
@@ -31,20 +31,20 @@ def categories_html(
 
     outer_class_html = f' class="{outer_class}"' if outer_class else ""
 
-    if outer == "ul":
+    if outer_tag == "ul":
         output += f"<ul{outer_class_html}>"
         for category in categories:
             output += f"<li>{category_link(category, link_class)}</li>"
         output += "</ul>"
 
-    if outer == "div":
+    if outer_tag == "div":
         output += f"<div{outer_class_html}>"
         for category in categories:
             output += f"{category_link(category, link_class)}, "
         output = output[:-2]  # Remove the trailing comma and space
         output += "</div>"
 
-    if outer == "span":
+    if outer_tag == "span":
         output += f"<span{outer_class_html}>"
         for category in categories:
             output += f"{category_link(category, link_class)}, "
@@ -56,7 +56,7 @@ def categories_html(
 
 def tags_html(
     tags: models.QuerySet,
-    outer: str,
+    outer_tag: str,
     outer_class: str,
     link_class: str,
 ) -> str:
@@ -66,7 +66,7 @@ def tags_html(
 
     Args:
         tags: The tags.
-        outer: The outer HTML tag for the tags.
+        outer_tag: The outer HTML tag for the tags.
         outer_class: The CSS class(es) for the outer tag.
         link_class: The CSS class(es) for the link.
 
@@ -77,20 +77,20 @@ def tags_html(
 
     outer_class_html = f' class="{outer_class}"' if outer_class else ""
 
-    if outer == "ul":
+    if outer_tag == "ul":
         output += f"<ul{outer_class_html}>"
         for tag in tags:
             output += f"<li>{tag_link(tag, link_class)}</li>"
         output += "</ul>"
 
-    if outer == "div":
+    if outer_tag == "div":
         output += f"<div{outer_class_html}>"
         for tag in tags:
             output += f"{tag_link(tag, link_class)}, "
         output = output[:-2]  # Remove the trailing comma and space
         output += "</div>"
 
-    if outer == "span":
+    if outer_tag == "span":
         output += f"<span{outer_class_html}>"
         for tag in tags:
             output += f"{tag_link(tag, link_class)}, "
