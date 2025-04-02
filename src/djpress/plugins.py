@@ -1,6 +1,7 @@
 """Plugin system for DJ Press."""
 
 import contextlib  # Ruff: SIM105
+import types
 from enum import Enum
 from typing import Any
 
@@ -132,6 +133,45 @@ class PluginRegistry:
                 return plugin
 
         return None
+
+    def get_plugin_name(self, plugin_method: types.MethodType) -> str:
+        """Get the name of the plugin that has registered a method to a hook.
+
+        Args:
+            plugin_method (types.MethodType): The method to get the name for.
+
+        Returns:
+            str: The name of the plugin that registered the method.
+        """
+        if not isinstance(plugin_method, types.MethodType):
+            msg = f"plugin_method must be a MethodType, got {type(plugin_method)}"
+            raise TypeError(msg)
+
+        # Get the plugin instance from the method
+        plugin_instance = getattr(plugin_method, "__self__", None)
+        if plugin_instance is None:
+            return ""
+
+        return plugin_instance.name
+
+    def get_plugin_method_display_name(self, plugin_method: types.MethodType) -> str:
+        """Get the name of the plugin method that has been registered to a hook.
+
+        The name returned is the name of the method, but formatted for display. Underscores are replaced with spaces and
+        the first letter of each word is capitalized.
+
+        Args:
+            plugin_method (types.MethodType): The method to get the name for.
+
+        Returns:
+            str: The name of the plugin method, formatted for display.
+        """
+        if not isinstance(plugin_method, types.MethodType):
+            msg = f"plugin_method must be a MethodType, got {type(plugin_method)}"
+            raise TypeError(msg)
+
+        method_name = plugin_method.__name__
+        return method_name.replace("_", " ").title()
 
     def _import_plugin_class(self, plugin_path: str) -> type:
         """Import the plugin class from either custom path or standard location.

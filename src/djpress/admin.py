@@ -1,5 +1,8 @@
 """djpress admin configuration."""
 
+import logging
+import types
+
 from django.contrib import admin
 from django.db.models.query import QuerySet
 from django.http import HttpRequest
@@ -11,6 +14,8 @@ from django.utils.safestring import mark_safe
 # Register the models here.
 from djpress.models import Category, PluginStorage, Post, Tag
 from djpress.plugins import Hooks, registry
+
+logger = logging.getLogger(__name__)
 
 
 @admin.register(Tag)
@@ -117,26 +122,28 @@ class PostAdmin(admin.ModelAdmin):
 
         buttons_html = []
         for button in admin_post_buttons:
-            if not isinstance(button, dict) or "name" not in button or "plugin_name" not in button:
+            if not isinstance(button, types.MethodType):
                 continue
+
+            plugin_name = registry.get_plugin_name(button)
+            method_name = button.__name__
+            button_label = registry.get_plugin_method_display_name(button)
 
             # Build the action URL
             url = reverse(
                 "djpress:post_admin_button_action",
                 kwargs={
-                    "plugin_name": button["plugin_name"],
+                    "plugin_name": plugin_name,
                     "post_id": obj.pk,
                 },
             )
 
             # Create the button HTML
-            btn_label = button.get("label", button["name"])
-            btn_style = button.get("style", "primary")
-            css_class = f"button button-{btn_style} plugin-action-btn"
-            action_url = f"{url}?action={button['name']}"
+            css_class = "button button-info plugin-action-btn"
+            action_url = f"{url}?action={method_name}"
             btn_html = (
                 f'<a href="{action_url}" class="{css_class}" '
-                f'data-plugin="{button["plugin_name"]}" data-action="{button["name"]}">{btn_label}</a>'
+                f'data-plugin="{plugin_name}" data-action="{method_name}">{button_label}</a>'
             )
             buttons_html.append(btn_html)
 

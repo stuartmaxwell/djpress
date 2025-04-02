@@ -16,7 +16,7 @@ class Plugin(DJPressPlugin):
         """
         registry.register_hook("pre_render_content", self.add_greeting)
         registry.register_hook("post_render_content", self.add_goodbye)
-        registry.register_hook("admin_post_buttons", self.word_count_button)
+        registry.register_hook("admin_post_buttons", self.count_words)
 
     def add_greeting(self, content: str) -> str:
         """Add a greeting to the content.
@@ -45,15 +45,6 @@ class Plugin(DJPressPlugin):
         """
         goodbye = self.config.get("pre_text", "Goodbye!")
         return f"{content}<hr><p>{goodbye} This was added by <code>djpress_example_plugin</code>!</p>"
-
-    # Register a button in the admin post edit screen. The name of the button must match the
-    # name of the function that handles the action.
-    word_count_button = {
-        "name": "count_words",
-        "plugin_name": "djpress_example_plugin",
-        "label": "Count Words",
-        "style": "info",
-    }
 
     def count_words(self, post_id: int) -> str:
         """Count the words in a post."""
