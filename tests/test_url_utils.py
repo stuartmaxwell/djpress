@@ -313,6 +313,16 @@ def test_get_category_url(settings, category1):
 
 
 @pytest.mark.django_db
+def test_get_category_url_blank(settings, category1):
+    assert settings.APPEND_SLASH is True
+    settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] = ""
+    expected_url = "/"
+
+    url = get_category_url(category1)
+    assert url == expected_url
+
+
+@pytest.mark.django_db
 def test_get_tag_url(settings, tag1):
     assert settings.APPEND_SLASH is True
     assert settings.DJPRESS_SETTINGS["TAG_PREFIX"] == "test-url-tag"
@@ -331,6 +341,16 @@ def test_get_tag_url(settings, tag1):
     settings.DJPRESS_SETTINGS["TAG_PREFIX"] = "test-url-tag"
     assert settings.DJPRESS_SETTINGS["TAG_PREFIX"] == "test-url-tag"
     expected_url = f"/test-url-tag/{tag1.slug}"
+    url = get_tag_url(tag1)
+    assert url == expected_url
+
+
+@pytest.mark.django_db
+def test_get_tag_url_blank(settings, tag1):
+    assert settings.APPEND_SLASH is True
+    settings.DJPRESS_SETTINGS["TAG_PREFIX"] = ""
+    expected_url = "/"
+
     url = get_tag_url(tag1)
     assert url == expected_url
 

@@ -219,7 +219,7 @@ def get_category_url(category: "Category") -> str:
 
     If either djpress_settings.CATEGORY_ENABLED or djpress_settings.CATEGORY_PREFIX is not set, return an empty string.
     """
-    if djpress_settings.CATEGORY_ENABLED and djpress_settings.CATEGORY_PREFIX:
+    if djpress_settings.CATEGORY_ENABLED and djpress_settings.CATEGORY_PREFIX != "":
         url = f"/{djpress_settings.CATEGORY_PREFIX}/{category.slug}"
     else:
         url = ""
