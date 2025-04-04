@@ -129,16 +129,16 @@ def regex_page() -> str:
 
 
 def regex_category() -> str:
-    """Generate the regex path for the category view."""
+    """Generate the regex path for the category view.
+
+    The category URL must have the CATEGORY_PREFIX. If not, an error occurs on startup: E002. See conf.py for details.
+    """
     # Regex explanation:
     # - (?P<slug>[\w-]+): This is a named capture group that matches any word character (alphanumeric or underscore)
     #   or a hyphen.
     regex = r"(?P<slug>[\w-]+)"
 
-    if djpress_settings.CATEGORY_PREFIX:
-        regex = rf"{re.escape(djpress_settings.CATEGORY_PREFIX)}/{regex}"
-
-    return regex
+    return rf"{re.escape(djpress_settings.CATEGORY_PREFIX)}/{regex}"
 
 
 def regex_tag() -> str:
