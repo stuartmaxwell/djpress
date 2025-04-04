@@ -193,7 +193,7 @@ def test_tag_posts(test_post1, test_post2, tag1, tag2):
     assert list(tag2.posts.all()) == [test_post2]
 
     test_post2.tags.add(tag1)
-    assert list(tag1.posts.all()) == [test_post1, test_post2]
+    assert list(tag1.posts.all()) == [test_post2, test_post1]
     assert list(tag2.posts.all()) == [test_post2]
 
 

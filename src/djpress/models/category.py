@@ -109,13 +109,13 @@ class Category(models.Model):
     def posts(self) -> models.QuerySet:
         """Return only published posts.
 
-        TODO: duplicated logic for what a published post is. Need a better way of managing this.
+        Note: this mirrors the queryset in PostsManager.
         """
         return self._posts.filter(
             post_type="post",
             status="published",
             date__lte=timezone.now(),
-        )
+        ).order_by("-date")
 
     @property
     def has_posts(self: "Category") -> bool:

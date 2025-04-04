@@ -192,7 +192,11 @@ class PostsManager(models.Manager):
     """Post custom manager."""
 
     def get_queryset(self: "PostsManager") -> models.QuerySet:
-        """Return the queryset for posts."""
+        """Return the queryset for posts.
+
+        Note: this queryset is mirrored in both the Tag and Category models. If this logic changes, it should be
+        reflected in those models as well.
+        """
         return (
             super()
             .get_queryset()

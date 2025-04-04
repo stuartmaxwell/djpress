@@ -161,7 +161,7 @@ def test_category_posts(test_post1, test_post2, category1, category2):
 
     test_post2.categories.set([category1])
     test_post2.save()
-    assert list(category1.posts.all()) == [test_post1, test_post2]
+    assert list(category1.posts.all()) == [test_post2, test_post1]
     assert list(category2.posts.all()) == []
 
 
