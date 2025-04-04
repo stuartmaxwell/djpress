@@ -232,10 +232,10 @@ def get_category_url(category: "Category") -> str:
 
 def get_tag_url(tag: "Tag") -> str:
     """Return the URL for a single tag."""
-    if djpress_settings.TAG_ENABLED and djpress_settings.TAG_PREFIX:
+    if djpress_settings.TAG_ENABLED and djpress_settings.TAG_PREFIX != "":
         url = f"/{djpress_settings.TAG_PREFIX}/{tag.slug}"
     else:
-        url = f"/{tag.slug}"
+        url = ""
 
     if django_settings.APPEND_SLASH:
         return f"{url}/"

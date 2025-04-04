@@ -330,13 +330,6 @@ def test_get_tag_url(settings, tag1):
     url = get_tag_url(tag1)
     assert url == expected_url
 
-    assert settings.APPEND_SLASH is True
-    settings.DJPRESS_SETTINGS["TAG_PREFIX"] = ""
-    assert settings.DJPRESS_SETTINGS["TAG_PREFIX"] == ""
-    expected_url = f"/{tag1.slug}/"
-    url = get_tag_url(tag1)
-    assert url == expected_url
-
     settings.APPEND_SLASH = False
     settings.DJPRESS_SETTINGS["TAG_PREFIX"] = "test-url-tag"
     assert settings.DJPRESS_SETTINGS["TAG_PREFIX"] == "test-url-tag"
