@@ -299,13 +299,14 @@ def test_get_author_url(settings, user):
 @pytest.mark.django_db
 def test_get_category_url(settings, category1):
     assert settings.APPEND_SLASH is True
-    expected_url = f"/{category1.permalink}/"
+    category_prefix = settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]
+    expected_url = f"/{category_prefix}/{category1.slug}/"
 
     url = get_category_url(category1)
     assert url == expected_url
 
     settings.APPEND_SLASH = False
-    expected_url = f"/{category1.permalink}"
+    expected_url = f"/{category_prefix}/{category1.slug}"
 
     url = get_category_url(category1)
     assert url == expected_url

@@ -99,14 +99,6 @@ class Category(models.Model):
             raise ValueError(msg) from exc
 
     @property
-    def permalink(self: "Category") -> str:
-        """Return the category's permalink."""
-        if djpress_settings.CATEGORY_ENABLED and djpress_settings.CATEGORY_PREFIX:
-            return f"{djpress_settings.CATEGORY_PREFIX}/{self.slug}"
-
-        return f"{self.slug}"
-
-    @property
     def url(self) -> str:
         """Return the category's URL."""
         from djpress.url_utils import get_category_url

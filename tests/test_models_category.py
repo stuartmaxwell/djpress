@@ -155,24 +155,6 @@ def test_get_category_by_slug_not_exists(settings):
 
 
 @pytest.mark.django_db
-def test_category_permalink(settings):
-    """Test that the permalink property returns the correct URL."""
-    # Confirm the settings in settings_testing.py
-    assert settings.DJPRESS_SETTINGS["CACHE_CATEGORIES"] is True
-    assert settings.DJPRESS_SETTINGS["CATEGORY_ENABLED"] is True
-    assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
-
-    category = Category.objects.create(title="Test Category", slug="test-category")
-
-    assert category.permalink == "test-url-category/test-category"
-
-    settings.DJPRESS_SETTINGS["CATEGORY_ENABLED"] = False
-    settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] = ""
-
-    assert category.permalink == "test-category"
-
-
-@pytest.mark.django_db
 def test_category_posts(test_post1, test_post2, category1, category2):
     assert list(category1.posts.all()) == [test_post1]
     assert list(category2.posts.all()) == [test_post2]
