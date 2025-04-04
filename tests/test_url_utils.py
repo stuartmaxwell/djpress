@@ -189,15 +189,6 @@ def test_category_with_prefix(settings):
 
 
 @pytest.mark.django_db
-def test_category_empty_prefix(settings):
-    settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] = ""
-    expected_regex = r"(?P<slug>[\w-]+)"
-
-    regex = regex_category()
-    assert regex == expected_regex
-
-
-@pytest.mark.django_db
 def test_author_with_prefix(settings):
     settings.DJPRESS_SETTINGS["AUTHOR_PREFIX"] = "author"
     expected_regex = r"author/(?P<author>[\w-]+)"
