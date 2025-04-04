@@ -215,8 +215,14 @@ def get_author_url(user: User) -> str:
 
 
 def get_category_url(category: "Category") -> str:
-    """Return the URL for the category."""
-    url = f"/{category.permalink}"
+    """Return the URL for the category.
+
+    If either djpress_settings.CATEGORY_ENABLED or djpress_settings.CATEGORY_PREFIX is not set, return an empty string.
+    """
+    if djpress_settings.CATEGORY_ENABLED and djpress_settings.CATEGORY_PREFIX != "":
+        url = f"/{djpress_settings.CATEGORY_PREFIX}/{category.slug}"
+    else:
+        url = ""
 
     if django_settings.APPEND_SLASH:
         return f"{url}/"
@@ -226,10 +232,10 @@ def get_category_url(category: "Category") -> str:
 
 def get_tag_url(tag: "Tag") -> str:
     """Return the URL for a single tag."""
-    if djpress_settings.TAG_ENABLED and djpress_settings.TAG_PREFIX:
+    if djpress_settings.TAG_ENABLED and djpress_settings.TAG_PREFIX != "":
         url = f"/{djpress_settings.TAG_PREFIX}/{tag.slug}"
     else:
-        url = f"/{tag.slug}"
+        url = ""
 
     if django_settings.APPEND_SLASH:
         return f"{url}/"

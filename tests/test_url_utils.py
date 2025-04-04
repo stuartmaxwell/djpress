@@ -299,13 +299,24 @@ def test_get_author_url(settings, user):
 @pytest.mark.django_db
 def test_get_category_url(settings, category1):
     assert settings.APPEND_SLASH is True
-    expected_url = f"/{category1.permalink}/"
+    category_prefix = settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]
+    expected_url = f"/{category_prefix}/{category1.slug}/"
 
     url = get_category_url(category1)
     assert url == expected_url
 
     settings.APPEND_SLASH = False
-    expected_url = f"/{category1.permalink}"
+    expected_url = f"/{category_prefix}/{category1.slug}"
+
+    url = get_category_url(category1)
+    assert url == expected_url
+
+
+@pytest.mark.django_db
+def test_get_category_url_blank(settings, category1):
+    assert settings.APPEND_SLASH is True
+    settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] = ""
+    expected_url = "/"
 
     url = get_category_url(category1)
     assert url == expected_url
@@ -319,17 +330,20 @@ def test_get_tag_url(settings, tag1):
     url = get_tag_url(tag1)
     assert url == expected_url
 
-    assert settings.APPEND_SLASH is True
-    settings.DJPRESS_SETTINGS["TAG_PREFIX"] = ""
-    assert settings.DJPRESS_SETTINGS["TAG_PREFIX"] == ""
-    expected_url = f"/{tag1.slug}/"
-    url = get_tag_url(tag1)
-    assert url == expected_url
-
     settings.APPEND_SLASH = False
     settings.DJPRESS_SETTINGS["TAG_PREFIX"] = "test-url-tag"
     assert settings.DJPRESS_SETTINGS["TAG_PREFIX"] == "test-url-tag"
     expected_url = f"/test-url-tag/{tag1.slug}"
+    url = get_tag_url(tag1)
+    assert url == expected_url
+
+
+@pytest.mark.django_db
+def test_get_tag_url_blank(settings, tag1):
+    assert settings.APPEND_SLASH is True
+    settings.DJPRESS_SETTINGS["TAG_PREFIX"] = ""
+    expected_url = "/"
+
     url = get_tag_url(tag1)
     assert url == expected_url
 

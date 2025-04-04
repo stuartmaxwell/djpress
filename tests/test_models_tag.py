@@ -169,7 +169,7 @@ def test_get_tag_by_slug_not_exists(settings):
 
 
 @pytest.mark.django_db
-def test_category_url(settings):
+def test_tag_url(settings):
     """Test that the url property returns the correct URL."""
     # Confirm the settings in settings_testing.py
     assert settings.DJPRESS_SETTINGS["TAG_ENABLED"] is True
@@ -182,7 +182,7 @@ def test_category_url(settings):
     settings.DJPRESS_SETTINGS["TAG_ENABLED"] = False
     settings.DJPRESS_SETTINGS["TAG_PREFIX"] = ""
 
-    assert tag.url == "/test-tag/"
+    assert tag.url == "/"
 
 
 @pytest.mark.django_db
