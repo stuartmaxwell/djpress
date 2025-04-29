@@ -14,7 +14,7 @@ CATEGORY_CACHE_KEY = "categories"
 class CategoryManager(models.Manager):
     """Category manager."""
 
-    def get_categories(self: "CategoryManager") -> models.QuerySet:
+    def get_categories(self) -> models.QuerySet:
         """Return the queryset for categories.
 
         If CACHE_CATEGORIES is set to True, we return the cached queryset.
@@ -24,7 +24,7 @@ class CategoryManager(models.Manager):
 
         return self.all()
 
-    def _get_cached_categories(self: "CategoryManager") -> models.QuerySet:
+    def _get_cached_categories(self) -> models.QuerySet:
         """Return the cached categories queryset."""
         queryset = cache.get(CATEGORY_CACHE_KEY)
 
@@ -34,7 +34,7 @@ class CategoryManager(models.Manager):
 
         return queryset
 
-    def get_category_by_slug(self: "CategoryManager", slug: str) -> "Category":
+    def get_category_by_slug(self, slug: str) -> "Category":
         """Return a single category by its slug."""
         # First, try to get the category from the cache
         categories = self.get_categories()
@@ -79,11 +79,11 @@ class Category(models.Model):
         verbose_name = "category"
         verbose_name_plural = "categories"
 
-    def __str__(self: "Category") -> str:
+    def __str__(self) -> str:
         """Return the string representation of the category."""
         return self.title
 
-    def save(self: "Category", *args, **kwargs) -> None:  # noqa: ANN002, ANN003
+    def save(self, *args, **kwargs) -> None:  # noqa: ANN002, ANN003
         """Override the save method to auto-generate the slug."""
         if not self.slug:
             self.slug = slugify(self.title)
@@ -118,12 +118,12 @@ class Category(models.Model):
         ).order_by("-date")
 
     @property
-    def has_posts(self: "Category") -> bool:
+    def has_posts(self) -> bool:
         """Return True if the category has published posts."""
         return self.posts.exists()
 
     @property
-    def last_modified(self: "Category") -> None | timezone.datetime:
+    def last_modified(self) -> None | timezone.datetime:
         """Return the most recent last modified date of posts in the category.
 
         This property is used in the sitemap to determine the last modified date of the category.

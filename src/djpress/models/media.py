@@ -69,6 +69,9 @@ class Media(models.Model):
         ("other", "Other"),
     ]
 
+    # Manager
+    objects: MediaManager = MediaManager()
+
     title = models.CharField("Title", max_length=255, help_text="A title for the media file")
     file = models.FileField("File", upload_to=upload_to_path, help_text="The uploaded file")
     media_type = models.CharField(
@@ -95,8 +98,6 @@ class Media(models.Model):
     )
     date = models.DateTimeField(default=timezone.now)
     modified_date = models.DateTimeField(auto_now=True)
-
-    objects: MediaManager = MediaManager()
 
     class Meta:
         """Meta options for the Media model."""

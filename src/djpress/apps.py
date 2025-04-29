@@ -11,7 +11,7 @@ class DjpressConfig(AppConfig):
     name = "djpress"
     label = "djpress"
 
-    def ready(self: "DjpressConfig") -> None:
+    def ready(self) -> None:
         """Run when the app is ready."""
         # Import signals to ensure they are registered
         import djpress.signals  # noqa: F401
