@@ -19,15 +19,15 @@ class PostFeed(Feed):
     link = url_utils.get_rss_url()
     description = djpress_settings.SITE_DESCRIPTION
 
-    def items(self: "PostFeed") -> "models.QuerySet":
+    def items(self) -> "models.QuerySet":
         """Return the most recent posts."""
         return Post.post_objects.get_recent_published_posts()
 
-    def item_title(self: "PostFeed", item: Post) -> str:
+    def item_title(self, item: Post) -> str:
         """Return the title of the post."""
         return item.title
 
-    def item_description(self: "PostFeed", item: Post) -> str:
+    def item_description(self, item: Post) -> str:
         """Return the description of the post.
 
         This is taken from the truncated content of the post converted to HTML from
@@ -38,6 +38,6 @@ class PostFeed(Feed):
             description += f'<p><a href="{self.item_link(item)}">Read more</a></p>'
         return description
 
-    def item_link(self: "PostFeed", item: Post) -> str:
+    def item_link(self, item: Post) -> str:
         """Return the link to the post."""
         return item.url

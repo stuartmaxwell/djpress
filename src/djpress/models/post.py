@@ -52,7 +52,7 @@ class PostsAndPagesManager(models.Manager):
 class PagesManager(models.Manager):
     """Page custom manager."""
 
-    def get_queryset(self: "PagesManager") -> models.QuerySet:
+    def get_queryset(self) -> models.QuerySet:
         """Return the queryset for pages."""
         return (
             super()
@@ -65,7 +65,7 @@ class PagesManager(models.Manager):
             .order_by("menu_order", "title")
         )
 
-    def get_published_pages(self: "PagesManager") -> models.QuerySet:
+    def get_published_pages(self) -> models.QuerySet:
         """Return all published pages.
 
         For a page to be considered published, it must meet the following requirements:
@@ -78,7 +78,7 @@ class PagesManager(models.Manager):
         ).order_by("menu_order", "title", "-date")
 
     def get_published_page_by_slug(
-        self: "PagesManager",
+        self,
         slug: str,
     ) -> "Post":
         """Return a single published page.
@@ -98,7 +98,7 @@ class PagesManager(models.Manager):
         return page
 
     def get_published_page_by_path(
-        self: "PagesManager",
+        self,
         path: str,
     ) -> "Post":
         """Return a single published page from a path.
@@ -191,7 +191,7 @@ class PagesManager(models.Manager):
 class PostsManager(models.Manager):
     """Post custom manager."""
 
-    def get_queryset(self: "PostsManager") -> models.QuerySet:
+    def get_queryset(self) -> models.QuerySet:
         """Return the queryset for posts.
 
         Note: this queryset is mirrored in both the Tag and Category models. If this logic changes, it should be
@@ -208,7 +208,7 @@ class PostsManager(models.Manager):
             .order_by("-date")
         )
 
-    def get_published_posts(self: "PostsManager") -> models.QuerySet:
+    def get_published_posts(self) -> models.QuerySet:
         """Returns all published posts.
 
         For a post to be considered published, it must meet the following requirements:
@@ -217,7 +217,7 @@ class PostsManager(models.Manager):
         """
         return self.get_queryset().prefetch_related("categories", "author")
 
-    def get_recent_published_posts(self: "PostsManager") -> models.QuerySet:
+    def get_recent_published_posts(self) -> models.QuerySet:
         """Return recent published posts.
 
         This does not return a paginated queryset. Use get_paginated_published_posts
@@ -230,7 +230,7 @@ class PostsManager(models.Manager):
 
         return self.get_published_posts()[: djpress_settings.RECENT_PUBLISHED_POSTS_COUNT]
 
-    def _get_cached_recent_published_posts(self: "PostsManager") -> models.QuerySet:
+    def _get_cached_recent_published_posts(self) -> models.QuerySet:
         """Return the cached recent published posts queryset.
 
         If there are any future posts, we calculate the seconds until that post, then we
@@ -264,7 +264,7 @@ class PostsManager(models.Manager):
         return queryset
 
     def _get_cache_timeout(
-        self: "PostsManager",
+        self,
         queryset: models.QuerySet,
     ) -> int | None:
         """Return the timeout for the cache.
@@ -287,7 +287,7 @@ class PostsManager(models.Manager):
         return None
 
     def get_published_post_by_slug(
-        self: "PostsManager",
+        self,
         slug: str,
         year: int | None = None,
         month: int | None = None,
@@ -327,7 +327,7 @@ class PostsManager(models.Manager):
             raise PostNotFoundError(msg) from exc
 
     def get_published_posts_by_category(
-        self: "PostsManager",
+        self,
         category: Category,
     ) -> models.QuerySet:
         """Return all published posts for a given category.
@@ -340,7 +340,7 @@ class PostsManager(models.Manager):
     # Adjust based on your needs
 
     def get_published_posts_by_tags(
-        self: "PostsManager",
+        self,
         tag_slugs: list[str],
     ) -> models.QuerySet:
         """Return all published posts for a given list of tags.
@@ -369,7 +369,7 @@ class PostsManager(models.Manager):
         return queryset.distinct()
 
     def get_published_posts_by_author(
-        self: "PostsManager",
+        self,
         author: User,
     ) -> models.QuerySet:
         """Return all published posts for a given author.
@@ -455,6 +455,12 @@ class Post(models.Model):
     STATUS_CHOICES = [("draft", "Draft"), ("published", "Published")]
     CONTENT_TYPE_CHOICES = [("post", "Post"), ("page", "Page")]
 
+    # Managers
+    admin_objects: AdminManager = AdminManager()  # Unfiltered - for admin use only
+    objects: PostsAndPagesManager = PostsAndPagesManager()  # Default manager returns only published content
+    page_objects: PagesManager = PagesManager()
+    post_objects: PostsManager = PostsManager()
+
     title = models.CharField(max_length=200)
     slug = models.SlugField(unique=True, blank=True)
     content = models.TextField()
@@ -475,12 +481,6 @@ class Post(models.Model):
         limit_choices_to={"post_type": "page"},
     )
 
-    # Managers
-    admin_objects = AdminManager()  # Unfiltered - for admin use only
-    objects = PostsAndPagesManager()  # Default manager returns only published content
-    page_objects: "PagesManager" = PagesManager()
-    post_objects: "PostsManager" = PostsManager()
-
     class Meta:
         """Meta options for the Post model."""
 
@@ -492,11 +492,11 @@ class Post(models.Model):
             ("can_publish_post", "Can publish post"),
         ]
 
-    def __str__(self: "Post") -> str:
+    def __str__(self) -> str:
         """Return the string representation of the post."""
         return self.title
 
-    def save(self: "Post", *args, **kwargs) -> None:  # noqa: ANN002, ANN003
+    def save(self, *args, **kwargs) -> None:  # noqa: ANN002, ANN003
         """Override the save method."""
         # auto-generate the slug.
         if not self.slug:
@@ -559,7 +559,7 @@ class Post(models.Model):
         ).order_by("menu_order", "title")
 
     @property
-    def content_markdown(self: "Post") -> str:
+    def content_markdown(self) -> str:
         """Return the content as HTML converted from Markdown."""
         # Get the raw markdown content
         content = self.content
@@ -574,19 +574,19 @@ class Post(models.Model):
         return registry.run_hook(Hooks.POST_RENDER_CONTENT, html_content)
 
     @property
-    def truncated_content_markdown(self: "Post") -> str:
+    def truncated_content_markdown(self) -> str:
         """Return the truncated content as HTML converted from Markdown."""
         read_more_index = self.content.find(djpress_settings.TRUNCATE_TAG)
         truncated_content = self.content[:read_more_index] if read_more_index != -1 else self.content
         return render_markdown(truncated_content)
 
     @property
-    def is_truncated(self: "Post") -> bool:
+    def is_truncated(self) -> bool:
         """Return whether the content is truncated."""
         return djpress_settings.TRUNCATE_TAG in self.content
 
     @property
-    def url(self: "Post") -> str:
+    def url(self) -> str:
         """Return the post's URL.
 
         Returns:
@@ -613,7 +613,7 @@ class Post(models.Model):
         return self.slug
 
     @property
-    def is_published(self: "Post") -> bool:
+    def is_published(self) -> bool:
         """Return whether the post or page is published.
 
         For a post to be published, it must meet the following requirements:

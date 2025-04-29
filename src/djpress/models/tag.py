@@ -91,11 +91,11 @@ class TagManager(models.Manager):
 class Tag(models.Model):
     """Tag model."""
 
+    # Manager
+    objects: TagManager = TagManager()
+
     title = models.CharField(max_length=100, unique=True)
     slug = models.SlugField(max_length=100, unique=True)
-
-    # Custom manager
-    objects: "TagManager" = TagManager()
 
     class Meta:
         """Meta options for the tag model."""
@@ -107,7 +107,7 @@ class Tag(models.Model):
         """Return the title of the tag."""
         return self.title
 
-    def save(self: "Tag", *args, **kwargs) -> None:  # noqa: ANN002, ANN003
+    def save(self, *args, **kwargs) -> None:  # noqa: ANN002, ANN003
         """Override the save method to auto-generate the slug."""
         if not self.slug:
             self.slug = slugify(self.title)

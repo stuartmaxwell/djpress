@@ -45,11 +45,11 @@ class PluginStorageManager(models.Manager):
 class PluginStorage(models.Model):
     """Model for storing plugin data in the database."""
 
+    # Manager
+    objects: PluginStorageManager = PluginStorageManager()
+
     plugin_name = models.CharField(max_length=100, unique=True)
     plugin_data = models.JSONField(default=dict)
-
-    # Manager
-    objects = PluginStorageManager()
 
     class Meta:
         """Meta options for the PluginStorage model."""
