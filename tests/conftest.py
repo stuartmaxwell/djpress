@@ -242,7 +242,7 @@ def superuser() -> User:
 
 
 @pytest.fixture
-def test_media_file_1(user) -> Media:
+def test_media_file_1(user):
     """Fixture to create a test media file."""
     file_content = b"Test file content"
     test_file = SimpleUploadedFile(
