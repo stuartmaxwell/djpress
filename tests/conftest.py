@@ -1,12 +1,15 @@
+import os
 import pytest
 from copy import deepcopy
+from io import BytesIO
 
 from django.utils import timezone
 from django.contrib.auth.models import User
 
 from djpress.url_converters import SlugPathConverter
-from djpress.models import Category, Post, Tag
+from djpress.models import Category, Media, Post, Tag
 from djpress.plugins import DJPressPlugin, registry
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 from example.config import settings_testing
 
@@ -236,3 +239,58 @@ def bad_plugin_registry(clean_registry):
 @pytest.fixture
 def superuser() -> User:
     return User.objects.create_superuser(username="admin", password="adminpass")
+
+
+@pytest.fixture
+def test_media_file_1(user) -> Media:
+    """Fixture to create a test media file."""
+    file_content = b"Test file content"
+    test_file = SimpleUploadedFile(
+        name="test_file.txt",
+        content=file_content,
+        content_type="text/plain",
+    )
+    # Create test media objects
+    media = Media.objects.create(
+        title="Test Document",
+        file=test_file,
+        media_type="document",
+        description="A test document",
+        uploaded_by=user,
+    )
+
+    yield media
+
+    # Clean up the file after the test
+    if media.file and os.path.isfile(media.file.path):
+        os.unlink(media.file.path)
+    media.delete()
+
+
+@pytest.fixture
+def test_media_image_1(user):
+    """Fixture to create a test media image."""
+    image_content = BytesIO()
+    image_content.write(b"Test image content")
+    image_content.seek(0)
+    test_image = SimpleUploadedFile(
+        name="test_image.jpg",
+        content=image_content.read(),
+        content_type="image/jpeg",
+    )
+
+    media = Media.objects.create(
+        title="Test Image",
+        file=test_image,
+        media_type="image",
+        alt_text="Test image alt text",
+        description="A test image",
+        uploaded_by=user,
+    )
+
+    yield media
+
+    # Clean up the file after the test
+    if media.file and os.path.isfile(media.file.path):
+        os.unlink(media.file.path)
+    media.delete()
