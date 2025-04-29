@@ -7,6 +7,7 @@ from django.core.cache import cache
 from django.db.models.signals import post_delete, post_migrate, post_save
 from django.dispatch import receiver
 
+from djpress.models import Media
 from djpress.models.category import (
     CATEGORY_CACHE_KEY,
     Category,
@@ -52,16 +53,26 @@ def create_groups(sender: AppConfig, **_) -> None:  # noqa: ANN003
         content_type=ContentType.objects.get_for_model(Tag),
         codename="add_tag",
     )
+    media_permissions = Permission.objects.filter(
+        content_type=ContentType.objects.get_for_model(Media),
+        codename__in=["add_media", "change_media", "delete_media"],
+    )
 
     # Create groups and assign permissions
     editor_group, _ = Group.objects.get_or_create(name="editor")
-    editor_group.permissions.add(publish_permission, *standard_permissions, *category_permissions, *tag_permissions)
+    editor_group.permissions.add(
+        publish_permission,
+        *standard_permissions,
+        *category_permissions,
+        *tag_permissions,
+        *media_permissions,
+    )
 
     author_group, _ = Group.objects.get_or_create(name="author")
-    author_group.permissions.add(publish_permission, *standard_permissions, tag_add_permission)
+    author_group.permissions.add(publish_permission, *standard_permissions, tag_add_permission, *media_permissions)
 
     contributor_group, _ = Group.objects.get_or_create(name="contributor")
-    contributor_group.permissions.add(*standard_permissions, tag_add_permission)
+    contributor_group.permissions.add(*standard_permissions, tag_add_permission, *media_permissions)
 
 
 @receiver(post_save, sender=Category)
