@@ -15,6 +15,7 @@ DJPRESS_SETTINGS = {
     "MARKDOWN_EXTENSIONS": ([], list),
     "MARKDOWN_RENDERER": ("djpress.markdown_renderer.default_renderer", str),
     "MAX_TAGS_PER_QUERY": (5, int),
+    "MEDIA_UPLOAD_PATH": ("djpress/{{ year }}/{{ month }}/{{ day }}", str),
     "MICROFORMATS_ENABLED": (True, bool),
     "PLUGINS": ([], list),
     "PLUGIN_SETTINGS": ({}, dict),

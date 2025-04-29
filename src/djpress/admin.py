@@ -1,5 +1,8 @@
 """djpress admin configuration."""
 
+from typing import Any
+
+from django import forms
 from django.contrib import admin
 from django.db.models.query import QuerySet
 from django.http import HttpRequest
@@ -7,7 +10,7 @@ from django.utils import timezone
 from django.utils.html import format_html
 
 # Register the models here.
-from djpress.models import Category, PluginStorage, Post, Tag
+from djpress.models import Category, Media, PluginStorage, Post, Tag
 
 
 @admin.register(Tag)
@@ -181,3 +184,53 @@ class PluginStorageAdmin(admin.ModelAdmin):
     ordering = ["plugin_name"]
     search_fields = ["plugin_name"]
     list_filter = ["plugin_name"]
+
+
+@admin.register(Media)
+class MediaAdmin(admin.ModelAdmin):
+    """Media admin configuration."""
+
+    list_display = ["title", "media_type", "filename", "uploaded_by", "date"]
+    list_filter = ["media_type", "date", "uploaded_by"]
+    search_fields = ["title", "description", "alt_text", "file"]
+    readonly_fields = ["date", "modified_date", "filesize", "preview", "markdown_text"]
+    fieldsets = [
+        (
+            None,
+            {
+                "fields": ("title", "file", "media_type", "uploaded_by"),
+            },
+        ),
+        (
+            "Details",
+            {
+                "fields": ("alt_text", "description"),
+            },
+        ),
+        (
+            "File Information",
+            {
+                "fields": ("date", "modified_date", "filesize", "preview", "markdown_text"),
+            },
+        ),
+    ]
+
+    def get_form(self, request: HttpRequest, obj: Any | None = None, **kwargs: dict[str, Any]) -> forms.ModelForm:  # noqa: ANN401
+        """Set the initial value for the uploaded_by field to the current user."""
+        form = super().get_form(request, obj, **kwargs)
+        form.base_fields["uploaded_by"].initial = request.user
+        return form
+
+    def preview(self, obj: Media) -> str:
+        """Display a preview of the file if it's an image."""
+        if obj.media_type == "image":
+            return format_html('<img src="{}" style="max-height: 200px; max-width: 300px;">', obj.file.url)
+        return "-"
+
+    preview.short_description = "Preview"
+
+    def markdown_text(self, obj: Media) -> str:
+        """Get the URL for the file in markdown format."""
+        return obj.markdown_url
+
+    markdown_text.short_description = "Markdown URL"

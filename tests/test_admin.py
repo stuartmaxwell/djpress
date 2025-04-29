@@ -12,6 +12,8 @@ from djpress.admin import PostAdmin
 from djpress.models import Post
 from djpress.url_utils import User
 from tests.conftest import superuser
+from djpress.admin import MediaAdmin
+from djpress.models.media import Media
 
 
 @pytest.fixture
@@ -337,3 +339,59 @@ def test_get_readonly_fields_contributor(user: User, post_admin: PostAdmin, requ
 
     readonly_fields = post_admin.get_readonly_fields(request)
     assert "status" in readonly_fields  # Contributor cannot edit status
+
+
+@pytest.mark.django_db
+def test_media_admin_get_form(user):
+    """Test the get_form method of the MediaAdmin class."""
+
+    # Create a request object
+    request = RequestFactory().get("/")
+    request.user = user
+
+    # Create an instance of the MediaAdmin class
+    media_admin = MediaAdmin(Media, site)
+
+    # Get the form
+    form = media_admin.get_form(request, None)
+
+    # Check if the form is correct
+    assert form is not None
+
+
+@pytest.mark.django_db
+def test_media_admin_preview(test_media_file_1, test_media_image_1):
+    """Test the preview method of the MediaAdmin class."""
+
+    # Create a request object
+    request = RequestFactory().get("/")
+    request.user = test_media_file_1.uploaded_by
+
+    # Create an instance of the MediaAdmin class
+    media_admin = MediaAdmin(Media, site)
+
+    # Get the preview for a file
+    preview_file = media_admin.preview(test_media_file_1)
+    assert preview_file == "-"
+
+    # Get the preview for an image
+    preview_image = media_admin.preview(test_media_image_1)
+    assert preview_image == f'<img src="{test_media_image_1.url}" style="max-height: 200px; max-width: 300px;">'
+
+
+@pytest.mark.django_db
+def test_media_admin_markdown_text(test_media_file_1, test_media_image_1):
+    """Test the markdown_text method of the MediaAdmin class."""
+
+    # Create a request object
+    request = RequestFactory().get("/")
+    request.user = test_media_file_1.uploaded_by
+
+    # Create an instance of the MediaAdmin class
+    media_admin = MediaAdmin(Media, site)
+
+    # Get the markdown text for a file
+    assert media_admin.markdown_text(test_media_file_1) == test_media_file_1.markdown_url
+
+    # Get the markdown text for an image
+    assert media_admin.markdown_text(test_media_image_1) == test_media_image_1.markdown_url
