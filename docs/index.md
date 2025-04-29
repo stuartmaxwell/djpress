@@ -14,6 +14,7 @@ complete:
 - [Sitemap](sitemap.md)
 - [Groups and Permissions](groups.md)
 - [Tags](tags.md)
+- [Media Management](media.md)
 
 ## Table of Contents
 
@@ -30,4 +31,5 @@ plugins
 sitemap
 groups
 tags
+media
 ```
