@@ -342,6 +342,24 @@ def test_get_readonly_fields_contributor(user: User, post_admin: PostAdmin, requ
 
 
 @pytest.mark.django_db
+def test_post_admin_get_form(user):
+    """Test the get_form method of the PostAdmin class."""
+
+    # Create a request object
+    request = RequestFactory().get("/")
+    request.user = user
+
+    # Create an instance of the PostAdmin class
+    post_admin = PostAdmin(Post, site)
+
+    # Get the form
+    form = post_admin.get_form(request, None)
+
+    # Check if the form is correct
+    assert form is not None
+
+
+@pytest.mark.django_db
 def test_media_admin_get_form(user):
     """Test the get_form method of the MediaAdmin class."""
 

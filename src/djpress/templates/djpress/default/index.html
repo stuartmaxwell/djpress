@@ -7,7 +7,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% page_title post_text="| " %}{% site_title %}</title>
-    <link rel="stylesheet" href="{% static 'default/css/style.min.css' %}">
+    <link rel="stylesheet" href="{% static 'default/css/style.css' %}">
     {% rss_link %}
   </head>
   <body>
@@ -26,14 +26,12 @@
 
         {% post_wrap %}
 
-          <header>
-            {% post_title outer_tag="h1" %}
-            <p>By {% post_author %}. {% post_date %}</p>
-          </header>
+          {% post_title outer_tag="h1" %}
 
           {% post_content outer_tag="section" %}
 
           <footer>
+            <p>By {% post_author %}. {% post_date %}</p>
             <p>Categories: {% post_categories outer_tag="span" link_class="badge" %}</p>
             <p>Tags: {% post_tags outer_tag="span" link_class="badge" %}</p>
           </footer>
@@ -48,14 +46,12 @@
 
           {% post_wrap %}
 
-            <header>
-              {% post_title outer_tag="h2" %}
-              <p>By {% post_author %}. {% post_date %}</p>
-            </header>
+            {% post_title outer_tag="h1" %}
 
             {% post_content outer_tag="section" %}
 
             <footer>
+              <p>By: {% post_author %}. <a href="{% get_post_url %}">{% get_post_date %}</a></p>
               <p>Categories: {% post_categories outer_tag="span" link_class="badge" %}</p>
               <p>Tags: {% post_tags outer_tag="span"  link_class="badge" %}</p>
             </footer>

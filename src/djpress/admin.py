@@ -34,7 +34,7 @@ class PostAdmin(admin.ModelAdmin):
     """Post admin configuration."""
 
     list_display = ["post_type", "published_status", "title", "parent", "formatted_date", "author"]
-    list_display_links = ["title"]
+    list_display_links = ["title", "formatted_date"]
     ordering = ["post_type", "-date"]  # Displays pages first, then sorted by date.
     list_filter = ["post_type", "date", "author"]
     prepopulated_fields = {"slug": ("title",)}
@@ -44,14 +44,13 @@ class PostAdmin(admin.ModelAdmin):
         (
             None,
             {
-                "fields": ("title", "slug", "author"),
+                "fields": ("title", "slug"),
             },
         ),
         (
             "Content",
             {
-                "fields": ("content",),
-                "classes": ("wide",),
+                "fields": ("content", "author"),
             },
         ),
         (
@@ -99,6 +98,12 @@ class PostAdmin(admin.ModelAdmin):
         return obj.date.strftime("%Y-%m-%d %H:%M")
 
     formatted_date.short_description = "Date"
+
+    def get_form(self, request: HttpRequest, obj: Any | None = None, **kwargs: dict[str, Any]) -> forms.ModelForm:  # noqa: ANN401
+        """Set the initial value for the author field to the current user."""
+        form = super().get_form(request, obj, **kwargs)
+        form.base_fields["author"].initial = request.user
+        return form
 
     def get_queryset(self, request: HttpRequest) -> QuerySet[Post]:
         """Limit the queryset based on user role.

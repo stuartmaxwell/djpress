@@ -109,11 +109,29 @@ def test_get_post_title_single_post(test_post1):
     context = Context({"post": test_post1})
     assert djpress_tags.get_post_title(context) == test_post1.title
 
+    # test with no title
+    test_post1.title = ""
+    test_post1.save()
+    assert djpress_tags.get_post_title(context) == ""
+
 
 def test_get_post_title_no_post_context():
     context = Context({"foo": "bar"})
     assert djpress_tags.get_post_title(context) == ""
     assert type(djpress_tags.get_post_title(context)) == str
+
+
+@pytest.mark.django_db
+def test_get_post_url(test_post1):
+    context = Context({"post": test_post1})
+
+    assert djpress_tags.get_post_url(context) == test_post1.url
+
+
+def test_get_post_url_no_context():
+    context = Context({"foo": "bar"})
+
+    assert djpress_tags.get_post_url(context) == ""
 
 
 @pytest.mark.django_db
@@ -140,6 +158,18 @@ def test_post_title_posts(settings, test_post1):
 @pytest.mark.django_db
 def test_post_title_no_post():
     context = Context({"post": None})
+
+    expected_output = ""
+    assert djpress_tags.post_title(context) == expected_output
+
+
+@pytest.mark.django_db
+def test_post_title_no_title(test_post1):
+    # test with no title
+    test_post1.title = ""
+    test_post1.save()
+
+    context = Context({"post": test_post1})
 
     expected_output = ""
     assert djpress_tags.post_title(context) == expected_output

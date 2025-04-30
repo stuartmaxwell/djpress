@@ -1,3 +1,4 @@
+from django.contrib import auth
 import pytest
 from django.utils import timezone
 from unittest.mock import Mock
@@ -168,6 +169,20 @@ def test_post_slug_generation(user):
             author=user,
         )
     assert str(exc_info.value) == "Invalid title. Unable to generate a valid slug."
+
+    # Test case 6: Slug generation for post without a title will use the first 5 words of the content
+    post5 = Post.post_objects.create(
+        content="This is the content of a post without a title.",
+        author=user,
+    )
+    assert post5.slug == "this-is-the-content-of"
+
+    # Test case 7: Slug generation for post without a title and very short content
+    post6 = Post.post_objects.create(
+        content="Short",
+        author=user,
+    )
+    assert post6.slug == "short"
 
 
 @pytest.mark.django_db
@@ -755,6 +770,14 @@ def test_post_clean_self_parent(test_page1):
     with pytest.raises(ValidationError) as exc_info:
         test_page1.clean()
     assert "Circular reference detected in page hierarchy." in str(exc_info.value)
+
+
+@pytest.mark.django_db
+def test_post_clean_check_page_has_title(test_page1):
+    test_page1.title = ""
+    with pytest.raises(ValidationError) as exc_info:
+        test_page1.clean()
+    assert "Page must have a title." in str(exc_info.value)
 
 
 @pytest.mark.django_db
