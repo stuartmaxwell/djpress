@@ -461,8 +461,14 @@ class Post(models.Model):
     page_objects: PagesManager = PagesManager()
     post_objects: PostsManager = PostsManager()
 
-    title = models.CharField(max_length=200, blank=True)
-    slug = models.SlugField(unique=True, blank=True)
+    title = models.CharField(max_length=200, blank=True, help_text="Title is only required for pages.")
+    slug = models.SlugField(
+        unique=True,
+        blank=True,
+        help_text=(
+            "The slug is automatically generated from the title, or from the first 5 words of the content if no title."
+        ),
+    )
     content = models.TextField()
     author = models.ForeignKey(User, on_delete=models.CASCADE)
     date = models.DateTimeField(default=timezone.now)
