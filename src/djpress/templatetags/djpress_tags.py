@@ -403,6 +403,25 @@ def get_post_title(context: Context) -> str:
 
 
 @register.simple_tag(takes_context=True)
+def get_post_url(context: Context) -> str:
+    """Return the URL of a post.
+
+    This is just the URL of the post from the current context with no further HTML.
+
+    Args:
+        context: The context.
+
+    Returns:
+        str: The URL of the post.
+    """
+    post: Post | None = context.get("post")
+    if not post:
+        return ""
+
+    return post.url
+
+
+@register.simple_tag(takes_context=True)
 def post_title(context: Context, *, outer_tag: str = "", link_class: str = "", force_link: bool = False) -> str:
     """Return the title link for a post.
 
@@ -415,6 +434,8 @@ def post_title(context: Context, *, outer_tag: str = "", link_class: str = "", f
 
     If the outer tag is one of the allowed tags, and if Microformats are enabled, then the outer tag will have the class
     "p-name".
+
+    If the post doesn't have a title, return an empty string.
 
     Otherwise return an empty string.
 
@@ -432,6 +453,10 @@ def post_title(context: Context, *, outer_tag: str = "", link_class: str = "", f
 
     # If there's no post in the context, return an empty string.
     if not post:
+        return ""
+
+    # If there's no title, return an empty string.
+    if not post.title:
         return ""
 
     # Get the title of the post

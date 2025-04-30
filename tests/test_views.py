@@ -30,7 +30,7 @@ def test_index_view_multiple_posts(client, test_post1, test_post2, test_post3):
     assert "posts" in response.context
     assert isinstance(response.context["posts"], Iterable)
     assert (
-        f'<h2 class="p-name"><a href="/test-posts/test-post1/" title="Test Post1" class="u-url">Test Post1</a></h2>'
+        f'<h1 class="p-name"><a href="/test-posts/test-post1/" title="Test Post1" class="u-url">Test Post1</a></h1>'
         in response.content.decode()
     )
     assert f'<article class="h-entry">' in response.content.decode()
