@@ -384,13 +384,16 @@ def have_posts(context: Context) -> list[Post | None] | Page:
 
 
 @register.simple_tag(takes_context=True)
-def get_post_title(context: Context) -> str:
+def get_post_title(context: Context, *, include_empty: bool = False) -> str:
     """Return the title of a post.
 
     This is just the title of the post from the current context with no further HTML.
 
+    If `include_empty` is set to `True`, then the title will be returned from the `post_title` property of the Post.
+
     Args:
         context: The context.
+        include_empty: Whether to include the title if it is empty.
 
     Returns:
         str: The title of the post.
@@ -398,6 +401,9 @@ def get_post_title(context: Context) -> str:
     post: Post | None = context.get("post")
     if not post:
         return ""
+
+    if include_empty:
+        return post.post_title
 
     return post.title
 
@@ -422,7 +428,14 @@ def get_post_url(context: Context) -> str:
 
 
 @register.simple_tag(takes_context=True)
-def post_title(context: Context, *, outer_tag: str = "", link_class: str = "", force_link: bool = False) -> str:
+def post_title(
+    context: Context,
+    *,
+    outer_tag: str = "",
+    link_class: str = "",
+    force_link: bool = False,
+    include_empty: bool = False,
+) -> str:
     """Return the title link for a post.
 
     If the post is part of a posts collection, then return the title and a link to the post. If the post is a single
@@ -435,7 +448,9 @@ def post_title(context: Context, *, outer_tag: str = "", link_class: str = "", f
     If the outer tag is one of the allowed tags, and if Microformats are enabled, then the outer tag will have the class
     "p-name".
 
-    If the post doesn't have a title, return an empty string.
+    If the post doesn't have a title, return an empty string, but if `include_empty` is set to `True`, then the title
+    will be returned from the `post_title` property of the Post.
+
 
     Otherwise return an empty string.
 
@@ -444,6 +459,7 @@ def post_title(context: Context, *, outer_tag: str = "", link_class: str = "", f
         outer_tag: The outer HTML tag for the title.
         link_class: The CSS class(es) for the link.
         force_link: Whether to force the link to be displayed.
+        include_empty: Whether to include the title if it is empty.
 
     Returns:
         str: The title link for the post.
@@ -456,11 +472,11 @@ def post_title(context: Context, *, outer_tag: str = "", link_class: str = "", f
         return ""
 
     # If there's no title, return an empty string.
-    if not post.title:
+    if not post.title and not include_empty:
         return ""
 
     # Get the title of the post
-    output = post.title
+    output = post.post_title if include_empty else post.title
 
     # If there's a posts in the context, or if the link is forced, then we need to display the link.
     if posts or force_link:

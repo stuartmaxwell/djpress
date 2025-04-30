@@ -107,12 +107,13 @@ def test_get_tags(tag1, tag2, tag3):
 @pytest.mark.django_db
 def test_get_post_title_single_post(test_post1):
     context = Context({"post": test_post1})
-    assert djpress_tags.get_post_title(context) == test_post1.title
+    assert djpress_tags.get_post_title(context) == "Test Post1"
 
     # test with no title
     test_post1.title = ""
     test_post1.save()
     assert djpress_tags.get_post_title(context) == ""
+    assert djpress_tags.get_post_title(context, include_empty=True) == "Test post1..."
 
 
 def test_get_post_title_no_post_context():
@@ -171,8 +172,8 @@ def test_post_title_no_title(test_post1):
 
     context = Context({"post": test_post1})
 
-    expected_output = ""
-    assert djpress_tags.post_title(context) == expected_output
+    assert djpress_tags.post_title(context) == ""
+    assert djpress_tags.post_title(context, include_empty=True) == "Test post1..."
 
 
 @pytest.mark.django_db
