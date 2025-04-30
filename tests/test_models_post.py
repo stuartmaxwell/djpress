@@ -1,4 +1,3 @@
-from django.contrib import auth
 import pytest
 from django.utils import timezone
 from unittest.mock import Mock
@@ -7,7 +6,6 @@ from django.core.exceptions import ValidationError
 from django.db.models import QuerySet
 
 from djpress.models import Category, Post
-from djpress import urls as djpress_urls
 from djpress.models.post import PUBLISHED_POSTS_CACHE_KEY
 from djpress.exceptions import PostNotFoundError, PageNotFoundError
 
@@ -1377,3 +1375,121 @@ def test_max_tags_per_query(settings, test_post1, test_post2, test_post3, tag1, 
     assert Post.post_objects.get_published_posts_by_tags([tag1.slug, tag3.slug]).count() == 1
     assert Post.post_objects.get_published_posts_by_tags([tag2.slug, tag3.slug]).count() == 1
     assert Post.post_objects.get_published_posts_by_tags([tag1.slug, tag2.slug, tag3.slug]).count() == 0
+
+
+@pytest.mark.django_db
+def test_post_title_page(test_page1):
+    """Test that the title of a page returns correctly."""
+    test_page1.title = "Updated Test Page"
+    test_page1.save()
+
+    assert test_page1.slug == "test-page1"
+    assert test_page1.post_title == "Updated Test Page"
+
+
+@pytest.mark.django_db
+def test_post_title_post(test_post1):
+    """Test that the title of a post returns correctly.
+
+    If there's a title, it will be used as the title.
+    """
+    test_post1.title = "Updated Test Post"
+    test_post1.save()
+
+    assert test_post1.slug == "test-post1"
+    assert test_post1.post_title == "Updated Test Post"
+
+
+@pytest.mark.django_db
+def test_post_title_post_no_title(user):
+    """Test that the title of a post with no title returns correctly."""
+    test_post = Post.objects.create(
+        title="",
+        content="This is a test post.",
+        author=user,
+    )
+
+    assert test_post.slug == "this-is-a-test-post"
+    assert test_post.post_title == "This is a test post..."
+
+
+@pytest.mark.django_db
+def test_post_title_post_no_title_short(user):
+    """Test that the title of a post with no title returns correctly."""
+    test_post = Post.objects.create(
+        title="",
+        content="This is a post.",
+        author=user,
+    )
+
+    assert test_post.slug == "this-is-a-post"
+    assert test_post.post_title == "This is a post..."
+
+
+@pytest.mark.django_db
+def test_post_title_post_no_title_long(user):
+    """Test that the title of a post with no title returns correctly."""
+    test_post = Post.objects.create(
+        title="",
+        content="This is a post with many words. But only 5 will be shown.",
+        author=user,
+    )
+
+    assert test_post.slug == "this-is-a-post-with"
+    assert test_post.post_title == "This is a post with..."
+
+
+@pytest.mark.django_db
+def test_post_title_post_no_title_markdown(user):
+    """Test that the title of a post with no title returns correctly.
+
+    There are only four words because the content is split on whitespace, the first 5 words are:
+    - #
+    - Heading
+    - With
+    - a
+    - new
+
+    Then the slugify function is called on the first 5 words, which results in:
+    - heading-with-a-new
+    """
+    test_post = Post.objects.create(
+        title="",
+        content="# Heading\n\nWith a new paragraph afterwards.",
+        author=user,
+    )
+
+    assert test_post.slug == "heading-with-a-new"
+    assert test_post.post_title == "Heading with a new..."
+
+
+@pytest.mark.django_db
+def test_post_title_post_no_title_html(user):
+    """Test that the title of a post with no title returns correctly.
+
+    The slugify function does its best but the slug will look odd. The user can fix up the slug and will get a nicer title.
+    """
+    test_post = Post.objects.create(
+        title="",
+        content="<h1 class='foo' id='h1'>Heading</h1>\n\n<p>With a new paragraph afterwards.</p>",
+        author=user,
+    )
+
+    assert test_post.slug == "h1-classfoo-idh1headingh1-pwith-a"
+    assert test_post.post_title == "H1 classfoo idh1headingh1 pwith a..."
+
+
+@pytest.mark.django_db
+def test_post_title_post_no_title_characters(user):
+    """Test that the title of a post with no title returns correctly.
+
+    The slugify function does its best but the slug will look odd. The user can fix up the slug and will get a nicer title.
+    """
+    test_post = Post.objects.create(
+        title="",
+        content="<h1 class='foo' id='h1'>Heading & me</h1>\n\n<p>With a new paragraph afterwards.</p>",
+        author=user,
+    )
+
+    assert test_post.slug == "h1-classfoo-idh1heading-meh1"
+    assert test_post.post_title == "H1 classfoo idh1heading meh1..."

@@ -531,7 +531,11 @@ class Post(models.Model):
     def _generate_slug(self) -> str:
         """Generate a slug for the post.
 
-        This is called in the save method if the slug is empty. The slug is generated from the title and is unique.
+        This is called in the save method if the slug is empty, and must be unique.
+
+        The slug is generated from the title or the first 5 words of the content if the title is empty.
+
+        This does not need to be perfect as the user can always edit the slug in the admin interface.
 
         Returns:
             str: The generated slug.
@@ -704,3 +708,29 @@ class Post(models.Model):
             bool: Whether the post is a child page.
         """
         return self.parent is not None
+
+    @property
+    def post_title(self) -> str:
+        """Return the post title.
+
+        This is used to display the post title in the admin interface. If the post is a page, we return the page title.
+        If the post is a post, we return the post title or create a title from the slug if there's no title.
+
+        See the `_generate_slug` method for more details on how the slug is generated.
+
+        If the resulting title looks odd due to how the slug has been generated, the user can always edit the slug in
+        the admin interface which will update the title.
+
+        Returns:
+            str: The post title.
+        """
+        if self.post_type == "page":
+            return self.title
+
+        if not self.title:
+            # Get the title from the slug and replace hyphens with spaces
+            title = self.slug.replace("-", " ").capitalize()  # Capitalize the first letter
+
+            return f"{title}..."
+
+        return self.title
