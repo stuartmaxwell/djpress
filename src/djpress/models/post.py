@@ -461,7 +461,7 @@ class Post(models.Model):
     page_objects: PagesManager = PagesManager()
     post_objects: PostsManager = PostsManager()
 
-    title = models.CharField(max_length=200)
+    title = models.CharField(max_length=200, blank=True)
     slug = models.SlugField(unique=True, blank=True)
     content = models.TextField()
     author = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -498,12 +498,8 @@ class Post(models.Model):
 
     def save(self, *args, **kwargs) -> None:  # noqa: ANN002, ANN003
         """Override the save method."""
-        # auto-generate the slug.
-        if not self.slug:
-            self.slug = slugify(self.title)
-            if not self.slug or self.slug.strip("-") == "":
-                msg = "Invalid title. Unable to generate a valid slug."
-                raise ValueError(msg)
+        # Generate the slug
+        self.slug = self._generate_slug()
 
         # If the post is a post, we need to ensure that the parent is None
         if self.post_type == "post":
@@ -518,8 +514,54 @@ class Post(models.Model):
 
     def clean(self) -> None:
         """Custom validation for the Post model."""
-        # Check for circular references in the page hierarchy
-        self._check_circular_reference()
+        # Validation for pages
+        if self.post_type == "page":
+            # Check if the page has a title
+            self._check_page_has_title()
+
+            # Check for circular references in the page hierarchy
+            self._check_circular_reference()
+
+    def _generate_slug(self) -> str:
+        """Generate a slug for the post.
+
+        This is called in the save method if the slug is empty. The slug is generated from the title and is unique.
+
+        Returns:
+            str: The generated slug.
+        """
+        # If the slug is already set, we don't need to do anything
+        if self.slug:
+            slug = self.slug
+        elif self.title:
+            # Try generating a slug from the title
+            slug = slugify(self.title)
+        else:
+            # If the title is empty, use the first 5 words of the content
+            slug = slugify(" ".join(self.content.split()[:5]))
+
+        # If the slug is empty, raise an error
+        if not slug or slug.strip("-") == "":
+            msg = "Invalid title. Unable to generate a valid slug."
+            raise ValueError(msg)
+
+        return slug
+
+    def _check_page_has_title(self) -> None:
+        """Check if the page has a title.
+
+        This is called in the clean method. If the page is a page and it doesn't have a title, we raise a validation
+        error.
+
+        Returns:
+            None
+
+        Raises:
+            ValidationError: If the page doesn't have a title.
+        """
+        if self.post_type == "page" and not self.title:
+            msg = "Page must have a title."
+            raise ValidationError(msg)
 
     def _check_circular_reference(self) -> None:
         """Check for circular references in the page hierarchy.
