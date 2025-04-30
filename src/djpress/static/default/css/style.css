@@ -101,31 +101,21 @@ article {
 }
 
 /* Article header styles */
-article>header {
-  margin-bottom: 1rem;
+article>h1 {
+  margin: 0 0 1rem;
   border-bottom: 1px solid var(--light4);
-  padding-bottom: 0.5rem;
-}
-
-article>header h1 {
+  padding: 0;
   font-size: 1.75rem;
-  margin: 0;
 }
 
-article>header h1 a {
+article>h1 a {
   text-decoration: none;
   color: var(--tertiary10);
   transition: color 0.2s;
 }
 
-article>header h1 a:hover {
+article>h1 a:hover {
   color: var(--primary8);
-}
-
-article>header p {
-  margin: 0.5em 0;
-  font-size: 0.875rem;
-  color: var(--dark3);
 }
 
 /* Article section styles */
@@ -141,6 +131,7 @@ article>footer {
 }
 
 article>footer p {
+  font-size: 0.875rem;
   margin: 0 0 0.5em 0;
   /* Added bottom margin */
   color: #555555;
