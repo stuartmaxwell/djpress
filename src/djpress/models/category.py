@@ -114,8 +114,8 @@ class Category(models.Model):
         return self._posts.filter(
             post_type="post",
             status="published",
-            date__lte=timezone.now(),
-        ).order_by("-date")
+            published_at__lte=timezone.now(),
+        ).order_by("-published_at")
 
     @property
     def has_posts(self) -> bool:
@@ -133,4 +133,4 @@ class Category(models.Model):
         Returns:
             None | timezone.datetime: The most recent last modified date of posts in the category.
         """
-        return self.posts.aggregate(latest=Max("modified_date"))["latest"]
+        return self.posts.aggregate(latest=Max("updated_at"))["latest"]

@@ -22,7 +22,7 @@ class PostSitemap(Sitemap):
 
     def lastmod(self, obj: Post) -> datetime:
         """Return the last modified date of the post."""
-        return obj.modified_date
+        return obj.updated_at
 
     def location(self, obj: Post) -> str:
         """Return the URL of the post."""
@@ -41,7 +41,7 @@ class PageSitemap(Sitemap):
 
     def lastmod(self, obj: Post) -> datetime:
         """Return the last modified date of the page."""
-        return obj.modified_date
+        return obj.updated_at
 
     def location(self, obj: Post) -> str:
         """Return the URL of the page."""

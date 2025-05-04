@@ -35,11 +35,11 @@ class PostAdmin(admin.ModelAdmin):
 
     list_display = ["post_type", "published_status", "title", "parent", "formatted_date", "author"]
     list_display_links = ["title", "formatted_date"]
-    ordering = ["post_type", "-date"]  # Displays pages first, then sorted by date.
-    list_filter = ["post_type", "date", "author"]
+    ordering = ["post_type", "-published_at"]
+    list_filter = ["post_type", "published_at", "author"]
     prepopulated_fields = {"slug": ("title",)}
     search_fields = ["title", "content", "slug"]
-    readonly_fields = ["modified_date"]
+    readonly_fields = ["updated_at"]
     fieldsets = [
         (
             None,
@@ -59,8 +59,8 @@ class PostAdmin(admin.ModelAdmin):
                 "fields": (
                     "status",
                     "post_type",
-                    "date",
-                    "modified_date",
+                    "published_at",
+                    "updated_at",
                 ),
             },
         ),
@@ -89,13 +89,13 @@ class PostAdmin(admin.ModelAdmin):
         return obj.is_published
 
     def formatted_date(self, obj: Post) -> str:
-        """Format the date and show future posts distinctly."""
-        if obj.date > timezone.now():
+        """Format the published_at date and show future posts distinctly."""
+        if obj.published_at > timezone.now():
             return format_html(
                 '<span style="color: #666;">{} (Scheduled)</span>',
-                obj.date.strftime("%Y-%m-%d %H:%M"),
+                obj.published_at.strftime("%Y-%m-%d %H:%M"),
             )
-        return obj.date.strftime("%Y-%m-%d %H:%M")
+        return obj.published_at.strftime("%Y-%m-%d %H:%M")
 
     formatted_date.short_description = "Date"
 
@@ -195,10 +195,10 @@ class PluginStorageAdmin(admin.ModelAdmin):
 class MediaAdmin(admin.ModelAdmin):
     """Media admin configuration."""
 
-    list_display = ["title", "media_type", "filename", "uploaded_by", "date"]
-    list_filter = ["media_type", "date", "uploaded_by"]
+    list_display = ["title", "media_type", "filename", "uploaded_by", "uploaded_at"]
+    list_filter = ["media_type", "uploaded_at", "uploaded_by"]
     search_fields = ["title", "description", "alt_text", "file"]
-    readonly_fields = ["date", "modified_date", "filesize", "preview", "markdown_text"]
+    readonly_fields = ["uploaded_at", "updated_at", "filesize", "preview", "markdown_text"]
     fieldsets = [
         (
             None,
@@ -215,7 +215,7 @@ class MediaAdmin(admin.ModelAdmin):
         (
             "File Information",
             {
-                "fields": ("date", "modified_date", "filesize", "preview", "markdown_text"),
+                "fields": ("uploaded_at", "updated_at", "filesize", "preview", "markdown_text"),
             },
         ),
     ]

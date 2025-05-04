@@ -595,7 +595,7 @@ def get_post_date(context: Context) -> str:
     if not post:
         return ""
 
-    output_date = post.date
+    output_date = post.local_date
     return output_date.strftime("%b %-d, %Y")
 
 
@@ -613,7 +613,7 @@ def post_date(context: Context, link_class: str = "") -> str:
     post: Post | None = context.get("post")
     if not post:
         return ""
-    output_date = post.date
+    output_date = post.local_date
 
     if not djpress_settings.ARCHIVE_ENABLED:
         return mark_safe(output_date.strftime("%b %-d, %Y"))

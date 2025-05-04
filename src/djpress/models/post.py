@@ -44,7 +44,7 @@ class PostsAndPagesManager(models.Manager):
             .get_queryset()
             .filter(
                 status="published",
-                date__lte=timezone.now(),
+                published_at__lte=timezone.now(),
             )
         )
 
@@ -60,7 +60,7 @@ class PagesManager(models.Manager):
             .filter(
                 post_type="page",
                 status="published",
-                date__lte=timezone.now(),
+                published_at__lte=timezone.now(),
             )
             .order_by("menu_order", "title")
         )
@@ -75,7 +75,7 @@ class PagesManager(models.Manager):
         """
         return Post.page_objects.filter(
             pk__in=[page.pk for page in self.get_queryset() if page.is_published],
-        ).order_by("menu_order", "title", "-date")
+        ).order_by("menu_order", "title", "-published_at")
 
     def get_published_page_by_slug(
         self,
@@ -203,9 +203,9 @@ class PostsManager(models.Manager):
             .filter(
                 post_type="post",
                 status="published",
-                date__lte=timezone.now(),
+                published_at__lte=timezone.now(),
             )
-            .order_by("-date")
+            .order_by("-published_at")
         )
 
     def get_published_posts(self) -> models.QuerySet:
@@ -250,10 +250,12 @@ class PostsManager(models.Manager):
                     "categories",
                     "author",
                 )
-                .order_by("-date")
+                .order_by("-published_at")
             )
             timeout = self._get_cache_timeout(queryset)
-            queryset = queryset.filter(date__lte=timezone.now())[: djpress_settings.RECENT_PUBLISHED_POSTS_COUNT]
+            queryset = queryset.filter(published_at__lte=timezone.now())[
+                : djpress_settings.RECENT_PUBLISHED_POSTS_COUNT
+            ]
 
             cache.set(
                 PUBLISHED_POSTS_CACHE_KEY,
@@ -279,10 +281,10 @@ class PostsManager(models.Manager):
             there are no future posts.
         """
         # TODO: total_seconds returns a float not an int.
-        future_posts = queryset.filter(date__gt=timezone.now())
+        future_posts = queryset.filter(published_at__gt=timezone.now())
         if future_posts.exists():
             future_post = future_posts[0]
-            return int((future_post.date - timezone.now()).total_seconds())
+            return int((future_post.published_at - timezone.now()).total_seconds())
 
         return None
 
@@ -312,13 +314,13 @@ class PostsManager(models.Manager):
         filters = {"slug": slug}
 
         if year:
-            filters["date__year"] = year
+            filters["published_at__year"] = year
 
         if month:
-            filters["date__month"] = month
+            filters["published_at__month"] = month
 
         if day:
-            filters["date__day"] = day
+            filters["published_at__day"] = day
 
         try:
             return self.get_published_posts().get(**filters)
@@ -385,7 +387,7 @@ class PostsManager(models.Manager):
         Returns:
             list[int]: A distinct list of years.
         """
-        return self.dates("date", "year")
+        return self.dates("published_at", "year")
 
     def get_months(self, year: int) -> models.QuerySet:
         """Return a list of months for a given year that have published posts.
@@ -396,7 +398,7 @@ class PostsManager(models.Manager):
         Returns:
             list[int]: A distinct list of months.
         """
-        return self.filter(date__year=year).dates("date", "month")
+        return self.filter(published_at__year=year).dates("published_at", "month")
 
     def get_days(self, year: int, month: int) -> models.QuerySet:
         """Return a list of days for a given year and month that have published posts.
@@ -408,10 +410,10 @@ class PostsManager(models.Manager):
         Returns:
             list[int]: A distinct list of days.
         """
-        return self.filter(date__year=year, date__month=month).dates("date", "day")
+        return self.filter(published_at__year=year, published_at__month=month).dates("published_at", "day")
 
     def get_year_last_modified(self, year: int) -> timezone.datetime | None:
-        """Return the most recent modified_date of posts for a given year.
+        """Return the most recent updated_at of posts for a given year.
 
         Args:
             year (int): The year.
@@ -419,10 +421,10 @@ class PostsManager(models.Manager):
         Returns:
             timezone.datetime | None: The last published post for the given year.
         """
-        return self.filter(date__year=year).aggregate(latest=Max("modified_date"))["latest"]
+        return self.filter(published_at__year=year).aggregate(latest=Max("updated_at"))["latest"]
 
     def get_month_last_modified(self, year: int, month: int) -> timezone.datetime | None:
-        """Return the most recent modified_date of posts for a given month.
+        """Return the most recent updated_at of posts for a given month.
 
         Args:
             year (int): The year.
@@ -431,10 +433,12 @@ class PostsManager(models.Manager):
         Returns:
             timezone.datetime | None: The last published post for the given month.
         """
-        return self.filter(date__year=year, date__month=month).aggregate(latest=Max("modified_date"))["latest"]
+        return self.filter(published_at__year=year, published_at__month=month).aggregate(latest=Max("updated_at"))[
+            "latest"
+        ]
 
     def get_day_last_modified(self, year: int, month: int, day: int) -> timezone.datetime | None:
-        """Return the most recent modified_date of posts for a given day.
+        """Return the most recent updated_at of posts for a given day.
 
         Args:
             year (int): The year.
@@ -444,9 +448,9 @@ class PostsManager(models.Manager):
         Returns:
             timezone.datetime | None: The last published post for the given day.
         """
-        return self.filter(date__year=year, date__month=month, date__day=day).aggregate(latest=Max("modified_date"))[
-            "latest"
-        ]
+        return self.filter(published_at__year=year, published_at__month=month, published_at__day=day).aggregate(
+            latest=Max("updated_at"),
+        )["latest"]
 
 
 class Post(models.Model):
@@ -471,8 +475,13 @@ class Post(models.Model):
     )
     content = models.TextField()
     author = models.ForeignKey(User, on_delete=models.CASCADE)
-    date = models.DateTimeField(default=timezone.now)
-    modified_date = models.DateTimeField(auto_now=True)
+    published_at = models.DateTimeField(default=timezone.now)
+    _date = models.DateField(
+        blank=True,
+        null=True,
+        help_text="Date that the post was published, without any timezone information. Used for generating the URL.",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="draft")
     post_type = models.CharField(max_length=10, choices=CONTENT_TYPE_CHOICES, default="post")
     categories = models.ManyToManyField(Category, blank=True, related_name="_posts")
@@ -510,6 +519,16 @@ class Post(models.Model):
         # If the post is a post, we need to ensure that the parent is None
         if self.post_type == "post":
             self.parent = None
+
+        # Generate the _date field from the date field.
+        # We only do this if the post is new or if the date has changed. This ensures the _date field doesn't change
+        # unless the date field has been specifically changed.
+        if self.pk is None:
+            self._date = self.published_at.date()
+        else:
+            old = self.__class__.objects.filter(pk=self.pk).only("published_at").first()
+            if old is None or old.published_at != self.published_at:
+                self._date = self.published_at.date()
 
         self.full_clean()
         super().save(*args, **kwargs)
@@ -607,7 +626,7 @@ class Post(models.Model):
         """Return only published children pages."""
         return self._children.filter(
             status="published",
-            date__lte=timezone.now(),
+            published_at__lte=timezone.now(),
         ).order_by("menu_order", "title")
 
     @property
@@ -681,7 +700,7 @@ class Post(models.Model):
             bool: Whether the post is published.
         """
         # If the post or page status is not published or the date is in the future, return False
-        if not (self.status == "published" and self.date <= timezone.now()):
+        if not (self.status == "published" and self.published_at <= timezone.now()):
             return False
 
         # If the post is a page and has a parent, check if the parent is published
@@ -734,3 +753,14 @@ class Post(models.Model):
             return f"{title}..."
 
         return self.title
+
+    @property
+    def local_date(self) -> timezone.datetime:
+        """Return the post date in the local timezone.
+
+        This is used to get the date of the post in the `TIME_ZONE` that is configured in `settings.py`.
+
+        Returns:
+            timezone.datetime: The post date in the local timezone.
+        """
+        return timezone.localtime(self.published_at)
