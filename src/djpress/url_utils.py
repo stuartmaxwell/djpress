@@ -73,7 +73,7 @@ def get_post_url(post: Post) -> str:
     # Remove spaces from the prefix so that either {{ year }} or {{year}} will work
     prefix = prefix.replace(" ", "")
 
-    post_date = post.published_at
+    post_date = post._date  # noqa: SLF001
 
     # Replace the placeholders in the prefix with the actual values
     if "{{year}}" in prefix:
