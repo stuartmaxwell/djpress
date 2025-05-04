@@ -1,3 +1,4 @@
+import datetime
 import pytest
 from django.utils import timezone
 from unittest.mock import Mock
@@ -31,7 +32,7 @@ def test_post_default_queryset(test_post1, test_post2, test_post3):
     test_post1.save()
     assert list(Post.objects.all()) == [test_post2, test_post3]
 
-    test_post2.date = timezone.now() + timezone.timedelta(days=1)
+    test_post2.published_at = timezone.now() + timezone.timedelta(days=1)
     test_post2.save()
     assert list(Post.objects.all()) == [test_post3]
 
@@ -45,7 +46,7 @@ def test_get_published_content_with_future_date(user):
         author=user,
         status="published",
         post_type="post",
-        date=timezone.now() - timezone.timedelta(days=1),
+        published_at=timezone.now() - timezone.timedelta(days=1),
     )
     Post.post_objects.create(
         title="Future Post",
@@ -54,7 +55,7 @@ def test_get_published_content_with_future_date(user):
         author=user,
         status="published",
         post_type="post",
-        date=timezone.now() + timezone.timedelta(days=1),
+        published_at=timezone.now() + timezone.timedelta(days=1),
     )
     assert Post.admin_objects.all().count() == 2
     assert Post.post_objects.get_published_posts().count() == 1
@@ -69,7 +70,7 @@ def test_get_published_content_ordering(user):
         author=user,
         status="published",
         post_type="post",
-        date=timezone.now() - timezone.timedelta(days=2),
+        published_at=timezone.now() - timezone.timedelta(days=2),
     )
     Post.post_objects.create(
         title="Newer Post",
@@ -78,7 +79,7 @@ def test_get_published_content_ordering(user):
         author=user,
         status="published",
         post_type="post",
-        date=timezone.now() - timezone.timedelta(days=1),
+        published_at=timezone.now() - timezone.timedelta(days=1),
     )
     posts = Post.post_objects.all()
     assert posts[0].title == "Newer Post"
@@ -94,7 +95,7 @@ def test_get_published_post_by_slug_with_future_date(user):
         author=user,
         status="published",
         post_type="post",
-        date=timezone.now() + timezone.timedelta(days=1),
+        published_at=timezone.now() + timezone.timedelta(days=1),
     )
     with pytest.raises(PostNotFoundError):
         Post.post_objects.get_published_post_by_slug("future-post")
@@ -110,7 +111,7 @@ def test_get_published_content_by_category_with_future_date(user):
         author=user,
         status="published",
         post_type="post",
-        date=timezone.now() - timezone.timedelta(days=1),
+        published_at=timezone.now() - timezone.timedelta(days=1),
     ).categories.add(category)
     Post.post_objects.create(
         title="Future Post",
@@ -119,7 +120,7 @@ def test_get_published_content_by_category_with_future_date(user):
         author=user,
         status="published",
         post_type="post",
-        date=timezone.now() + timezone.timedelta(days=1),
+        published_at=timezone.now() + timezone.timedelta(days=1),
     ).categories.add(category)
     assert Post.post_objects.get_published_posts_by_category(category).count() == 1
 
@@ -292,7 +293,7 @@ def test_get_published_posts_by_author(user):
         content="Content of future post.",
         author=user,
         status="published",
-        date=timezone.now() + timezone.timedelta(days=1),
+        published_at=timezone.now() + timezone.timedelta(days=1),
     )
 
     # Call the method being tested
@@ -359,7 +360,7 @@ def test_get_published_pages(test_page1, test_page2, test_page3, test_page4, tes
     test_page2.save()
     assert list(Post.page_objects.get_published_pages()) == [test_page3, test_page4, test_page5]
 
-    test_page3.date = timezone.now() + timezone.timedelta(days=1)
+    test_page3.published_at = timezone.now() + timezone.timedelta(days=1)
     test_page3.save()
     assert list(Post.page_objects.get_published_pages()) == [test_page4, test_page5]
 
@@ -568,7 +569,7 @@ def test_get_cached_future_published_posts(user, settings, mock_timezone_now, mo
         slug="test-post",
         content="This is a test post.",
         author=user,
-        date=post_date,
+        published_at=post_date,
         status="published",
         post_type="post",
     )
@@ -901,7 +902,7 @@ def test_page_get_page_tree_with_grandchildren_parent_with_future_date(
     test_page3.parent = test_page2
     test_page3.save()
     test_page2.parent = test_page5
-    test_page2.date = timezone.now() + timezone.timedelta(days=1)
+    test_page2.published_at = timezone.now() + timezone.timedelta(days=1)
     test_page2.save()
 
     assert test_page2.is_published is False
@@ -1028,7 +1029,7 @@ def test_page_is_published(test_page1, test_page2, test_page3, test_page4, test_
     assert test_page1.is_published is True
 
     # Change test_page3 to be in the future - test_page3 and the child test_page2 will be unpublished
-    test_page3.date = timezone.now() + timezone.timedelta(days=1)
+    test_page3.published_at = timezone.now() + timezone.timedelta(days=1)
     test_page3.save()
     assert test_page3.is_published is False
     assert test_page2.is_published is True
@@ -1042,7 +1043,7 @@ def test_page_is_published(test_page1, test_page2, test_page3, test_page4, test_
     assert test_page1.is_published is True
 
     # Change test_page3 to be published again - test_page3 and the child test_page2 will be published
-    test_page3.date = timezone.now()
+    test_page3.published_at = timezone.now()
     test_page3.save()
     assert test_page2.is_published is True
     assert test_page3.is_published is True
@@ -1114,26 +1115,26 @@ def test_post_get_years(test_post1, test_post2, test_post3):
     # Queryset should have 1 item
     assert len(Post.post_objects.get_years()) == 1
     # The item should be the year of the post
-    assert Post.post_objects.get_years()[0].year == test_post1.date.year
+    assert Post.post_objects.get_years()[0].year == test_post1.published_at.year
 
-    test_post2.date = timezone.make_aware(timezone.datetime(2023, 1, 1, 12, 0, 0))
+    test_post2.published_at = timezone.make_aware(timezone.datetime(2023, 1, 1, 12, 0, 0))
     test_post2.save()
 
     # Queryset should have 2 items
     assert len(Post.post_objects.get_years()) == 2
     # The items should be the years of the posts
-    assert Post.post_objects.get_years()[0].year == test_post2.date.year
-    assert Post.post_objects.get_years()[1].year == test_post1.date.year
+    assert Post.post_objects.get_years()[0].year == test_post2.published_at.year
+    assert Post.post_objects.get_years()[1].year == test_post1.published_at.year
 
-    test_post3.date = timezone.make_aware(timezone.datetime(2022, 1, 1, 12, 0, 0))
+    test_post3.published_at = timezone.make_aware(timezone.datetime(2022, 1, 1, 12, 0, 0))
     test_post3.save()
 
     # Queryset should have 3 items
     assert len(Post.post_objects.get_years()) == 3
     # The items should be the years of the posts
-    assert Post.post_objects.get_years()[0].year == test_post3.date.year
-    assert Post.post_objects.get_years()[1].year == test_post2.date.year
-    assert Post.post_objects.get_years()[2].year == test_post1.date.year
+    assert Post.post_objects.get_years()[0].year == test_post3.published_at.year
+    assert Post.post_objects.get_years()[1].year == test_post2.published_at.year
+    assert Post.post_objects.get_years()[2].year == test_post1.published_at.year
 
     # Change a post to draft status
     test_post1.status = "draft"
@@ -1142,54 +1143,54 @@ def test_post_get_years(test_post1, test_post2, test_post3):
     # Queryset should have 2 items
     assert len(Post.post_objects.get_years()) == 2
     # The items should be the years of the posts
-    assert Post.post_objects.get_years()[0].year == test_post3.date.year
-    assert Post.post_objects.get_years()[1].year == test_post2.date.year
+    assert Post.post_objects.get_years()[0].year == test_post3.published_at.year
+    assert Post.post_objects.get_years()[1].year == test_post2.published_at.year
 
 
 @pytest.mark.django_db
 def test_post_get_months(test_post1, test_post2, test_post3):
-    months = Post.post_objects.get_months(test_post1.date.year)
+    months = Post.post_objects.get_months(test_post1.published_at.year)
 
     # type should be a queryset
     assert isinstance(months, QuerySet)
     # Queryset should have 1 item - all three posts are in the same year and month
     assert len(months) == 1
     # The item should be the month of the post
-    assert months[0].month == test_post1.date.month
+    assert months[0].month == test_post1.published_at.month
 
     # Set specific dates for each of the posts
-    test_post1.date = timezone.make_aware(timezone.datetime(2022, 1, 1, 12, 0, 0))
+    test_post1.published_at = timezone.make_aware(timezone.datetime(2022, 1, 1, 12, 0, 0))
     test_post1.save()
-    test_post2.date = timezone.make_aware(timezone.datetime(2022, 2, 1, 12, 0, 0))
+    test_post2.published_at = timezone.make_aware(timezone.datetime(2022, 2, 1, 12, 0, 0))
     test_post2.save()
-    test_post3.date = timezone.make_aware(timezone.datetime(2022, 3, 1, 12, 0, 0))
+    test_post3.published_at = timezone.make_aware(timezone.datetime(2022, 3, 1, 12, 0, 0))
     test_post3.save()
 
-    months = Post.post_objects.get_months(test_post1.date.year)
+    months = Post.post_objects.get_months(test_post1.published_at.year)
 
     # Queryset should have 3 items
     assert len(months) == 3
     # The items should be the months of the posts
-    assert months[0].month == test_post1.date.month
-    assert months[1].month == test_post2.date.month
-    assert months[2].month == test_post3.date.month
+    assert months[0].month == test_post1.published_at.month
+    assert months[1].month == test_post2.published_at.month
+    assert months[2].month == test_post3.published_at.month
 
     # Change a post to draft status
     test_post1.status = "draft"
     test_post1.save()
 
-    months = Post.post_objects.get_months(test_post1.date.year)
+    months = Post.post_objects.get_months(test_post1.published_at.year)
 
     # Queryset should have 2 items
     assert len(months) == 2
     # The items should be the months of the posts
-    assert months[0].month == test_post2.date.month
-    assert months[1].month == test_post3.date.month
+    assert months[0].month == test_post2.published_at.month
+    assert months[1].month == test_post3.published_at.month
 
 
 @pytest.mark.django_db
 def test_post_get_days(test_post1, test_post2, test_post3):
-    days = Post.post_objects.get_days(test_post1.date.year, test_post1.date.month)
+    days = Post.post_objects.get_days(test_post1.published_at.year, test_post1.published_at.month)
 
     # type should be a queryset
     assert isinstance(days, QuerySet)
@@ -1197,73 +1198,73 @@ def test_post_get_days(test_post1, test_post2, test_post3):
     assert len(days) == 1
 
     # Set specific dates for each of the posts
-    test_post1.date = timezone.make_aware(timezone.datetime(2022, 1, 1, 12, 0, 0))
+    test_post1.published_at = timezone.make_aware(timezone.datetime(2022, 1, 1, 12, 0, 0))
     test_post1.save()
-    test_post2.date = timezone.make_aware(timezone.datetime(2022, 1, 2, 12, 0, 0))
+    test_post2.published_at = timezone.make_aware(timezone.datetime(2022, 1, 2, 12, 0, 0))
     test_post2.save()
-    test_post3.date = timezone.make_aware(timezone.datetime(2022, 1, 3, 12, 0, 0))
+    test_post3.published_at = timezone.make_aware(timezone.datetime(2022, 1, 3, 12, 0, 0))
     test_post3.save()
 
-    days = Post.post_objects.get_days(test_post1.date.year, test_post1.date.month)
+    days = Post.post_objects.get_days(test_post1.published_at.year, test_post1.published_at.month)
 
     # Queryset should have 3 items
     assert len(days) == 3
     # The items should be the days of the posts
-    assert days[0].day == test_post1.date.day
-    assert days[1].day == test_post2.date.day
-    assert days[2].day == test_post3.date.day
+    assert days[0].day == test_post1.published_at.day
+    assert days[1].day == test_post2.published_at.day
+    assert days[2].day == test_post3.published_at.day
 
     # Change a post to draft status
     test_post1.status = "draft"
     test_post1.save()
 
-    days = Post.post_objects.get_days(test_post1.date.year, test_post1.date.month)
+    days = Post.post_objects.get_days(test_post1.published_at.year, test_post1.published_at.month)
 
     # Queryset should have 2 items
     assert len(days) == 2
     # The items should be the days of the posts
-    assert days[0].day == test_post2.date.day
-    assert days[1].day == test_post3.date.day
+    assert days[0].day == test_post2.published_at.day
+    assert days[1].day == test_post3.published_at.day
 
 
 @pytest.mark.django_db
 def test_get_year_last_modified(test_post1, test_post2, test_post3):
     # Should match the modified date of the last post in the list - i.e. most recent post
-    assert Post.post_objects.get_year_last_modified(test_post1.date.year) == test_post3.modified_date
+    assert Post.post_objects.get_year_last_modified(test_post1.published_at.year) == test_post3.updated_at
 
     # Change test_post3 to draft and it should now match test_post2
     test_post3.status = "draft"
     test_post3.save()
-    assert Post.post_objects.get_year_last_modified(test_post1.date.year) == test_post2.modified_date
+    assert Post.post_objects.get_year_last_modified(test_post1.published_at.year) == test_post2.updated_at
 
     # Changetest_post2 to future date and it should now match test_post1
-    test_post2.date = timezone.now() + timezone.timedelta(days=1)
+    test_post2.published_at = timezone.now() + timezone.timedelta(days=1)
     test_post2.save()
-    assert Post.post_objects.get_year_last_modified(test_post1.date.year) == test_post1.modified_date
+    assert Post.post_objects.get_year_last_modified(test_post1.published_at.year) == test_post1.updated_at
 
 
 @pytest.mark.django_db
 def test_get_month_last_modified(test_post1, test_post2, test_post3):
     # Should match the modified date of the last post in the list - i.e. most recent post
     assert (
-        Post.post_objects.get_month_last_modified(test_post1.date.year, test_post1.date.month)
-        == test_post3.modified_date
+        Post.post_objects.get_month_last_modified(test_post1.published_at.year, test_post1.published_at.month)
+        == test_post3.updated_at
     )
 
     # Change test_post3 to draft and it should now match test_post2
     test_post3.status = "draft"
     test_post3.save()
     assert (
-        Post.post_objects.get_month_last_modified(test_post1.date.year, test_post1.date.month)
-        == test_post2.modified_date
+        Post.post_objects.get_month_last_modified(test_post1.published_at.year, test_post1.published_at.month)
+        == test_post2.updated_at
     )
 
     # Changetest_post2 to future date and it should now match test_post1
-    test_post2.date = timezone.now() + timezone.timedelta(days=1)
+    test_post2.published_at = timezone.now() + timezone.timedelta(days=1)
     test_post2.save()
     assert (
-        Post.post_objects.get_month_last_modified(test_post1.date.year, test_post1.date.month)
-        == test_post1.modified_date
+        Post.post_objects.get_month_last_modified(test_post1.published_at.year, test_post1.published_at.month)
+        == test_post1.updated_at
     )
 
 
@@ -1271,24 +1272,30 @@ def test_get_month_last_modified(test_post1, test_post2, test_post3):
 def test_get_day_last_modified(test_post1, test_post2, test_post3):
     # Should match the modified date of the last post in the list - i.e. most recent post
     assert (
-        Post.post_objects.get_day_last_modified(test_post1.date.year, test_post1.date.month, test_post1.date.day)
-        == test_post3.modified_date
+        Post.post_objects.get_day_last_modified(
+            test_post1.published_at.year, test_post1.published_at.month, test_post1.published_at.day
+        )
+        == test_post3.updated_at
     )
 
     # Change test_post3 to draft and it should now match test_post2
     test_post3.status = "draft"
     test_post3.save()
     assert (
-        Post.post_objects.get_day_last_modified(test_post1.date.year, test_post1.date.month, test_post1.date.day)
-        == test_post2.modified_date
+        Post.post_objects.get_day_last_modified(
+            test_post1.published_at.year, test_post1.published_at.month, test_post1.published_at.day
+        )
+        == test_post2.updated_at
     )
 
     # Changetest_post2 to future date and it should now match test_post1
-    test_post2.date = timezone.now() + timezone.timedelta(days=1)
+    test_post2.published_at = timezone.now() + timezone.timedelta(days=1)
     test_post2.save()
     assert (
-        Post.post_objects.get_day_last_modified(test_post1.date.year, test_post1.date.month, test_post1.date.day)
-        == test_post1.modified_date
+        Post.post_objects.get_day_last_modified(
+            test_post1.published_at.year, test_post1.published_at.month, test_post1.published_at.day
+        )
+        == test_post1.updated_at
     )
 
 
@@ -1493,3 +1500,67 @@ def test_post_title_post_no_title_characters(user):
 
     assert test_post.slug == "h1-classfoo-idh1heading-meh1"
     assert test_post.post_title == "H1 classfoo idh1heading meh1..."
+
+
+@pytest.mark.django_db
+def test_post_date_timezones(test_post1, settings):
+    """Test that changing the Django timezone doesn't affect the URL generation."""
+
+    # Change the timezone to Pacific/Auckland
+    settings.TIME_ZONE = "Pacific/Auckland"
+    default_timezone = timezone.get_default_timezone_name()
+    current_timezone = timezone.get_current_timezone_name()
+    assert settings.USE_TZ is True
+    assert settings.TIME_ZONE == "Pacific/Auckland"
+    assert default_timezone == "Pacific/Auckland"
+    assert current_timezone == "Pacific/Auckland"
+
+    settings.DJPRESS_SETTINGS["POST_PREFIX"] = "{{ year }}/{{ month }}/{{ day }}"
+
+    # Change the date of the post to 1am on 1st January 2025 Pacific/Auckland time
+    test_post1.published_at = timezone.make_aware(timezone.datetime(2025, 1, 1, 1, 0, 0))
+    test_post1.save()
+    # Confirm that the post is saved with Pacific/Auckland as the timezone
+    assert str(test_post1.published_at.tzinfo) == "Pacific/Auckland"
+    assert test_post1.url == "/2025/01/01/test-post1/"
+
+    # Change the timezone to UTC
+    settings.TIME_ZONE = "UTC"
+    assert settings.TIME_ZONE == "UTC"
+    default_timezone = timezone.get_default_timezone_name()
+    current_timezone = timezone.get_current_timezone_name()
+    assert settings.USE_TZ is True
+    assert default_timezone == "UTC"
+    assert current_timezone == "UTC"
+
+    # Confirm the post is saved with UTC as the timezone for the published_at field
+    assert str(test_post1.published_at.tzinfo) == "Pacific/Auckland"
+    # Confirm the date is set to 1st January 2025
+    assert test_post1._date == datetime.date(2025, 1, 1)
+    # Confirm the URL matches the date
+    assert test_post1.url == "/2025/01/01/test-post1/"
+
+    # Changing the content of a post should not change the published_at date, nor the _date, nor the URL.
+    # So even though Django is now in UTC, the original date is still in Pacific/Auckland time.
+    # Edit the content of the post but don't change the date
+    test_post1.content = "This is a test post."
+    test_post1.save()
+    # Confirm the post is still saved with Pacific/Auckland as the timezone for the published_at field
+    assert str(test_post1.published_at.tzinfo) == "Pacific/Auckland"
+    # Confirm the date is still set to 1st January 2025
+    assert test_post1._date == datetime.date(2025, 1, 1)
+    # Confirm the URL still matches the date
+    assert test_post1.url == "/2025/01/01/test-post1/"
+
+    # If the user changes the date of the post, then we expect the _date and URL to change.
+    # In this case, the acutal time is the same due to the timezone difference, but because the dateimte object has
+    # changed to UTC, we update the published_at field and we change the _date to match, which also updates the URL.
+    # Now edit the post and change the date of the post to 1pm on 31st December 2024 UTC time
+    test_post1.published_at = timezone.make_aware(timezone.datetime(2024, 12, 31, 13, 0, 0))
+    test_post1.save()
+    # Confirm that the post is now saved with UTC as the timezone
+    assert str(test_post1.published_at.tzinfo) == "UTC"
+    # Confirm the date is set to 31 December 2024
+    assert test_post1._date == datetime.date(2024, 12, 31)
+    # Confirm the URL matches the date
+    assert test_post1.url == "/2024/12/31/test-post1/"

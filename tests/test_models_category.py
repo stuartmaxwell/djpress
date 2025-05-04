@@ -184,19 +184,19 @@ def test_get_category_published(test_post1, test_post2, category1, category2):
     test_post1.save()
     assert list(Category.objects.get_categories_with_published_posts()) == [category2]
 
-    test_post2.date = timezone.now() + timezone.timedelta(days=1)
+    test_post2.published_at = timezone.now() + timezone.timedelta(days=1)
     test_post2.save()
     assert list(Category.objects.get_categories_with_published_posts()) == []
 
 
 @pytest.mark.django_db
 def test_category_last_modified(test_post1, test_post2, category1, category2):
-    assert category1.last_modified == test_post1.modified_date
-    assert category2.last_modified == test_post2.modified_date
+    assert category1.last_modified == test_post1.updated_at
+    assert category2.last_modified == test_post2.updated_at
 
-    test_post1.modified_date = timezone.now() + timezone.timedelta(days=1)
+    test_post1.updated_at = timezone.now() + timezone.timedelta(days=1)
     test_post1.save()
-    assert category1.last_modified == test_post1.modified_date
+    assert category1.last_modified == test_post1.updated_at
 
     test_post1.status = "draft"
     test_post1.save()

@@ -215,7 +215,7 @@ def test_tag_has_posts(test_post1, test_post2, tag1, tag2):
     assert tag1.has_posts is False
     assert tag2.has_posts is True
 
-    test_post2.date = timezone.now() + timezone.timedelta(days=1)
+    test_post2.published_at = timezone.now() + timezone.timedelta(days=1)
     test_post2.save()
     assert tag1.has_posts is False
     assert tag2.has_posts is False
@@ -233,7 +233,7 @@ def test_get_tag_published(test_post1, test_post2, tag1, tag2):
     test_post1.save()
     assert list(Tag.objects.get_tags_with_published_posts()) == [tag2]
 
-    test_post2.date = timezone.now() + timezone.timedelta(days=1)
+    test_post2.published_at = timezone.now() + timezone.timedelta(days=1)
     test_post2.save()
     assert list(Tag.objects.get_tags_with_published_posts()) == []
 
@@ -243,12 +243,12 @@ def test_tag_last_modified(test_post1, test_post2, tag1, tag2):
     test_post1.tags.add(tag1)
     test_post2.tags.add(tag2)
 
-    assert tag1.last_modified == test_post1.modified_date
-    assert tag2.last_modified == test_post2.modified_date
+    assert tag1.last_modified == test_post1.updated_at
+    assert tag2.last_modified == test_post2.updated_at
 
-    test_post1.modified_date = timezone.now() + timezone.timedelta(days=1)
+    test_post1.updated_at = timezone.now() + timezone.timedelta(days=1)
     test_post1.save()
-    assert tag1.last_modified == test_post1.modified_date
+    assert tag1.last_modified == test_post1.updated_at
 
     test_post1.status = "draft"
     test_post1.save()

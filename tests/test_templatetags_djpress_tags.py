@@ -18,7 +18,7 @@ from djpress.exceptions import PageNotFoundError
 
 @pytest.mark.django_db
 def test_get_posts(test_post1, test_long_post1, test_post2, test_post3):
-    posts = Post.objects.all().order_by("-date")
+    posts = Post.objects.all().order_by("-published_at")
 
     assert list(djpress_tags.get_posts()) == list(posts)
 
@@ -423,7 +423,7 @@ def test_get_post_date_with_date_archives_disabled(settings, test_post1):
     settings.DJPRESS_SETTINGS["ARCHIVE_ENABLED"] = False
     assert settings.DJPRESS_SETTINGS["ARCHIVE_ENABLED"] is False
 
-    expected_output = test_post1.date.strftime("%b %-d, %Y")
+    expected_output = test_post1.published_at.strftime("%b %-d, %Y")
 
     assert djpress_tags.get_post_date(context) == expected_output
 
@@ -436,7 +436,7 @@ def test_get_post_date_with_date_archives_enabled(settings, test_post1):
     # Confirm settings are set according to settings_testing.py
     assert settings.DJPRESS_SETTINGS["ARCHIVE_ENABLED"] is True
 
-    expected_output = test_post1.date.strftime("%b %-d, %Y")
+    expected_output = test_post1.published_at.strftime("%b %-d, %Y")
 
     assert djpress_tags.get_post_date(context) == expected_output
 
@@ -459,7 +459,7 @@ def test_post_date_with_date_archives_disabled(settings, test_post1):
     settings.DJPRESS_SETTINGS["ARCHIVE_ENABLED"] = False
     assert settings.DJPRESS_SETTINGS["ARCHIVE_ENABLED"] is False
 
-    expected_output = test_post1.date.strftime("%b %-d, %Y")
+    expected_output = test_post1.published_at.strftime("%b %-d, %Y")
 
     assert djpress_tags.post_date(context) == expected_output
 
@@ -471,7 +471,7 @@ def test_post_date_with_date_archives_enabled(settings, test_post1):
     # Confirm settings are set according to settings_testing.py
     assert settings.DJPRESS_SETTINGS["ARCHIVE_ENABLED"] is True
 
-    post_date = test_post1.date
+    post_date = test_post1.published_at
     post_year = post_date.strftime("%Y")
     post_month = post_date.strftime("%m")
     post_month_name = post_date.strftime("%b")
@@ -509,7 +509,7 @@ def test_post_date_with_date_archives_enabled_with_one_link_class(settings, test
     # Confirm settings are set according to settings_testing.py
     assert settings.DJPRESS_SETTINGS["ARCHIVE_ENABLED"] is True
 
-    post_date = test_post1.date
+    post_date = test_post1.published_at
     post_year = post_date.strftime("%Y")
     post_month = post_date.strftime("%m")
     post_month_name = post_date.strftime("%b")
@@ -536,7 +536,7 @@ def test_post_date_with_date_archives_enabled_with_two_link_classes(settings, te
     # Confirm settings are set according to settings_testing.py
     assert settings.DJPRESS_SETTINGS["ARCHIVE_ENABLED"] is True
 
-    post_date = test_post1.date
+    post_date = test_post1.published_at
     post_year = post_date.strftime("%Y")
     post_month = post_date.strftime("%m")
     post_month_name = post_date.strftime("%b")

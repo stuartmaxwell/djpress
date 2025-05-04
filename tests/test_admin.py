@@ -42,7 +42,7 @@ def test_published_status(test_post1):
 
     # Change to future post
     test_post1.status = "published"
-    test_post1.date = timezone.now() + timedelta(days=1)
+    test_post1.published_at = timezone.now() + timedelta(days=1)
     test_post1.save()
     assert post_admin.published_status(test_post1) is False
 
@@ -54,15 +54,15 @@ def test_formatted_date(test_post1):
     post_admin = PostAdmin(Post, site)
 
     # Test formatted date
-    assert post_admin.formatted_date(test_post1) == test_post1.date.strftime("%Y-%m-%d %H:%M")
+    assert post_admin.formatted_date(test_post1) == test_post1.published_at.strftime("%Y-%m-%d %H:%M")
 
     # Test future post
-    test_post1.date = timezone.now() + timedelta(days=1)
+    test_post1.published_at = timezone.now() + timedelta(days=1)
     test_post1.save()
 
     assert (
         post_admin.formatted_date(test_post1)
-        == f'<span style="color: #666;">{test_post1.date.strftime("%Y-%m-%d %H:%M")} (Scheduled)</span>'
+        == f'<span style="color: #666;">{test_post1.published_at.strftime("%Y-%m-%d %H:%M")} (Scheduled)</span>'
     )
 
 

@@ -215,8 +215,8 @@ def test_tag_with_tag_enabled_false(client, settings, tag1):
 @pytest.mark.django_db
 def test_date_archives_year(client, settings, test_post1):
     assert settings.DJPRESS_SETTINGS["ARCHIVE_PREFIX"] == "test-url-archives"
-    url = get_archives_url(test_post1.date.year)
-    assert url == f"/test-url-archives/{test_post1.date.year}/"
+    url = get_archives_url(test_post1.published_at.year)
+    assert url == f"/test-url-archives/{test_post1.published_at.year}/"
     response = client.get(url)
     assert response.status_code == 200
     assert test_post1.title.encode() in response.content
@@ -225,8 +225,8 @@ def test_date_archives_year(client, settings, test_post1):
     assert "Test Post1" in response.content.decode()
 
     settings.DJPRESS_SETTINGS["ARCHIVE_PREFIX"] = ""
-    url = get_archives_url(test_post1.date.year)
-    assert url == f"/{test_post1.date.year}/"
+    url = get_archives_url(test_post1.published_at.year)
+    assert url == f"/{test_post1.published_at.year}/"
 
     response = client.get(url)
     assert response.status_code == 200
@@ -245,7 +245,7 @@ def test_date_archives_year_invalid_year(client, settings):
 
 @pytest.mark.django_db
 def test_date_archives_year_no_posts(client, test_post1):
-    url = get_archives_url(test_post1.date.year - 1)
+    url = get_archives_url(test_post1.published_at.year - 1)
     response = client.get(url)
     assert response.status_code == 200
     assert not test_post1.title.encode() in response.content
@@ -257,8 +257,8 @@ def test_date_archives_year_no_posts(client, test_post1):
 @pytest.mark.django_db
 def test_date_archives_month(client, settings, test_post1):
     assert settings.DJPRESS_SETTINGS["ARCHIVE_PREFIX"] == "test-url-archives"
-    url = get_archives_url(test_post1.date.year, test_post1.date.month)
-    assert url == f"/test-url-archives/{test_post1.date.year}/{test_post1.date.month:02}/"
+    url = get_archives_url(test_post1.published_at.year, test_post1.published_at.month)
+    assert url == f"/test-url-archives/{test_post1.published_at.year}/{test_post1.published_at.month:02}/"
 
     response = client.get(url)
     assert response.status_code == 200
@@ -267,8 +267,8 @@ def test_date_archives_month(client, settings, test_post1):
     assert isinstance(response.context["posts"], Iterable)
 
     settings.DJPRESS_SETTINGS["ARCHIVE_PREFIX"] = ""
-    url = get_archives_url(test_post1.date.year, test_post1.date.month)
-    assert url == f"/{test_post1.date.year}/{test_post1.date.month:02}/"
+    url = get_archives_url(test_post1.published_at.year, test_post1.published_at.month)
+    assert url == f"/{test_post1.published_at.year}/{test_post1.published_at.month:02}/"
 
     response = client.get(url)
     assert response.status_code == 200
@@ -288,7 +288,7 @@ def test_date_archives_month_invalid_month(client, settings):
 
 @pytest.mark.django_db
 def test_date_archives_month_no_posts(client, test_post1):
-    url = get_archives_url(test_post1.date.year - 1, test_post1.date.month)
+    url = get_archives_url(test_post1.published_at.year - 1, test_post1.published_at.month)
     response = client.get(url)
     assert response.status_code == 200
     assert not test_post1.title.encode() in response.content
@@ -300,8 +300,11 @@ def test_date_archives_month_no_posts(client, test_post1):
 @pytest.mark.django_db
 def test_date_archives_day(client, settings, test_post1):
     assert settings.DJPRESS_SETTINGS["ARCHIVE_PREFIX"] == "test-url-archives"
-    url = get_archives_url(test_post1.date.year, test_post1.date.month, test_post1.date.day)
-    assert url == f"/test-url-archives/{test_post1.date.year}/{test_post1.date.month:02}/{test_post1.date.day:02}/"
+    url = get_archives_url(test_post1.published_at.year, test_post1.published_at.month, test_post1.published_at.day)
+    assert (
+        url
+        == f"/test-url-archives/{test_post1.published_at.year}/{test_post1.published_at.month:02}/{test_post1.published_at.day:02}/"
+    )
 
     response = client.get(url)
     assert response.status_code == 200
@@ -310,8 +313,10 @@ def test_date_archives_day(client, settings, test_post1):
     assert isinstance(response.context["posts"], Iterable)
 
     settings.DJPRESS_SETTINGS["ARCHIVE_PREFIX"] = ""
-    url = get_archives_url(test_post1.date.year, test_post1.date.month, test_post1.date.day)
-    assert url == f"/{test_post1.date.year}/{test_post1.date.month:02}/{test_post1.date.day:02}/"
+    url = get_archives_url(test_post1.published_at.year, test_post1.published_at.month, test_post1.published_at.day)
+    assert (
+        url == f"/{test_post1.published_at.year}/{test_post1.published_at.month:02}/{test_post1.published_at.day:02}/"
+    )
 
     response = client.get(url)
     assert response.status_code == 200
@@ -321,8 +326,10 @@ def test_date_archives_day(client, settings, test_post1):
 
     assert settings.DJPRESS_SETTINGS["POST_PREFIX"] == "test-posts"
     settings.DJPRESS_SETTINGS["POST_PREFIX"] = "{{ year }}/{{ month }}/{{ day }}"
-    url = get_archives_url(test_post1.date.year, test_post1.date.month, test_post1.date.day)
-    assert url == f"/{test_post1.date.year}/{test_post1.date.month:02}/{test_post1.date.day:02}/"
+    url = get_archives_url(test_post1.published_at.year, test_post1.published_at.month, test_post1.published_at.day)
+    assert (
+        url == f"/{test_post1.published_at.year}/{test_post1.published_at.month:02}/{test_post1.published_at.day:02}/"
+    )
 
     response = client.get(url)
     assert response.status_code == 200
@@ -345,8 +352,10 @@ def test_conflict_day_archives_and_single_post(client, settings, test_post1):
     """
     settings.DJPRESS_SETTINGS["ARCHIVE_PREFIX"] = ""
     settings.DJPRESS_SETTINGS["POST_PREFIX"] = "{{ year }}/{{ month }}"
-    url = get_archives_url(test_post1.date.year, test_post1.date.month, test_post1.date.day)
-    assert url == f"/{test_post1.date.year}/{test_post1.date.month:02}/{test_post1.date.day:02}/"
+    url = get_archives_url(test_post1.published_at.year, test_post1.published_at.month, test_post1.published_at.day)
+    assert (
+        url == f"/{test_post1.published_at.year}/{test_post1.published_at.month:02}/{test_post1.published_at.day:02}/"
+    )
 
     response = client.get(url)
     assert response.status_code == 200
@@ -366,8 +375,8 @@ def test_conflict_month_archives_and_single_post(client, settings, test_post1):
     """
     settings.DJPRESS_SETTINGS["ARCHIVE_PREFIX"] = ""
     settings.DJPRESS_SETTINGS["POST_PREFIX"] = "{{ year }}"
-    url = get_archives_url(test_post1.date.year, test_post1.date.month)
-    assert url == f"/{test_post1.date.year}/{test_post1.date.month:02}/"
+    url = get_archives_url(test_post1.published_at.year, test_post1.published_at.month)
+    assert url == f"/{test_post1.published_at.year}/{test_post1.published_at.month:02}/"
 
     response = client.get(url)
     assert response.status_code == 200
@@ -387,8 +396,8 @@ def test_conflict_year_archives_and_single_post(client, settings, test_post1):
     """
     settings.DJPRESS_SETTINGS["ARCHIVE_PREFIX"] = ""
     settings.DJPRESS_SETTINGS["POST_PREFIX"] = ""
-    url = get_archives_url(test_post1.date.year)
-    assert url == f"/{test_post1.date.year}/"
+    url = get_archives_url(test_post1.published_at.year)
+    assert url == f"/{test_post1.published_at.year}/"
 
     response = client.get(url)
     assert response.status_code == 200
@@ -397,7 +406,7 @@ def test_conflict_year_archives_and_single_post(client, settings, test_post1):
     assert isinstance(response.context["posts"], Iterable)
 
     # If the post slug is 2024, then the post will be returned.
-    test_post1.slug = str(test_post1.date.year)
+    test_post1.slug = str(test_post1.published_at.year)
     test_post1.save()
     response = client.get(url)
     assert response.status_code == 200
@@ -417,7 +426,7 @@ def test_date_archives_day_invalid_day(client, settings):
 
 @pytest.mark.django_db
 def test_date_archives_day_no_posts(client, test_post1):
-    url = get_archives_url(test_post1.date.year - 1, test_post1.date.month, test_post1.date.day)
+    url = get_archives_url(test_post1.published_at.year - 1, test_post1.published_at.month, test_post1.published_at.day)
     response = client.get(url)
     assert response.status_code == 200
     assert not test_post1.title.encode() in response.content
