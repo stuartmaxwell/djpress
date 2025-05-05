@@ -54,7 +54,9 @@ def test_formatted_date(test_post1):
     post_admin = PostAdmin(Post, site)
 
     # Test formatted date
-    assert post_admin.formatted_date(test_post1) == test_post1.published_at.strftime("%Y-%m-%d %H:%M")
+    assert post_admin.formatted_date(test_post1) == timezone.localtime(test_post1.published_at).strftime(
+        "%Y-%m-%d %H:%M"
+    )
 
     # Test future post
     test_post1.published_at = timezone.now() + timedelta(days=1)
@@ -62,7 +64,7 @@ def test_formatted_date(test_post1):
 
     assert (
         post_admin.formatted_date(test_post1)
-        == f'<span style="color: #666;">{test_post1.published_at.strftime("%Y-%m-%d %H:%M")} (Scheduled)</span>'
+        == f'<span style="color: #666;">{timezone.localtime(test_post1.published_at).strftime("%Y-%m-%d %H:%M")} (Scheduled)</span>'
     )
 
 

@@ -300,11 +300,11 @@ def test_date_archives_month_no_posts(client, test_post1):
 @pytest.mark.django_db
 def test_date_archives_day(client, settings, test_post1):
     assert settings.DJPRESS_SETTINGS["ARCHIVE_PREFIX"] == "test-url-archives"
-    url = get_archives_url(test_post1.published_at.year, test_post1.published_at.month, test_post1.published_at.day)
-    assert (
-        url
-        == f"/test-url-archives/{test_post1.published_at.year}/{test_post1.published_at.month:02}/{test_post1.published_at.day:02}/"
-    )
+    url = get_archives_url(test_post1._date.year, test_post1._date.month, test_post1._date.day)
+    assert url == f"/test-url-archives/{test_post1._date.year}/{test_post1._date.month:02}/{test_post1._date.day:02}/"
+
+    print(url)
+    print(test_post1._date)
 
     response = client.get(url)
     assert response.status_code == 200

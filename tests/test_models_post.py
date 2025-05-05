@@ -1271,6 +1271,15 @@ def test_get_month_last_modified(test_post1, test_post2, test_post3):
 @pytest.mark.django_db
 def test_get_day_last_modified(test_post1, test_post2, test_post3):
     # Should match the modified date of the last post in the list - i.e. most recent post
+    post_year = test_post1.published_at.year
+    post_month = test_post1.published_at.month
+    post_day = test_post1.published_at.day
+
+    print(f"{post_year=}")
+    print(f"{post_month=}")
+    print(f"{post_day=}")
+    print(f"{test_post1._date=}")
+    print(f"{Post.post_objects.get_day_last_modified(post_year, post_month, post_day)=}")
     assert (
         Post.post_objects.get_day_last_modified(
             test_post1.published_at.year, test_post1.published_at.month, test_post1.published_at.day
@@ -1503,11 +1512,12 @@ def test_post_title_post_no_title_characters(user):
 
 
 @pytest.mark.django_db
-def test_post_date_timezones(test_post1, settings):
+def test_post_date_timezones_url_generation(test_post1, settings):
     """Test that changing the Django timezone doesn't affect the URL generation."""
 
     # Change the timezone to Pacific/Auckland
     settings.TIME_ZONE = "Pacific/Auckland"
+    timezone.activate(settings.TIME_ZONE)
     default_timezone = timezone.get_default_timezone_name()
     current_timezone = timezone.get_current_timezone_name()
     assert settings.USE_TZ is True
@@ -1520,12 +1530,15 @@ def test_post_date_timezones(test_post1, settings):
     # Change the date of the post to 1am on 1st January 2025 Pacific/Auckland time
     test_post1.published_at = timezone.make_aware(timezone.datetime(2025, 1, 1, 1, 0, 0))
     test_post1.save()
+    print(f"{test_post1.published_at=}")
     # Confirm that the post is saved with Pacific/Auckland as the timezone
     assert str(test_post1.published_at.tzinfo) == "Pacific/Auckland"
+    assert test_post1._date == datetime.date(2025, 1, 1)
     assert test_post1.url == "/2025/01/01/test-post1/"
 
     # Change the timezone to UTC
     settings.TIME_ZONE = "UTC"
+    timezone.activate(settings.TIME_ZONE)
     assert settings.TIME_ZONE == "UTC"
     default_timezone = timezone.get_default_timezone_name()
     current_timezone = timezone.get_current_timezone_name()
@@ -1564,3 +1577,18 @@ def test_post_date_timezones(test_post1, settings):
     assert test_post1._date == datetime.date(2024, 12, 31)
     # Confirm the URL matches the date
     assert test_post1.url == "/2024/12/31/test-post1/"
+
+    timezone.deactivate()
+
+
+@pytest.mark.django_db
+def test_post_date_timezones_testing(settings, user):
+    p1 = Post.objects.create(
+        slug="test-post-date-timezones-testing-1",
+        content="This is a test post.",
+        author=user,
+    )
+    print(f"{p1.published_at=}")
+    print(f"{p1._date=}")
+    print(f"{p1.url=}")
+    print(str(p1.published_at.tzinfo))
