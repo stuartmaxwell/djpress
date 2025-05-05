@@ -51,7 +51,10 @@ BUILDDIR      := "docs/_build"
 @test:
     {{uv}} pytest
 
-# Run Ruff linking
+@test-tz tz:
+    TEST_TIME_ZONE={{tz}} {{uv}} pytest
+
+# Run Ruff linktng
 @lint:
     {{uv-tool}} ruff check
 
@@ -62,6 +65,10 @@ BUILDDIR      := "docs/_build"
 # Run nox
 @nox:
     {{uv-tool}} nox --session test
+
+# Run nox timezone test
+@nox-tz:
+    {{uv-tool}} nox --session test_timezones
 
 # Run coverage
 @cov:
