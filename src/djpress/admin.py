@@ -89,13 +89,19 @@ class PostAdmin(admin.ModelAdmin):
         return obj.is_published
 
     def formatted_date(self, obj: Post) -> str:
-        """Format the published_at date and show future posts distinctly."""
+        """Format the published_at date and show future posts distinctly.
+
+        Make sure the display date is in the local timezone.
+        """
+        display_date_format = "%Y-%m-%d %H:%M"
+        display_date = timezone.localtime(obj.published_at).strftime(display_date_format)
+
         if obj.published_at > timezone.now():
             return format_html(
                 '<span style="color: #666;">{} (Scheduled)</span>',
-                obj.published_at.strftime("%Y-%m-%d %H:%M"),
+                display_date,
             )
-        return obj.published_at.strftime("%Y-%m-%d %H:%M")
+        return display_date
 
     formatted_date.short_description = "Date"
 

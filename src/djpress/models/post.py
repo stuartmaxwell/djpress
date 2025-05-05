@@ -1,6 +1,8 @@
 """Post model."""
 
+import datetime
 import logging
+from collections.abc import Iterable
 
 from django.contrib.auth.models import User
 from django.core.cache import cache
@@ -381,26 +383,26 @@ class PostsManager(models.Manager):
         """
         return self.get_published_posts().filter(author=author)
 
-    def get_years(self) -> models.QuerySet:
+    def get_years(self) -> Iterable[datetime.date]:
         """Return a list of years that have published posts.
 
         Returns:
-            list[int]: A distinct list of years.
+            Iterable[datetime.date]: A distinct list of dates.
         """
-        return self.dates("published_at", "year")
+        return self.dates("_date", "year")
 
-    def get_months(self, year: int) -> models.QuerySet:
+    def get_months(self, year: int) -> Iterable[datetime.date]:
         """Return a list of months for a given year that have published posts.
 
         Args:
             year (int): The year.
 
         Returns:
-            list[int]: A distinct list of months.
+            Iterable[datetime.date]: A distinct list of dates.
         """
-        return self.filter(published_at__year=year).dates("published_at", "month")
+        return self.filter(_date__year=year).dates("_date", "month")
 
-    def get_days(self, year: int, month: int) -> models.QuerySet:
+    def get_days(self, year: int, month: int) -> Iterable[datetime.date]:
         """Return a list of days for a given year and month that have published posts.
 
         Args:
@@ -408,9 +410,9 @@ class PostsManager(models.Manager):
             month (int): The month.
 
         Returns:
-            list[int]: A distinct list of days.
+            Iterable[datetime.date]: A distinct list of dates.
         """
-        return self.filter(published_at__year=year, published_at__month=month).dates("published_at", "day")
+        return self.filter(_date__year=year, _date__month=month).dates("_date", "day")
 
     def get_year_last_modified(self, year: int) -> timezone.datetime | None:
         """Return the most recent updated_at of posts for a given year.
@@ -421,7 +423,7 @@ class PostsManager(models.Manager):
         Returns:
             timezone.datetime | None: The last published post for the given year.
         """
-        return self.filter(published_at__year=year).aggregate(latest=Max("updated_at"))["latest"]
+        return self.filter(_date__year=year).aggregate(latest=Max("updated_at"))["latest"]
 
     def get_month_last_modified(self, year: int, month: int) -> timezone.datetime | None:
         """Return the most recent updated_at of posts for a given month.
@@ -433,9 +435,7 @@ class PostsManager(models.Manager):
         Returns:
             timezone.datetime | None: The last published post for the given month.
         """
-        return self.filter(published_at__year=year, published_at__month=month).aggregate(latest=Max("updated_at"))[
-            "latest"
-        ]
+        return self.filter(_date__year=year, _date__month=month).aggregate(latest=Max("updated_at"))["latest"]
 
     def get_day_last_modified(self, year: int, month: int, day: int) -> timezone.datetime | None:
         """Return the most recent updated_at of posts for a given day.
@@ -448,7 +448,7 @@ class PostsManager(models.Manager):
         Returns:
             timezone.datetime | None: The last published post for the given day.
         """
-        return self.filter(published_at__year=year, published_at__month=month, published_at__day=day).aggregate(
+        return self.filter(_date__year=year, _date__month=month, _date__day=day).aggregate(
             latest=Max("updated_at"),
         )["latest"]
 
@@ -523,12 +523,12 @@ class Post(models.Model):
         # Generate the _date field from the date field.
         # We only do this if the post is new or if the date has changed. This ensures the _date field doesn't change
         # unless the date field has been specifically changed.
-        if self.pk is None:
+        if self.id is None:
             self._date = self.published_at.date()
         else:
-            old = self.__class__.objects.filter(pk=self.pk).only("published_at").first()
+            old = self.__class__.admin_objects.filter(id=self.id).only("published_at").first()
             if old is None or old.published_at != self.published_at:
-                self._date = self.published_at.date()
+                self._date = self.local_datetime.date()
 
         self.full_clean()
         super().save(*args, **kwargs)
@@ -755,7 +755,7 @@ class Post(models.Model):
         return self.title
 
     @property
-    def local_date(self) -> timezone.datetime:
+    def local_datetime(self) -> timezone.datetime:
         """Return the post date in the local timezone.
 
         This is used to get the date of the post in the `TIME_ZONE` that is configured in `settings.py`.
