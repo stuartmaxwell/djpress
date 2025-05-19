@@ -22,7 +22,6 @@ def test_get_cached_content(user, settings):
         author=user,
         status="published",
         post_type="post",
-        date=timezone.now(),
     )
     Post.post_objects.create(
         title="Content 2",
@@ -30,7 +29,6 @@ def test_get_cached_content(user, settings):
         author=user,
         status="published",
         post_type="post",
-        date=timezone.now(),
     )
 
     # Call the _get_cached_recent_published_content method - this forces the cache to be set, regardless of settings
@@ -59,7 +57,6 @@ def test_cache_invalidation_on_save(user):
         author=user,
         status="published",
         post_type="post",
-        date=timezone.now(),
     )
 
     # Call the _get_cached_recent_published_content method - this forces the cache to be set, regardless of settings
@@ -100,7 +97,6 @@ def test_cache_invalidation_on_delete(user):
         author=user,
         status="published",
         post_type="post",
-        date=timezone.now(),
     )
 
     # Call the _get_cached_recent_published_content method - this forces the cache to be set, regardless of settings

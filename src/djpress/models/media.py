@@ -96,15 +96,15 @@ class Media(models.Model):
         related_name="media_files",
         help_text="The user who uploaded the file",
     )
-    date = models.DateTimeField(default=timezone.now)
-    modified_date = models.DateTimeField(auto_now=True)
+    uploaded_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         """Meta options for the Media model."""
 
         verbose_name = "Media"
         verbose_name_plural = "Media"
-        ordering = ["-date"]
+        ordering = ["-uploaded_at"]
 
     def __str__(self) -> str:
         """Return a string representation of the media file.

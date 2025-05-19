@@ -149,11 +149,11 @@ def archive_posts(
         msg = "Invalid date"
         return HttpResponseBadRequest(msg)
 
-    filtered_posts = Post.post_objects.get_published_posts().filter(date__year=date_parts["year"])
+    filtered_posts = Post.post_objects.get_published_posts().filter(_date__year=date_parts["year"])
     if "month" in date_parts:
-        filtered_posts = filtered_posts.filter(date__month=date_parts["month"])
+        filtered_posts = filtered_posts.filter(_date__month=date_parts["month"])
     if "day" in date_parts:
-        filtered_posts = filtered_posts.filter(date__day=date_parts["day"])
+        filtered_posts = filtered_posts.filter(_date__day=date_parts["day"])
 
     posts = Paginator(filtered_posts, djpress_settings.RECENT_PUBLISHED_POSTS_COUNT)
     page_number = request.GET.get("page")

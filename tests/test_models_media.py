@@ -1,5 +1,6 @@
 """Test the Media model."""
 
+from django.utils import timezone
 import pytest
 
 from datetime import datetime
@@ -46,7 +47,7 @@ def test_upload_to_path():
     path = upload_to_path(test_media, "test_file.txt")
 
     # The default path should be 'djpress/YYYY/MM/DD/filename'
-    expected_path = f"djpress/{datetime.now().strftime('%Y')}/{datetime.now().strftime('%m')}/{datetime.now().strftime('%d')}/test_file.txt"
+    expected_path = f"djpress/{timezone.now().strftime('%Y')}/{timezone.now().strftime('%m')}/{timezone.now().strftime('%d')}/test_file.txt"
     assert path == expected_path
 
 

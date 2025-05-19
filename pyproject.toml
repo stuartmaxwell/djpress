@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "djpress"
-version = "0.18.1"
+version = "0.19.0b0"
 description = "A blog application for Django sites, inspired by classic WordPress."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -102,7 +102,7 @@ include = ["src/djpress/*"]
 omit = ["*/tests/*", "*/migrations/*"]
 
 [tool.bumpver]
-current_version = "0.18.1"
+current_version = "0.19.0b0"
 version_pattern = "MAJOR.MINOR.PATCH[PYTAGNUM]"
 commit_message = "👍 bump version {old_version} -> {new_version}"
 commit = true

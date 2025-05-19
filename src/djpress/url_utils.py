@@ -73,13 +73,15 @@ def get_post_url(post: Post) -> str:
     # Remove spaces from the prefix so that either {{ year }} or {{year}} will work
     prefix = prefix.replace(" ", "")
 
+    post_date = post._date  # noqa: SLF001
+
     # Replace the placeholders in the prefix with the actual values
     if "{{year}}" in prefix:
-        prefix = prefix.replace("{{year}}", post.date.strftime("%Y"))
+        prefix = prefix.replace("{{year}}", post_date.strftime("%Y"))
     if "{{month}}" in prefix:
-        prefix = prefix.replace("{{month}}", post.date.strftime("%m"))
+        prefix = prefix.replace("{{month}}", post_date.strftime("%m"))
     if "{{day}}" in prefix:
-        prefix = prefix.replace("{{day}}", post.date.strftime("%d"))
+        prefix = prefix.replace("{{day}}", post_date.strftime("%d"))
 
     url = f"/{post.slug}" if prefix == "" else f"/{prefix}/{post.slug}"
 

@@ -5,6 +5,7 @@ from io import BytesIO
 
 from django.utils import timezone
 from django.contrib.auth.models import User
+from django.conf import settings
 
 from djpress.url_converters import SlugPathConverter
 from djpress.models import Category, Media, Post, Tag
@@ -15,6 +16,17 @@ from example.config import settings_testing
 
 # Take a static snapshot of DJPRESS_SETTINGS from settings_test.py
 CLEAN_DJPRESS_SETTINGS = deepcopy(settings_testing.DJPRESS_SETTINGS)
+
+
+def pytest_configure(config):
+    test_tz = os.environ.get("TEST_TIME_ZONE")
+    if test_tz:
+        settings.TIME_ZONE = test_tz
+
+
+def pytest_report_header(config):
+    current_tz = settings.TIME_ZONE
+    return f"Django TIME_ZONE for tests: {current_tz}"
 
 
 @pytest.fixture(autouse=True)

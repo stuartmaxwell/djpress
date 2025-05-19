@@ -16,11 +16,11 @@ def test_post_sitemap(test_post1, test_post2, test_post3):
     assert sitemap.changefreq == "monthly"
     assert sitemap.protocol == "https"
     assert len(sitemap.items()) == len(expected_items)
-    assert sitemap.lastmod(test_post1) == test_post1.modified_date
+    assert sitemap.lastmod(test_post1) == test_post1.updated_at
     assert sitemap.location(test_post1) == test_post1.url
-    assert sitemap.lastmod(test_post2) == test_post2.modified_date
+    assert sitemap.lastmod(test_post2) == test_post2.updated_at
     assert sitemap.location(test_post2) == test_post2.url
-    assert sitemap.lastmod(test_post3) == test_post3.modified_date
+    assert sitemap.lastmod(test_post3) == test_post3.updated_at
     assert sitemap.location(test_post3) == test_post3.url
 
 
@@ -35,11 +35,11 @@ def test_page_sitemap(test_page1, test_page2, test_page3):
     assert sitemap.changefreq == "monthly"
     assert sitemap.protocol == "https"
     assert len(sitemap.items()) == len(expected_items)
-    assert sitemap.lastmod(test_page1) == test_page1.modified_date
+    assert sitemap.lastmod(test_page1) == test_page1.updated_at
     assert sitemap.location(test_page1) == test_page1.url
-    assert sitemap.lastmod(test_page2) == test_page2.modified_date
+    assert sitemap.lastmod(test_page2) == test_page2.updated_at
     assert sitemap.location(test_page2) == test_page2.url
-    assert sitemap.lastmod(test_page3) == test_page3.modified_date
+    assert sitemap.lastmod(test_page3) == test_page3.updated_at
     assert sitemap.location(test_page3) == test_page3.url
 
 
@@ -54,8 +54,8 @@ def test_category_sitemap(category1, category2, test_post1, test_post2):
     assert sitemap.changefreq == "daily"
     assert sitemap.protocol == "https"
     assert len(sitemap.items()) == len(expected_items)
-    assert sitemap.lastmod(category1) == test_post1.modified_date
-    assert sitemap.lastmod(category2) == test_post2.modified_date
+    assert sitemap.lastmod(category1) == test_post1.updated_at
+    assert sitemap.lastmod(category2) == test_post2.updated_at
     assert sitemap.location(category1) == get_category_url(category1)
 
 
@@ -64,13 +64,17 @@ def test_date_based_sitemap(test_post1, test_post2, test_post3):
     """Test the DateBasedSitemap class."""
 
     expected_items = [
-        {"year": test_post3.date.year, "latest_modified": test_post3.modified_date},
-        {"year": test_post3.date.year, "month": test_post3.date.month, "latest_modified": test_post3.modified_date},
+        {"year": test_post3.published_at.year, "latest_modified": test_post3.updated_at},
         {
-            "year": test_post3.date.year,
-            "month": test_post3.date.month,
-            "day": test_post3.date.day,
-            "latest_modified": test_post3.modified_date,
+            "year": test_post3.published_at.year,
+            "month": test_post3.published_at.month,
+            "latest_modified": test_post3.updated_at,
+        },
+        {
+            "year": test_post3.published_at.year,
+            "month": test_post3.published_at.month,
+            "day": test_post3.published_at.day,
+            "latest_modified": test_post3.updated_at,
         },
     ]
 
@@ -79,11 +83,13 @@ def test_date_based_sitemap(test_post1, test_post2, test_post3):
     assert sitemap.changefreq == "daily"
     assert sitemap.protocol == "https"
     assert sitemap.items() == expected_items
-    assert sitemap.lastmod(expected_items[0]) == test_post3.modified_date
-    assert sitemap.location(expected_items[0]) == get_archives_url(test_post3.date.year)
-    assert sitemap.location(expected_items[1]) == get_archives_url(test_post3.date.year, test_post3.date.month)
+    assert sitemap.lastmod(expected_items[0]) == test_post3.updated_at
+    assert sitemap.location(expected_items[0]) == get_archives_url(test_post3.published_at.year)
+    assert sitemap.location(expected_items[1]) == get_archives_url(
+        test_post3.published_at.year, test_post3.published_at.month
+    )
     assert sitemap.location(expected_items[2]) == get_archives_url(
-        test_post3.date.year, test_post3.date.month, test_post3.date.day
+        test_post3.published_at.year, test_post3.published_at.month, test_post3.published_at.day
     )
 
 
