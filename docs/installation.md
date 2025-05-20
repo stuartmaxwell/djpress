@@ -7,7 +7,7 @@ This guide will walk you through installing DJ Press in your Django project.
 DJ Press will always be compatible with any supported version of Django and Python. Right now this is:
 
 - Django 4.2 LTS, 5.1, 5.2 LTS
-- Python 3.8 and above
+- Python 3.9 and above
 
 ## Quick Start
 

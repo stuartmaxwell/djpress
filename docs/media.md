@@ -36,7 +36,8 @@ DJ Press supports the following media types:
 - `description`: A description of the media file
 - `uploaded_by`: The user who uploaded the file
 - `date`: The upload date and time
-- `modified_date`: The last modification date and time
+- `uploaded_at`: The upload date and time
+- `updated_at`: The last modification date and time
 
 ## Configuration
 
