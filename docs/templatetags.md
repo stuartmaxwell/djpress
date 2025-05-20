@@ -1,18 +1,49 @@
 # Template Tags
 
+DJ Press provides a rich set of template tags to help you build your blog templates. These tags allow you to retrieve
+and display data from your blog, create navigation menus, format dates, and more.
+
+## Loading Template Tags
+
 To use any of the following tags, you must load the `djpress_tags` in your template file:
 
 ```django
 {% load djpress_tags %}
 ```
 
-## get_posts
+## Tag Categories
 
-Return all published posts as a queryset.
+The template tags in DJ Press are organised into several functional categories:
+
+1. **Data Access Tags** - Tags that start with `get_` retrieve data from the database without any HTML formatting
+2. **Display Tags** - Format and display data with appropriate HTML (e.g., `site_title_link`, `blog_categories`)
+3. **Post Content Tags** - Handle rendering post content, titles, dates, etc. (e.g., `post_title`, `post_content`)
+4. **Navigation Tags** - Generate navigation elements like menus (e.g., `site_pages_list`, `blog_categories`)
+5. **Utility Tags** - Additional helper tags for common operations
+
+## Table of Contents
+
+- [Data Access Tags](#data-access-tags)
+- [Display Tags](#display-tags)
+- [Post Content Tags](#post-content-tags)
+- [Navigation Tags](#navigation-tags)
+- [Utility Tags](#utility-tags)
+
+## Data Access Tags
+
+These tags retrieve data from your blog without adding any HTML formatting. They're useful when you want to access data
+but apply your own custom formatting.
+
+### get_posts
+
+Returns all published posts as a queryset. Use this tag to access all published blog posts in your templates.
 
 **Returns:** queryset of all published posts.
 
-### get_posts Examples
+> **Related Topics:** See [url_structure.md](url_structure.md) for URL patterns and [themes.md](themes.md) for how to
+> use posts in your theme.
+
+#### get_posts Example
 
 This is useful for building an index page with all posts:
 
@@ -20,21 +51,196 @@ This is useful for building an index page with all posts:
 {% get_posts as all_posts %}
 
 {% for post in all_posts %}
-
 <ul>
-<li>{{ post.title }}</li>
+  <li>{{ post.title }}</li>
 </ul>
-
 {% endfor %}
 ```
 
-## site_title
+### get_recent_posts
 
-Returns the site title as configured in the settings with the `SITE_TITLE` variable. If no site title has been configured, this will return the default title: "My DJ Press Blog".
+Returns the most recent published posts. Tries to be efficient by checking if there's a `posts` object in the context
+that can be used.
+
+**Returns:** queryset of recent published posts.
+
+#### get_recent_posts Example
+
+```django
+{% get_recent_posts as recent_posts %}
+
+<h3>Recent Posts</h3>
+<ul>
+  {% for post in recent_posts %}
+  <li><a href="{{ post.url }}">{{ post.title }}</a></li>
+  {% endfor %}
+</ul>
+```
+
+### get_pages
+
+Get all published pages as an iterable queryset. This can be useful if you want to build your own menu or list of pages
+on the blog.
+
+**Returns:** queryset of published pages that are sorted by the `menu_order` field, and then by the `title` field.
+
+#### get_pages Example
+
+Get the pages and display as a list:
+
+```django
+{% get_pages as pages %}
+<ul>
+  {% for page in pages %}
+    <li>
+      <a href="{% url 'djpress:single_post' page.slug %}">{{ page.title }}</a>
+    </li>
+  {% endfor %}
+</ul>
+```
+
+Outputs the following:
+
+```html
+<ul>
+  <li>
+    <a href="/about/">About me</a>
+  </li>
+  <li>
+    <a href="/contact/">Contact me</a>
+  </li>
+</ul>
+```
+
+Also see [`site_pages`](#site_pages) for a tag that produces similar output to the above but with just a single
+template tag.
+
+### get_categories
+
+Get all categories as an iterable queryset. This can be useful if you want to build your own menu or list of categories
+on the blog.
+
+Also see `blog_categories` for a tag that produces similar output to the below example, but with just a single template
+tag.
+
+**Returns:** queryset of categories that are sorted by the `menu_order` field, and then by the `title` field.
+
+#### get_categories Example
+
+Get the categories and display as a list:
+
+```django
+{% get_categories as categories %}
+<ul>
+  {% for category in categories %}
+    <li>
+      <a href="{% url 'djpress:category_posts' category.slug %}">{{ category.title }}</a>
+    </li>
+  {% endfor %}
+</ul>
+```
+
+Outputs the following:
+
+```html
+<ul>
+  <li>
+    <a href="/category/general/">General</a>
+  </li>
+  <li>
+    <a href="/category/news/">News</a>
+  </li>
+</ul>
+```
+
+### get_tags
+
+Returns all tags as a queryset.
+
+**Returns:** queryset of all tags.
+
+#### get_tags Example
+
+```django
+{% get_tags as all_tags %}
+<div class="tag-cloud">
+  {% for tag in all_tags %}
+    <a href="{% url 'djpress:tag_posts' tag.slug %}" class="tag">{{ tag.title }}</a>
+  {% endfor %}
+</div>
+```
+
+### get_post_title
+
+Returns the title of a post from the current context.
+
+#### get_post_title Parameters
+
+- `include_empty` (boolean): Whether to include the title if it is empty, using the post_title property fallback.
+Default is false.
+
+**Returns:** string - the title of the post.
+
+#### get_post_title Example
+
+```django
+{% get_post_title as title %}
+<meta property="og:title" content="{{ title }}">
+```
+
+### get_post_url
+
+Returns the URL of a post from the current context.
+
+**Returns:** string - the URL of the post.
+
+#### get_post_url Example
+
+```django
+{% get_post_url as post_url %}
+<meta property="og:url" content="{{ post_url }}">
+```
+
+### get_post_author
+
+Returns the author display name from the current context.
+
+**Returns:** string - the author display name.
+
+#### get_post_author Example
+
+```django
+{% get_post_author as author %}
+<meta property="article:author" content="{{ author }}">
+```
+
+### get_post_date
+
+Returns the date of a post from the current context.
+
+**Returns:** string - the date of the post in the format "Mon DD, YYYY".
+
+#### get_post_date Example
+
+```django
+{% get_post_date as post_date %}
+<meta property="article:published_time" content="{{ post_date }}">
+```
+
+## Display Tags
+
+These tags retrieve data and format it with HTML, ready to be displayed in your templates.
+
+### site_title
+
+Returns the site title as configured in the settings with the `SITE_TITLE` variable. If no site title has been
+configured, this will return the default title: "My DJ Press Blog".
 
 **Returns:** the `SITE_TITLE` value as a string.
 
-### site_title Examples
+> **Related Topics:** See [configuration.md](configuration.md) for how to configure the site title and other settings.
+
+#### site_title Example
 
 This is useful for the HTML `title` tag:
 
@@ -42,17 +248,17 @@ This is useful for the HTML `title` tag:
 <title>{% site_title %}</title>
 ```
 
-## site_title_link
+### site_title_link
 
 This is used to return an HTML link to the index view of the blog.
 
 **Returns:** an HTML link to the index view marked as safe.
 
-### site_title_link Arguments
+#### site_title_link Parameters
 
 - `link_class` (optional): CSS class(es) to apply to the link.
 
-### site_title_link Examples
+#### site_title_link Examples
 
 Just the tag with no argument:
 
@@ -102,24 +308,25 @@ Outputs the following:
 <a href="/" class="class1 class2">My DJ Press Blog</a>
 ```
 
-## page_title
+### page_title
 
-Returns the title of the page, depending on the context of the page. A different title is returned for a category page, a blog page, author page, etc. This is useful to be used in the `<title>` tag of the template.
+Returns the title of the page, depending on the context of the page. A different title is returned for a category page,
+a blog page, author page, etc. This is useful to be used in the `<title>` tag of the template.
 
 **Returns:** A string with no HTML formatting.
 
-### Arguments
+#### page_title Parameters
 
 - `pre_text` (optional): text to be displayed before the page title
 - `post_text` (optional): text to be displayed after the page title
 
-### Examples
+#### page_title Examples
 
 The tag with no options for a single blog page or post:
 
 ```django
 <title>{% page_title %}</title>
-````
+```
 
 Outputs the following:
 
@@ -153,91 +360,26 @@ Outputs the following:
 
 Category pages will show the title of the category, and author pages will show the display name of the author.
 
-## get_pages
+## Navigation Tags
 
-Get all published pages as an iterable queryset. This can be useful if you want to build your own menu or list of pages on the blog.
+These tags help you build navigation elements for your blog.
 
-**Returns:** queryset of published pages that are sorted by the `menu_order` field, and then by the `title` field.
-
-### get_pages Examples
-
-Get the pages and display as a list:
-
-```django
-{% get_pages as pages %}
-<ul>
-  {% for page in pages %}
-    <li>
-      <a href="{% url 'djpress:single_post' page.slug %}">{{ page.title }}</a>
-    </li>
-  {% endfor %}
-</ul>
-```
-
-Outputs the following:
-
-```html
-<ul>
-  <li>
-    <a href="/about/">About me</a>
-  </li>
-  <li>
-    <a href="/contact/">Contact me</a>
-  </li>
-</ul>
-```
-
-Also see [`site_pages`](#site_pages) for a tag that produces similar output to the above but with just a single template tag.
-
-## get_categories
-
-Get all categories as an iterable queryset. This can be useful if you want to build your own menu or list of categories on the blog.
-
-Also see `blog_categories` for a tag that produces similar output to the below example, but with just a single template tag.
-
-Return: queryset of categories that are sorted by the `menu_order` field, and then by the `title` field.
-
-### get_categories Examples
-
-Get the categories and display as a list:
-
-```django
-{% get_categories as categories %}
-<ul>
-  {% for category in categories %}
-    <li>
-      <a href="{% url 'djpress:category_posts' category.slug %}">{{ category.title }}</a>
-    </li>
-  {% endfor %}
-</ul>
-```
-
-Outputs the following:
-
-```html
-<ul>
-  <li>
-    <a href="/category/general/">General</a>
-  </li>
-  <li>
-    <a href="/category/news/">News</a>
-  </li>
-</ul>
-```
-
-## blog_categories
+### blog_categories
 
 Get a list of all categories wrapped in HTML that can be configured with optional arguments.
 
 **Returns:** all categories as HTML which has been marked as safe.
 
-### blog_categories Arguments
+> **Related Topics:** See [url_structure.md](url_structure.md) for category URL patterns and [configuration.md](configuration.md) for category-related settings.
 
-- `outer_tag` (optional): the outer tags that this should be wrapped in. Accepted options are "ul", "div", "span". Default is: "ul".
+#### blog_categories Parameters
+
+- `outer_tag` (optional): the outer tags that this should be wrapped in. Accepted options are "ul", "div", "span".
+  Default is: "ul".
 - `outer_class` (optional): the CSS classes to apply to the outer tag. Default: "".
 - `link_class` (optional): the CSS classes to apply to the link tag. Default: "".
 
-### blog_categories Examples
+#### blog_categories Examples
 
 Just the tag, with no arguments.
 
@@ -288,19 +430,23 @@ Outputs the same comma-separated list of categories, but wrapped in a `span` tag
 </span>
 ```
 
-## blog_tags
+### blog_tags
 
 Get a list of all tags wrapped in HTML that can be configured with optional arguments.
 
 **Returns:** all tags as HTML which has been marked as safe.
 
-### blog_tags Arguments
+> **Related Topics:** See [tags.md](tags.md) for more information about tags and [url_structure.md](url_structure.md)
+for tag URL patterns.
 
-- `outer_tag` (optional): the outer tags that this should be wrapped in. Accepted options are "ul", "div", "span". Default is: "ul".
+#### blog_tags Parameters
+
+- `outer_tag` (optional): the outer tags that this should be wrapped in. Accepted options are "ul", "div", "span".
+  Default is: "ul".
 - `outer_class` (optional): the CSS classes to apply to the outer tag. Default: "".
 - `link_class` (optional): the CSS classes to apply to the link tag. Default: "".
 
-### blog_tags Examples
+#### blog_tags Examples
 
 Just the tag, with no arguments.
 
@@ -351,19 +497,20 @@ Outputs the same comma-separated list of tags, but wrapped in a `span` tag.
 </span>
 ```
 
-## tags_with_counts
+### tags_with_counts
 
 Get a list of all tags with post counts wrapped in HTML that can be configured with optional arguments.
 
 **Returns:** all tags with post counts as HTML which has been marked as safe.
 
-### tags_with_counts Arguments
+#### tags_with_counts Parameters
 
-- `outer_tag` (optional): the outer tags that this should be wrapped in. Accepted options are "ul", "div", "span". Default is: "ul".
+- `outer_tag` (optional): the outer tags that this should be wrapped in. Accepted options are "ul", "div", "span".
+  Default is: "ul".
 - `outer_class` (optional): the CSS classes to apply to the outer tag. Default: "".
 - `link_class` (optional): the CSS classes to apply to the link tag. Default: "".
 
-### tags_with_counts Examples
+#### tags_with_counts Examples
 
 Just the tag, with no arguments.
 
@@ -399,19 +546,20 @@ Outputs a comma-separated list of tags with post counts, wrapped in a `div` tag.
 </div>
 ```
 
-## site_pages
+### site_pages
 
 Get all site pages as a single-level list, wrapped in HTML that can be configured with optional arguments.
 
 **Returns:** all blog pages as HTML marked as safe.
 
-### site_pages Arguments
+#### site_pages Parameters
 
-- `outer` (optional): the outer tags that this should be wrapped in. Accepted options are "ul", "div", "span". Default is: "ul".
+- `outer` (optional): the outer tags that this should be wrapped in. Accepted options are "ul", "div", "span". Default
+  is: "ul".
 - `outer_class` (optional): the CSS classes to apply to the outer tag. Default: "".
 - `link_class` (optional): the CSS classes to apply to the link tag. Default: "".
 
-### site_pages Examples
+#### site_pages Examples
 
 Just the tag, with no arguments.
 
@@ -435,22 +583,22 @@ This will output the same HTML from the `get_pages` example.
 Wrapped in a `div` tag with classes added, using positional arguments.
 
 ```django
-{% site_pages "div" "class1" "class2" %}
+{% site_pages "div" "class1" %}
 ```
 
 Outputs a comma-separated list of pages, wrapped in a `div` tag.
 
 ```html
 <div class="class1">
-  <a href="/about/" class="class2">About me</a>,
-  <a href="/contact/" class="class2">Contact me</a>
+  <a href="/about/">About me</a>,
+  <a href="/contact/">Contact me</a>
 </div>
 ```
 
 Wrapped in a `span` tag with classes added, using named arguments.
 
 ```django
-{% site_pages outer="div" outer_class="class1" link_class="class2" %}
+{% site_pages outer="span" outer_class="class1" link_class="class2" %}
 ```
 
 Outputs the same comma-separated list of pages, but wrapped in a `span` tag.
@@ -462,20 +610,24 @@ Outputs the same comma-separated list of pages, but wrapped in a `span` tag.
 </span>
 ```
 
-## site_pages_list
+### site_pages_list
 
-Get all published site pages and output as a nested list to support parent pages.
+Get all published site pages and output as a nested list to support parent-child page relationships. This tag is ideal
+for building hierarchical navigation menus that reflect your page structure.
 
-Return: HTML which has been marked as safe.
+**Returns:** HTML which has been marked as safe.
 
-### site_pages_list Arguments
+> **Related Topics:** See [url_structure.md](url_structure.md) for page URL patterns and [themes.md](themes.md) for
+> creating navigation in your theme.
+
+#### site_pages_list Parameters
 
 - `ul_outer_class` (optional): The CSS class(es) for the outer unordered list.
 - `li_class` (optional): The CSS class(es) for the list item tags
 - `a_class` (optional): The CSS class(es) for the anchor tags.
 - `ul_child_class` (optional): The CSS class(es) for the nested unordered lists.
 
-### site_pages_list Examples
+#### site_pages_list Examples
 
 Just the tag, with no arguments.
 
@@ -504,749 +656,346 @@ This will output the following HTML:
 </ul>
 ```
 
-Or arguments can be used to build a Bootstrap-like navbar menu.
+With CSS classes:
 
 ```django
-{% site_pages ul_outer_class="navbar-nav" li_class="nav-item" a_class="nav-link" ul_child_class="dropdown-menu" %}
+{% site_pages_list ul_outer_class="main-nav" li_class="nav-item" a_class="nav-link" ul_child_class="sub-nav" %}
 ```
 
-This will output the following HTML:
+This will output:
 
 ```html
-<ul class="navbar-nav">
+<ul class="main-nav">
   <li class="nav-item">
-    <a href="/about/" title="View the About me page" class="nav-link">About me</a>
-    <ul>
+    <a href="/about/" class="nav-link">About me</a>
+    <ul class="sub-nav">
       <li class="nav-item">
-        <a href="/about/hobbies/" title="View the Hobbies page" class="nav-link">Hobbies</a>
+        <a href="/about/hobbies/" class="nav-link">Hobbies</a>
       </li>
       <li class="nav-item">
-        <a href="/about/resume/" title="View the My Resume page" class="nav-link">My Resume</a>
+        <a href="/about/resume/" class="nav-link">My Resume</a>
       </li>
     </ul>
   </li>
   <li class="nav-item">
-    <a href="/contact/" title="View the Contact me page" class="nav-link">Contact me</a>
+    <a href="/contact/" class="nav-link">Contact me</a>
   </li>
 </ul>
 ```
 
-## have_posts
+## Post Content Tags
 
-Get a list of posts from the current context. This always returns a list, even if the context only contains a single post or page.
+These tags help you display the content of posts.
 
-This is useful if you want to use a single template to show either a single post or a collection of posts.
+### post_title
 
-**Returns:** list containing a single Post object, a Page object of posts, or an empty list.
+Display the title of a post, with intelligent handling of linking depending on the context.
 
-### have_posts Examples
+- In a single post view, displays just the title with no link.
+- In a posts list view, displays the title with a link to the full post.
 
-The following code will work with a single post or page view, or a page with multiple posts:
+**Returns:** HTML with the post title, marked as safe.
 
-```django
-{% have_posts as posts %}
+> **Related Topics:** See [themes.md](themes.md) for more about post display in templates and [url_structure.md](url_structure.md) for post URL patterns.
 
-{% for post in posts %}
-    <h2>{{ post.title }}</h2>
-    <p>{{ post.excerpt }}</p>
-{% endfor %}
-```
+#### post_title Parameters
 
-## get_post_title
+- `outer_tag` (optional): The outer HTML tag for the title. Accepted options are "h1", "h2", "h3", "h4", "h5", "h6",
+  "p", "div", "span". If not provided, no outer tag is used.
+- `link_class` (optional): The CSS class(es) to apply to the link if the title is linked.
+- `force_link` (optional): Boolean. If true, always links the title even in a single post view. Default is false.
+- `include_empty` (optional): Boolean. If true, includes the title even if it is empty, using the post_title property
+  fallback. Default is false.
 
-Returns the title of the current post as a plain string.
+#### post_title Exampless
 
-**Returns:** A string containing the post title or empty if there's no post in the context.
-
-### get_post_title Examples
-
-```django
-<h1>{% get_post_title %}</h1>
-```
-
-Outputs:
-
-```html
-<h1>My Post Title</h1>
-```
-
-## post_wrap
-
-This is a wrapper tag that is used to add a semantic HTML wrapper tags around a post. By default this will use an
-`<article>` tag and will add the necessary microformat tags if microformats are enabled (these are enabled by
-default.)
-
-**Returns:** HTML marked as safe.
-
-### post_wrap Arguments
-
-*Note* - keyword arguments are recommended but not required.
-
-- `tag` (optional): The HTML tag to wrap the content in, default is `<article>`.
-- `class` (optional): CSS class(es) to apply to the tag, default is blank.
-
-### post_wrap Usage
-
-Basic wrapper with no additional arguments and with microformats enabled.
-
-```django
-{% post_wrap %}
-<h2>Post Title</h2>
-<p>This is my post content</p>
-{% end_post_wrap %}
-```
-
-Outputs:
-
-```django
-<article class="h-entry">
-<h2>Post Title</h2>
-<p>This is my post content</p>
-</article>
-```
-
-Wrapper with specific HTML tag, a CSS class, and with microformats enabled.
-
-```django
-{% post_wrap tag="div" class="blogpost" %}
-<h2>Post Title</h2>
-<p>This is my post content</p>
-{% end_post_wrap %}
-```
-
-Outputs:
-
-```django
-<div class="h-entry blogpost">
-<h2>Post Title</h2>
-<p>This is my post content</p>
-</div>
-```
-
-## post_title
-
-Returns the title of the current post as a link if it's part of a collection, or just the title if it's single post.
-
-The `force_link` argument can be used to always return the link, regardless if it's part of a collection or not.
-
-**Returns:** A string containing just the post title, or HTML text that has been marked as safe.
-
-### post_title Arguments
-
-*Note* - these are keyword-only arguments.
-
-- `outer_tag` (optional): The outer HTML tag to wrap the title in.
-- `link_class` (optional): CSS class(es) to apply to the link.
-- `force_link` (optional, boolean): Always displays a link when true.
-
-### post_title Examples
+Basic usage in a template:
 
 ```django
 {% post_title %}
 ```
 
-If a single post, this outputs:
+In a single post view, this will output:
 
 ```html
-My Post Title
+My Blog Post Title
 ```
 
-Or, if part of a collection of posts:
+In a posts list view, this will output:
 
 ```html
-<a href="/my-post/">My Post Title</a>
+<a href="/2025/05/blog-post/" title="My Blog Post Title">My Blog Post Title</a>
 ```
 
-With the `link_class` argument:
+With an outer tag and custom link class:
 
 ```django
-{% post_title link_class="post-title-link" %}
+{% post_title outer_tag="h1" link_class="post-title-link" %}
 ```
 
-Outputs:
+In a single post view with microformats enabled, this will output:
 
 ```html
-<a href="/my-post/" class="post-title-link">My Post Title</a>
+<h1 class="p-name">My Blog Post Title</h1>
 ```
 
-Or, to force the link, even when just a single post is displayed:
+In a posts list view with microformats enabled, this will output:
+
+```html
+<h1 class="p-name">
+  <a href="/2025/05/blog-post/" title="My Blog Post Title" class="u-url post-title-link">My Blog Post Title</a>
+</h1>
+```
+
+Force link in a single post view:
 
 ```django
 {% post_title force_link=True %}
 ```
 
-Outputs:
+This will always generate a link to the post, even in single post view.
 
-```html
-<a href="/my-post/">My Post Title</a>
-```
+### post_content
 
-To wrap the title in an HTML tag, use the `outer_tag` attribute. If microformats are enabled (these are enabled by
-default), then a class is added to the outer tag. The outer tag must be one of the following types:
-"h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "span".
-If anything else is used, or if the outer_tag attribute is ommitted, then no outer tag is added.
+Display the content of a post with intelligent handling of both single posts and post lists.
 
-```django
-{% post_title outer_tag="h2" %}
-```
+- In a single post view, returns the full content of the post.
+- In a posts list view, returns the truncated content with a "read more" link.
 
-Outputs:
+**Returns:** HTML content for the post which has been marked as safe.
 
-```html
-<h2 class="p-name"><a href="/my-post/">My Post Title</a></h2>
-```
+**Related Topics:** See [themes.md](themes.md) for more about content display and
+[configuration.md](configuration.md) for content truncation settings.
 
-## get_post_author
+#### post_content Parameters
 
-Returns the display name of the post's author.
+- `outer_tag` (optional): The outer HTML tag to wrap the content in. Accepted options are "section", "div", "article",
+  "p", "span". If not provided, no outer tag is used.
+- `read_more_link_class` (optional): The CSS class(es) to apply to the "read more" link.
+- `read_more_text` (optional): The text to use for the "read more" link. If not provided, defaults to "Read more".
 
-**Returns:** String containing the author's display name.
+#### post_content Examples
 
-### get_post_author Examples
-
-```django
-<p>Written by {% get_post_author %}</p>
-```
-
-Outputs:
-
-```html
-<p>Written by Sam Doe</p>
-```
-
-## post_author
-
-Get the author's display name, wrapped in a span tag, with a link to their author page.
-
-**Returns:** HTML text containing the author's name, marked as safe.
-
-### post_author Arguments
-
-- `link_class` (optional): CSS class(es) to apply to the link.
-
-### post_author Examples
-
-```django
-<p>By {% post_author %}</p>
-```
-
-Outputs:
-
-```html
-<p>By <a href="/post-author/" title="View all posts by Post Author"><span rel="author">Post Author</span></a></p>
-```
-
-With the `link_class` argument:
-
-```django
-<p>By {% post_author link_class="author-link" %}</p>
-```
-
-Outputs:
-
-```html
-<p>By <a href="/post-author/" title="View all posts by Post Author" class="author-link"><span rel="author">Post Author</span></a></p>
-```
-
-## post_category_link
-
-Get a link to a post's category.
-
-**Returns:** HTML text containing a link to the category.
-
-### post_category_link Arguments
-
-- `category`: The Category object to link to.
-- `link_class` (optional): CSS class(es) to apply to the link.
-
-### post_category_link Examples
-
-```django
-{% for category in post.categories.all %}
-    {% post_category_link category link_class="category-link" %}
-{% endfor %}
-```
-
-## get_post_date
-
-Get the date of the current post.
-
-**Returns:** A string containing the post's date formatted as "MMM D, YYYY".
-
-### get_post_date Examples
-
-```django
-<p>Published on {% get_post_date %}</p>
-```
-
-Outputs:
-
-```html
-<p>Published on Jun 5, 2024</p>
-```
-
-## post_date
-
-Returns the post's date as a set of links to date-based archives, if enabled.
-
-**Returns:** An HTML string containing links to date-based archives, or just the formatted date if date archives are disabled.
-
-### post_date Arguments
-
-- `link_class` (optional): CSS class(es) to apply to the links.
-
-### post_date Examples
-
-```django
-<p>Posted on {% post_date link_class="date-link" %}</p>
-```
-
-Outputs:
-
-```html
-<p>Posted on <a href="/archives/2024/06/" title="View all posts in Jun 2024">Jun</a> <a href="/archives/2024/06/05/" title="View all posts on 5 Jun 2024">5</a>, <a href="/archives/2024/" title="View all posts in 2024">2024</a>, 11:06 AM.</p>
-```
-
-## post_content
-
-Returns the content of the current post, either full or truncated with a "read more" link. If the post is on a post detail page, the full content is displayed. If the post is on any other type of page, just the truncated content is displayed.
-
-**Returns:** HTML text containing the post content, or truncated with a "read more" link. The HTML is marked as safe.
-
-### post_content Arguments
-
-*Note* - these are keyword-only arguments.
-
-- `outer_tag` (optional):
-- `read_more_link_class` (optional): CSS class(es) to apply to the "read more" link.
-- `read_more_text` (optional): Custom text for the "read more" link.
-
-### post_content Examples
+Basic usage in a template:
 
 ```django
 {% post_content %}
 ```
 
-If the post is on a detail page, this will output the full content. But if the post is part of a collection of posts, it will only display truncated content with a read more link:
+This will output the full content of a post in a single post view, or the truncated content with a "read more" link in
+a posts list view.
 
-```html
-<p>This is the start of the post content.</p>
-<p><a href="/post-title/">Read more...</a></p>
-```
-
-With the optional arguments to control the read more function:
+With custom read more text and an outer tag:
 
 ```django
-{% post_content read_more_link_class="read-more" read_more_text="Continue reading..." %}
+{% post_content outer_tag="div" read_more_link_class="btn btn-primary" read_more_text="Continue reading..." %}
 ```
 
-Outputs:
+This will output:
 
 ```html
-<p>This is the start of the post content.</p>
-<p><a href="/post-title/" class="read-more">Continue reading...</a></p>
+<!-- In a single post view -->
+<div class="e-content">
+  <p>This is the full content of the post...</p>
+</div>
+
+<!-- In a posts list view -->
+<div class="e-content">
+  <p>This is the truncated content of the post...</p>
+  <a href="/2023/05/sample-post/" class="btn btn-primary">Continue reading...</a>
+</div>
 ```
 
-To wrap the content in an HTML tag, use the `outer_tag` attribute. Note that if microformats are enabled (these are
-enabled by default), then `e-content` will be added to the outer tag class.
+Note: The `class="e-content"` will only be added if Microformats are enabled in the configuration.
+
+### post_date
+
+Display the date of a post, optionally with links to the archives if archive functionality is enabled.
+
+**Returns:** HTML with formatted date information, marked as safe.
+
+**Related Topics:** See [url_structure.md](url_structure.md) for archive URL patterns and
+[configuration.md](configuration.md) for date/archive settings.
+
+#### post_date Parameters
+
+- `link_class` (optional): The CSS class(es) to apply to the date links.
+
+#### post_date Examples
+
+Basic usage in a template:
 
 ```django
-{% post_content outer_tag="section" %}
+{% post_date %}
 ```
 
-Outputs:
+If archive functionality is disabled, this will output:
 
 ```html
-<section class="e-content">
-<p>This is the start of the post content.</p>
-<p><a href="/post-title/" class="read-more">Continue reading...</a></p>
-</section>
+May 20, 2025
 ```
 
-## category_title
+If archive functionality is enabled, this will output links to the date archives:
 
-Get the title of the current category, optionally wrapped in an HTML tag.
+```html
+<a href="/2025/05/" title="View all posts in May 2025">May</a> <a href="/2025/05/20/" title="View all posts on 20 May 2025">20</a>, <a href="/2025/" title="View all posts in 2025">2025</a>, 10:30 AM.
+```
 
-**Returns:** A string or HTML-wrapped text containing the category title. The HTML text is marked as safe.
+With microformats enabled, the output will include time tag:
 
-### category_title Arguments
+```html
+<time class="dt-published" datetime="2025-05-20T10:30:00+00:00">
+  <a href="/2025/05/" title="View all posts in May 2025">May</a> <a href="/2025/05/20/" title="View all posts on 20 May 2025">20</a>, <a href="/2025/" title="View all posts in 2025">2025</a>, 10:30 AM.
+</time>
+```
 
-- `outer` (optional): The HTML tag to wrap the title in.
-- `outer_class` (optional): CSS class(es) to apply to the outer tag.
-- `pre_text` (optional): Text to prepend to the category title.
-- `post_text` (optional): Text to append to the category title.
-
-### category_title Examples
-
-The following will just return the category title as a string:
+With a custom link class:
 
 ```django
-{% category_title %}
+{% post_date link_class="date-link" %}
 ```
 
-The following will return HTML text:
+This will add the "date-link" class to all the date links.
+
+### post_author
+
+Return the author link for a post.
+
+**Returns:** HTML with the author name and link, marked as safe.
+
+#### post_author Parameters
+
+- `link_class` (optional): The CSS class(es) to apply to the link.
+
+#### post_author Examples
+
+```django
+{% post_author %}
+```
+
+If author links are enabled, this will output:
+
+```html
+<a href="/author/johndoe/" title="View all posts by John Doe"><span class="p-author">John Doe</span></a>
+```
+
+If author links are disabled, this will output just the author name:
+
+```html
+<span class="p-author">John Doe</span>
+```
+
+The microformat class `p-author` will only be added if Microformats are enabled.
+
+### post_category_link
+
+Return the category link for a post.
+
+**Returns:** HTML with the category link, marked as safe.
+
+#### post_category_link Parameters
+
+- `category`: The category object of the post.
+- `link_class` (optional): The CSS class(es) to apply to the link.
+
+#### post_category_link Examples
+
+```django
+{% for category in post.categories.all %}
+  {% post_category_link category %}
+{% endfor %}
+```
+
+If category functionality is disabled, this will output just the category name:
+
+```html
+General
+```
+
+If category functionality is enabled, this will output a link to the category:
+
+```html
+<a href="/category/general/" title="View all posts in the General category">General</a>
+```
+
+## Utility Tags
+
+These tags provide additional helper functions for your templates.
+
+### have_posts
+
+Return the posts in the context, providing a convenient way to check if there are posts to display.
+
+**Returns:** list of Post objects or a Page object of posts.
+
+#### have_posts Example
+
+```django
+{% have_posts as posts_list %}
+{% if posts_list %}
+  <h2>We have posts!</h2>
+  {% for post in posts_list %}
+    <h3>{{ post.title }}</h3>
+  {% endfor %}
+{% else %}
+  <p>No posts to display.</p>
+{% endif %}
+```
+
+### category_title
+
+Return the title of a category from the current context.
+
+**Returns:** string or HTML-formatted string with the category title.
+
+#### category_title Parameters
+
+- `outer` (optional): The outer HTML tag for the category. Allowed values: "h1", "h2", "h3", "h4", "h5", "h6", "p",
+  "div", "span".
+- `outer_class` (optional): The CSS class(es) for the outer tag.
+- `pre_text` (optional): The text to prepend to the category title.
+- `post_text` (optional): The text to append to the category title.
+
+#### category_title Examples
 
 ```django
 {% category_title outer="h1" outer_class="category-title" pre_text="Category: " %}
 ```
 
-Outputs:
+This will output:
 
 ```html
 <h1 class="category-title">Category: General</h1>
 ```
 
-Or with all arguments:
+### tag_title
+
+Return the title of a tag from the current context.
+
+**Returns:** string or HTML-formatted string with the tag title.
+
+#### tag_title Parameters
+
+- `outer` (optional): The outer HTML tag for the tag title. Allowed values: "h1", "h2", "h3", "h4", "h5", "h6", "p",
+  "div", "span".
+- `outer_class` (optional): The CSS class(es) for the outer tag.
+- `pre_text` (optional): The text to prepend to the tag title.
+- `post_text` (optional): The text to append to the tag title.
+
+#### tag_title Examples
 
 ```django
-{% category_title outer="h1" outer_class="category-title" pre_text="Posts in the '" post_text="' category" %}
+{% tag_title outer="h1" outer_class="tag-title" pre_text="Posts tagged with: " %}
 ```
 
-Outputs:
+This will output:
 
 ```html
-<h1 class="category-title">Posts in the 'General' category</h1>
+<h1 class="tag-title">Posts tagged with: Python</h1>
 ```
 
-## author_name
-
-Get the author's display name, optionally wrapped in an HTML tag.
-
-**Returns:** A string or HTML-wrapped text containing the author's display name. The HTML text is marked as safe.
-
-### author_name Arguments
-
-- `outer` (optional): The HTML tag to wrap the name in.
-- `outer_class` (optional): CSS class(es) to apply to the outer tag.
-- `pre_text` (optional): Text to prepend to the author name.
-- `post_text` (optional): Text to append to the author name.
-
-### author_name Examples
-
-The following will just return the author's display name
-
-```django
-{% author_name %}
-```
-
-The following will return HTML text:
-
-```django
-{% author_name outer="h1" outer_class="author-title" pre_text="Author: " %}
-```
-
-Outputs:
+If multiple tags are in the context, they will be joined with commas:
 
 ```html
-<h1 class="author-title">Author: Sam Jones</h1>
+<h1 class="tag-title">Posts tagged with: Python, Django</h1>
 ```
-
-Or with all arguments:
-
-```django
-{% author_name outer="h1" outer_class="author-title" pre_text="Posts that '" post_text="' wrote" %}
-```
-
-Outputs:
-
-```html
-<h1 class="author-title">Posts that 'Sam Jones' wrote</h1>
-```
-
-## post_categories
-
-Returns a list of links to the categories of the current post.
-
-**Returns:** An HTML string containing a list of category links for the current post.
-
-### post_categories Arguments
-
-- `outer_tag` (optional): The HTML tag to use for the outer container. Default is "ul".
-- `outer_class` (optional): CSS class(es) to apply to the outer container.
-- `link_class` (optional): CSS class(es) to apply to each category link.
-
-### post_categories Examples
-
-Just the tag with no arguments:
-
-```django
-{% post_categories %}
-```
-
-Outputs:
-
-```html
-<ul>
-  <li>
-    <a href="/general/" title="View all posts in the General category">General</a>
-  </li>
-</ul>
-```
-
-The tag with all options provided as arguments and using a `div` for the outer tag:
-
-```django
-{% post_categories outer_tag="div" outer_class="post-categories" link_class="category-link" %}
-```
-
-Outputs the following HTML:
-
-```html
-<div class="post-categories">
-  <a href="/general/" title="View all posts in the General category" class="category-link">General</a>
-</div>
-```
-
-The tag with a `span` for the outer tag:
-
-```django
-{% post_categories outer_tag="span" %}
-```
-
-Outputs the following HTML:
-
-```html
-<span>
-  <a href="/general/" title="View all posts in the General category">General</a>
-</span>
-```
-
-## post_tags
-
-Returns a list of links to the tags of the current post.
-
-**Returns:** An HTML string containing a list of tag links for the current post.
-
-### post_tags Arguments
-
-- `outer_tag` (optional): The HTML tag to use for the outer container. Default is "ul".
-- `outer_class` (optional): CSS class(es) to apply to the outer container.
-- `link_class` (optional): CSS class(es) to apply to each tag link.
-
-### post_tags Examples
-
-Just the tag with no arguments:
-
-```django
-{% post_tags %}
-```
-
-Outputs:
-
-```html
-<ul>
-  <li>
-    <a href="/tag/python/" title="View all posts tagged with Python">Python</a>
-  </li>
-  <li>
-    <a href="/tag/django/" title="View all posts tagged with Django">Django</a>
-  </li>
-</ul>
-```
-
-The tag with all options provided as arguments and using a `div` for the outer tag:
-
-```django
-{% post_tags outer_tag="div" outer_class="post-tags" link_class="tag-link" %}
-```
-
-Outputs the following HTML:
-
-```html
-<div class="post-tags">
-  <a href="/tag/python/" title="View all posts tagged with Python" class="tag-link">Python</a>,
-  <a href="/tag/django/" title="View all posts tagged with Django" class="tag-link">Django</a>
-</div>
-```
-
-The tag with a `span` for the outer tag:
-
-```django
-{% post_tags outer_tag="span" %}
-```
-
-Outputs the following HTML:
-
-```html
-<span>
-  <a href="/tag/python/" title="View all posts tagged with Python">Python</a>,
-  <a href="/tag/django/" title="View all posts tagged with Django">Django</a>
-</span>
-```
-
-## pagination_links
-
-This is used to create basic pagination links in the form of "Page x of y" with left and right angled quotes on either side to allow moving backwards and forwards through the pages.
-
-This tag will be ignored if the current view is not a paginated object.
-
-For more control over pagination links, you can create your own pagination controls with the following tags:
-
-- `is_paginated`
-- `get_pagination_range`
-- `get_pagination_range`
-- `get_pagination_current_page`
-
-**Returns:** An HTML string containing pagination links.
-
-### pagination_links Examples
-
-If used on the first page of three:
-
-```django
-{% pagination_links %}
-```
-
-Outputs:
-
-```html
-<div class="pagination">
-  <span class="current">
-    Page 1 of 3
-  </span>
-  <span class="next">
-    <a href="?page=2">next</a> <a href="?page=3">last »</a>
-  </span>
-</div>
-```
-
-If used on the second page of three:
-
-```django
-{% pagination_links %}
-```
-
-Outputs:
-
-```html
-<div class="pagination">
-  <span class="previous">
-    <a href="?page=1">« first</a> <a href="?page=1">previous</a>
-  </span>
-  <span class="current">Page 2 of 3</span>
-  <span class="next">
-    <a href="?page=3">next</a> <a href="?page=3">last »</a>
-  </span>
-</div>
-```
-
-If used on the third page of three:
-
-```django
-{% pagination_links %}
-```
-
-Outputs:
-
-```html
-<div class="pagination">
-  <span class="previous">
-    <a href="?page=1">« first</a> <a href="?page=2">previous</a>
-  </span>
-  <span class="current">Page 3 of 3</span>
-</div>
-```
-
-If used on paginated page with only one page:
-
-```django
-{% pagination_links %}
-```
-
-Outputs:
-
-```html
-<div class="pagination">
-  <span class="current">Page 1 of 1</span>
-</div>
-```
-
-## is_paginated
-
-Returns whether the current posts are paginated.
-
-**Returns:** A boolean indicating if the posts are paginated.
-
-### is_paginated Examples
-
-```django
-{% if is_paginated %}
-    <!-- Show pagination controls -->
-{% endif %}
-```
-
-## get_pagination_range
-
-Returns the range of pagination pages.
-
-**Returns:** A range object representing the pagination pages.
-
-### get_pagination_range Examples
-
-```django
-{% for page_num in get_pagination_range %}
-    <a href="?page={{ page_num }}">{{ page_num }}</a>
-{% endfor %}
-```
-
-## get_pagination_current_page
-
-Returns the current page number.
-
-**Returns:** An integer representing the current page number.
-
-### get_pagination_current_page Examples
-
-```django
-<p>You are on page {% get_pagination_current_page %}</p>
-```
-
-## page_link
-
-Returns a link to a specific page.
-
-**Returns:** An HTML string containing a link to the specified page.
-
-### page_linkArguments
-
-- `page_slug`: The slug of the page to link to.
-- `outer` (optional): The HTML tag to wrap the link in. Default is "div".
-- `outer_class` (optional): CSS class(es) to apply to the outer tag.
-- `link_class` (optional): CSS class(es) to apply to the link.
-
-### page_link Examples
-
-```django
-{% page_link "about" %}
-{% page_link "contact" outer="li" outer_class="menu-item" link_class="page-link" %}
-```
-
-## rss_url
-
-Returns the URL of the RSS feed.
-
-**Returns:** A plain text representation of the URL.
-
-### get_rss_url Examples
-
-```django
-<a href="{% rss_url %}">RSS Feed</a>
-
-<link rel="alternate" type="application/rss+xml" title="Latest Posts" href="{% rss_url %}">
-```
-
-## rss_link
-
-Returns the HTML link tag with the correct attributes for the RSS URL. If RSS is disabled, this will return nothing.
-
-**Returns:** HTML marked as safe.
-
-### rss_link Examples
-
-  ```django
-  {% rss_link %}
-  ```
-
-  ```html
-  <link rel="alternate" type="application/rss+xml" title="Latest Posts" href="/rss/">
-  ```

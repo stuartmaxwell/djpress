@@ -1,7 +1,18 @@
 # Plugins
 
 DJ Press includes a plugin system that allows you to extend its functionality. Plugins can modify content before and
-after rendering, and future versions will include more hook points for customization.
+after rendering, send notifications when content is published, and more. The plugin system is designed to be easy to
+use while still being powerful enough for complex extensions.
+
+## Plugin Lifecycle
+
+The DJ Press plugin system follows this lifecycle:
+
+1. **Discovery** - Plugins are loaded from the `PLUGINS` setting during application startup
+2. **Initialisation** - Each plugin's `__init__` and `setup` methods are called
+3. **Registration** - Plugins register callbacks for specific hooks
+4. **Execution** - Callbacks are executed when hooks are triggered during normal application operation
+5. **Cleanup** - When Django shuts down, plugins can perform cleanup (if needed)
 
 ## Creating a Plugin
 
@@ -11,130 +22,282 @@ To create a plugin, create a new Python package with the following structure:
 djpress_my_plugin/
     __init__.py
     plugin.py
+    tests/
+        __init__.py
+        test_plugin.py
 ```
 
 In `plugin.py`, create a class called `Plugin` that inherits from `DJPressPlugin`:
 
 ```python
-from djpress.plugins import DJPressPlugin
+from djpress.plugins import DJPressPlugin, Hooks
 
 class Plugin(DJPressPlugin):
-    name = "djpress_my_plugin"  # Required - recommended to be the same as the package name
+    name = "djpress_my_plugin"  # Required - use same name as package
+
+    def __init__(self):
+        super().__init__()
+        # Initialise your plugin here if needed
+        self.initialized = True
 
     def setup(self, registry):
         # Register your hook callbacks
-        registry.register_hook("pre_render_content", self.modify_content)
-        registry.register_hook("post_render_content", self.modify_html)
+        registry.register_hook(Hooks.PRE_RENDER_CONTENT, self.modify_content)
+        registry.register_hook(Hooks.POST_RENDER_CONTENT, self.modify_html)
+        registry.register_hook(Hooks.POST_SAVE_POST, self.notify_on_publish)
+
+        # Load any saved configuration or state
+        self.my_saved_state = self.get_data()
 
     def modify_content(self, content: str) -> str:
-        """Modify the markdown content before rendering."""
-        # Create your code here...
-        return content
+        """Modify the markdown content before rendering.
 
-    def modify_html(self, content: str) -> str:
-        """Modify the HTML after rendering."""
-        # Create your code here...
-        return content
+        Args:
+            content: The raw markdown content
+
+        Returns:
+            Modified markdown content
+        """
+        try:
+            # Always wrap plugin code in try/except to prevent site breakage
+            if not content or not isinstance(content, str):
+                return content
+
+            # Example: Add a header to all content
+            prefix = self.config.get("prefix_text", "")
+            if prefix:
+                content = f"{prefix}\n\n{content}"
+
+            return content
+        except Exception as e:
+            # Log the error but don't break the site
+            import logging
+            logging.error(f"Error in modify_content: {e}")
+            return content
+
+    def modify_html(self, html_content: str) -> str:
+        """Modify the HTML after markdown rendering.
+
+        Args:
+            html_content: The rendered HTML content
+
+        Returns:
+            Modified HTML content
+        """
+        try:
+            # Example: Add a footer to all content
+            suffix = self.config.get("suffix_text", "")
+            if suffix and html_content:
+                html_content = f"{html_content}<div class='plugin-footer'>{suffix}</div>"
+            return html_content
+        except Exception as e:
+            import logging
+            logging.error(f"Error in modify_html: {e}")
+            return html_content
+
+    def notify_on_publish(self, post):
+        """Send notification when a post is published.
+
+        Args:
+            post: The Post object that was published
+
+        Returns:
+            None (return value is ignored for this hook)
+        """
+        try:
+            # Example: Track published posts in plugin storage
+            data = self.get_data() or {"published_posts": []}
+
+            # Add the post ID to our tracking list if not already there
+            if post.id not in data.get("published_posts", []):
+                data.setdefault("published_posts", []).append(post.id)
+                self.save_data(data)
+
+            # Example: Could send an email, ping a webhook, etc.
+            if self.config.get("send_notifications"):
+                self._send_notification(post)
+        except Exception as e:
+            import logging
+            logging.error(f"Error in notify_on_publish: {e}")
+
+    def _send_notification(self, post):
+        """Private helper method to send notifications."""
+        # Implementation would depend on notification method
+        pass
 ```
 
 ## Saving Plugin Data
 
-Plugins can store a blob of JSON data in the database through the use of a JSONField on the PluginStorage model.
+Plugins can store data in the database through the `PluginStorage` model. This is useful for maintaining state between
+requests or for caching data.
 
-To retrieve the data, plugins can use: `data = self.get_data()`, and to save the data: `self.save_data(data)`.
+```python
+# Get the current data (returns None if no data exists)
+data = self.get_data()
+
+# Initialise if needed
+if data is None:
+    data = {"counter": 0, "settings": {}}
+
+# Update the data
+data["counter"] += 1
+data["settings"]["last_updated"] = str(timezone.now())
+
+# Save the data back to the database
+self.save_data(data)
+```
+
+The data must be JSON-serialisable (dictionaries, lists, strings, numbers, booleans, or None).
 
 ## Available Hooks
 
-Currently available hooks:
+DJ Press provides these hooks for plugins:
 
-- `pre_render_content`: Called before markdown content is rendered to HTML. Passes the content to the plugin and
-  expects to get content back.
-- `post_render_content`: Called after markdown content is rendered to HTML. Passes the content to the plugin and
-  expects to get content back.
-- `post_save_post`: Called after saving a published post. Passes the published post to the plugin and ignores any
-  returned values.
+| Hook Name             | Description                                        | Arguments                 | Expected Return           |
+|-----------------------|----------------------------------------------------|---------------------------|---------------------------|
+| `PRE_RENDER_CONTENT`  | Called before markdown content is rendered to HTML | `content: str` (markdown) | Modified markdown content |
+| `POST_RENDER_CONTENT` | Called after markdown content is rendered to HTML  | `content: str` (HTML)     | Modified HTML content     |
+| `POST_SAVE_POST`      | Called after saving a published post               | `post: Post` (object)     | None (return ignored)     |
 
-**Note** that you can also import the `Hooks` enum class, and reference the hook names specifically, e.g.
-`from djpress.plugins import Hooks` and then you can refer to the above hooks as follows:
+You can reference hooks using the `Hooks` enum:
 
-- `Hooks.PRE_RENDER_CONTENT`
-- `Hooks.POST_RENDER_CONTENT`
-- `Hooks.POST_SAVE_POST`
+```python
+from djpress.plugins import Hooks
 
-Each hook receives a value as its first argument and returns a value to be used by DJ Press. For example, the hooks
-relating to rendering content expect to receive content back to continue processing. However, the `POST_SAVE_POST` hook
-ignores any returned values since it has finished processing that step.
+# Use in your plugin setup
+registry.register_hook(Hooks.PRE_RENDER_CONTENT, self.my_callback)
+```
 
 ## Installing Plugins
 
-- Install your plugin package:
+To install a plugin, follow these steps:
+
+1. Install the plugin package:
 
 ```bash
 pip install djpress-my-plugin
 ```
 
-- Add the plugin to your DJ Press settings by adding the package name of your plugin to the `PLUGINS` key in `DJPRESS_SETTINGS`.
-  If you use the recommended file structure for your plugin as described above, you only need the package name,
-  i.e. this assumes your plugin code resides in a class called `Plugin` in a module called `plugins.py`
+1. Add the plugin to your settings:
 
 ```python
 DJPRESS_SETTINGS = {
     "PLUGINS": [
-        "djpress_my_plugin"
+        "djpress_my_plugin"  # Package name
     ],
 }
 ```
 
-- If you have a more complex plugin or you prefer a different style of packaging your plugin, you must use the full
-  path to your plugin class. For example, if your package name is `djpress_my_plugin` and the module with your plugin
-  class is `custom.py` and the plugin class is called `MyPlugin`, you'd need to use the following format:
+1. Run migrations and restart your server:
+
+```bash
+python manage.py migrate
+```
+
+If your plugin is structured differently, specify the full path:
 
 ```python
 DJPRESS_SETTINGS = {
     "PLUGINS": [
-        "djpress_my_plugin.custom.MyPlugin"
+        "djpress_my_plugin.custom.MyPlugin"  # Full path to class
     ],
 }
 ```
 
 ## Plugin Configuration
 
-Plugins can receive configuration through the `PLUGIN_SETTINGS` dictionary. Access settings in your plugin using `self.config`.
-
-For example, here is the `PLUGIN_SETTINGS` from the example plugin in this repository. **Note** that the dictionary key
-is the `name` of the plugin and not the package name. It's recommended to keep the `name` of the plugin the same as the
-package name, otherwise it will get confusing.
+Configure plugins using the `PLUGIN_SETTINGS` dictionary:
 
 ```python
 DJPRESS_SETTINGS = {
-    "PLUGINS": ["djpress_example_plugin"],  # this is the package name!
+    "PLUGINS": ["djpress_example_plugin"],
     "PLUGIN_SETTINGS": {
-        "djpress_example_plugin": {  # this is the plugin name!
-            "pre_text": "Hello, this text is configurable!",
-            "post_text": "Goodbye, this text is configurable!",
+        "djpress_example_plugin": {  # Must match plugin's 'name'
+            "prefix_text": "### Featured Content",
+            "suffix_text": "<em>Thanks for reading!</em>",
+            "send_notifications": True,
+            "notification_email": "admin@example.com",
         },
     },
 }
 ```
 
-In your plugin, you can access these settings using `self.config.get("pre_text")` or `self.config.get("post_text")`.
+Access settings in your plugin using `self.config`:
+
+```python
+# Get with default value if setting doesn't exist
+prefix = self.config.get("prefix_text", "Default prefix")
+
+# Check if a setting exists
+if "send_notifications" in self.config:
+    # Do something
+```
+
+## Error Handling
+
+Proper error handling is essential for plugins. Always wrap your code in try/except blocks:
+
+```python
+def my_hook_handler(self, content):
+    try:
+        # Your code here
+        return modified_content
+    except Exception as e:
+        import logging
+        logging.error(f"Plugin error in my_hook_handler: {e}")
+        # Return original content to avoid breaking the site
+        return content
+```
+
+## Testing Your Plugin
+
+Create tests in the `tests` directory:
+
+```python
+# tests/test_plugin.py
+from django.test import TestCase
+from djpress.plugins import registry
+from djpress_my_plugin.plugin import Plugin
+
+class MyPluginTest(TestCase):
+    def setUp(self):
+        self.plugin = Plugin()
+
+    def test_modify_content(self):
+        original = "# Test Content"
+        modified = self.plugin.modify_content(original)
+        self.assertIn("Test Content", modified)
+
+    def test_plugin_registration(self):
+        # Test that plugin registers correctly
+        registry.load_plugins()
+        self.assertIn(self.plugin.name, [p.name for p in registry.plugins])
+```
 
 ## Plugin Development Guidelines
 
-1. You must define a unique `name` for your plugin and strongly recommend this is the same as the package name.
-2. Handle errors gracefully - don't let your plugin break the site.
-3. Use type hints for better code maintainability.
-4. Include tests for your plugin's functionality.
-5. Document any settings your plugin uses.
+1. **Unique Name**: Define a unique `name` property that matches your package name.
+2. **Error Handling**: Always use try/except to prevent crashing the site.
+3. **Type Hints**: Use type hints for better code maintainability.
+4. **Documentation**: Document your plugin's purpose, hooks, and configuration options.
+5. **Testing**: Include comprehensive tests for your plugin's functionality.
+6. **Performance**: Be mindful of performance in hooks that run frequently.
+7. **Security**: Validate and sanitise any user-provided data.
 
 ## System Checks
 
 DJ Press includes system checks that will warn about:
 
 - Unknown hooks (might indicate deprecated hooks or version mismatches)
+- Plugins that fail to load or initialise properly
 
 Run Django's check framework to see any warnings:
 
 ```bash
 python manage.py check
 ```
+
+## Complete Example Plugin
+
+Check out the [example plugin](https://github.com/stuartmaxwell/djpress/tree/main/djpress-example-plugin)
+included with DJ Press for a working reference implementation.

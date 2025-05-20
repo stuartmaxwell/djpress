@@ -6,7 +6,7 @@ DJ Press uses the built-in Django media management system that allows you to upl
 
 The Media management feature provides:
 
-- File uploads with automatic date-based organization
+- File uploads with automatic date-based organisation
 - Custom upload paths, configurable through the settings
 - Support for different media types (images, documents, audio, video, etc.)
 - Admin interface for managing uploaded files
@@ -106,7 +106,7 @@ Media uploads and management follow Django's permissions system:
 ## Best Practices
 
 1. **Use Alt Text**: Always provide descriptive alt text for images to improve accessibility
-2. **Organize With Titles**: Use clear, descriptive titles to make files easy to find
-3. **Optimize Images**: Optimize large images before uploading to improve page load times
+2. **Organise With Titles**: Use clear, descriptive titles to make files easy to find
+3. **Optimise Images**: Optimise large images before uploading to improve page load times
 4. **Use Appropriate Types**: Select the correct media type when uploading files
 5. **Consider File Size**: Be mindful of file sizes, especially for images and videos

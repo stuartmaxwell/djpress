@@ -110,7 +110,7 @@ The default change frequencies are:
 - Categories: daily
 - Archives: daily
 
-To customize these, subclass the relevant sitemap class:
+To customise these, subclass the relevant sitemap class:
 
 ```python
 from djpress.sitemaps import PostSitemap
