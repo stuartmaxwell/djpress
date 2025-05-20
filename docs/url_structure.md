@@ -1,205 +1,253 @@
 # URL Structure
 
-## Types of pages
+This document explains how URLs are organised in DJ Press and how to customise them for your site's needs.
 
-- [Page](#page)
-- [Post](#post)
-- [Index](#index)
+## Types of Content
+
+DJ Press manages three main types of content, each with their own URL structure:
+
+- [Pages](#page) - Static content like "About Us" or "Contact"
+- [Posts](#post) - Blog entries organised chronologically
+- [Index pages](#index) - Collections of posts organised by date, category, tag, or author
 
 ## Page
 
-A page is a single piece of content stored in the `Post` table with a `post_type` of `page`. They are used to build static pages on your site that don't belong to categories, nor do they form part of any chronological structure, although they do have created and updated dates that can be used if desired. A page can have a parent (and that parent can have a parent), so that you can build a hierarchical menu. Typical examples are "About" pages or "Contact" pages.
+A page is standalone content with a `post_type` of `page`. Pages:
+
+- Don't belong to categories or tags
+- Can have a hierarchical structure with parent pages
+- Have simple URLs based on their slug
+- Can be used for static content like "About", "Contact", etc.
 
 ## Post
 
-A post is a single blog post stored in the `Post` table with a `post_type` of `post`. A post can belong to categories and tags, and have a created date that is used to display posts in a chronological order on an "Index" page. Posts also have an updated date field that can optionally be used if desired.
+A post is a blog entry with a `post_type` of `post`. Posts:
+
+- Belong to categories and can have tags
+- Are organised chronologically
+- Have URLs that typically include date information
+- Form the primary content of your blog
 
 ## Index
 
-These are views that display a chronological list of blog posts that match a particular aspect. For example "/2024" would show all posts in the year 2024, or "/author/sam" shows all blog posts from the author called Sam. Index views have pagination to limit the number of posts displayed on a page which is configurable in the settings. Also, on an Index page, the posts are typically truncated to avoid polluting search engines with multiple copies of the same post on different URLs (although this is configurable).
+Index pages display collections of posts filtered by specific criteria:
 
-### URL Types
+- Date-based archives (yearly, monthly, daily)
+- Category archives
+- Tag archives
+- Author archives
 
-- [Single post](#single-post) (Post)
-- [Single page](#single-page) (Page)
-- [Archive page](#archive-page) (Index)
-- [Category page](#category-page) (Index)
-- [Author page](#author-page) (Index)
-- [Tag page](#tag-page) (Index)
-- [Special URLs](#special-urls)
+Index pages include pagination and typically display truncated post content.
 
-### Single post
+## URL Patterns
 
-URL structure - always ends with the post_slug:
+### Single Post
 
-- /{{ POST_PREFIX }}/{{ post_slug }}
+Post URLs follow this pattern:
 
-Prefix is optional and configurable with the `POST_PREFIX` setting, and the default setting is `{{ year }}/{{ month }}/{{ day }}`. It's made up text and date fields, e.g.
+```text
+/{{ POST_PREFIX }}/{{ post_slug }}
+```
 
-- {{ year }}/{{ month }}/{{ day }} == "/2024/01/01/test-post"
-- {{ year }}/{{ month }} == "/2024/01/test-post"
-- {{ year }} == "/2024/test-post"
-- post/{{ year }}/{{ month }}/{{ day }} == "/post/2024/01/01/test-post"
-- {{ year }}/{{ month }}/{{ day }}/post == "/2024/01/01/post/test-post"
-- foo{{ year }}bar{{ month }} == "/foo2024bar01/test-post"
-- articles == "/articles/test-post"
+The `POST_PREFIX` setting can include date placeholders and static text:
 
-### Single page
+| Example `POST_PREFIX`                        | Sample URL            |
+|----------------------------------------------|-----------------------|
+| `{{ year }}/{{ month }}/{{ day }}` (default) | `/2024/05/20/my-post` |
+| `{{ year }}/{{ month }}`                     | `/2024/05/my-post`    |
+| `blog/{{ year }}`                            | `/blog/2024/my-post`  |
+| `articles`                                   | `/articles/my-post`   |
+| *(empty string)*                             | `/my-post`            |
 
-URL structure - can be either the slug name or with an optional parent:
+### Single Page
 
-- /{{ page_slug }}
-- /{{ parent_page_slug }}/{{ page_slug }}
+Page URLs follow a hierarchical pattern:
 
-Note that the parent is a page itself, and this could also have a parent:
+```text
+/{{ parent_slug }}/{{ parent_slug }}/{{ page_slug }}
+```
 
-- /{{ parent_page_slug }}/{{ parent_page_slug }}/{{ page_slug }}
-- /{{ parent_page_slug }}/{{ parent_page_slug }}/{{ parent_page_slug }}/{{ page_slug }}
+Pages can have unlimited nesting levels, with each level represented by its slug:
 
-### Archive page
+| Page Structure                    | URL                      |
+|-----------------------------------|--------------------------|
+| Page: "About"                     | `/about`                 |
+| Page: "Team" (parent: About)      | `/about/team`            |
+| Page: "Leadership" (parent: Team) | `/about/team/leadership` |
 
-URL structure - date-based URLs with an optional prefix:
+### Archive Page
 
-- /{{ ARCHIVE_PREFIX }}/{{ year }}/{{ month }}/{{ day }}
-- /{{ ARCHIVE_PREFIX }}/{{ year }}/{{ month }}
-- /{{ ARCHIVE_PREFIX }}/{{ year }}
+Archive URLs display posts from a specific time period:
 
-Prefix is an optional string, and is configurable with the `ARCHIVE_PREFIX` setting e.g.
+```text
+/{{ ARCHIVE_PREFIX }}/{{ year }}/{{ month }}/{{ day }}
+```
 
-- /2024/01/31
-- /2024/01
-- /2024/
-- /archives/2024/01/31
-- /archives/2024/01
-- /archives/2024/
+The `ARCHIVE_PREFIX` is optional (default is empty):
 
-The `ARCHIVE_PREFIX` setting is configured as an empty string by default, so no prefix is used.
+| Example       | URL              | Content                     |
+|---------------|------------------|-----------------------------|
+| Year archive  | `/2024`          | All posts from 2024         |
+| Month archive | `/2024/05`       | All posts from May 2024     |
+| Day archive   | `/2024/05/20`    | All posts from May 20, 2024 |
+| With prefix   | `/archives/2024` | All posts from 2024         |
 
-This feature is enabled by default, but can be disabled by setting `ARCHIVE_ENABLED` to `False`
+Enable/disable with `ARCHIVE_ENABLED` (default: `True`).
 
-### Category page
+### Category Page
 
-URL structure - a prefix and the category slug
+Category URLs follow this pattern:
 
-- /{{ CATEGORY_PREFIX }}/{{ category_slug }}
+```text
+/{{ CATEGORY_PREFIX }}/{{ category_slug }}
+```
 
-The prefix is configurable with the `CATEGORY_PREFIX` setting, but is not optional, e.g.:
+The `CATEGORY_PREFIX` is required (default is "category"):
 
-- /group/{{ category_slug }}
-- /cat/{{ category_slug }}
+| Example       | URL              | Content                          |
+|---------------|------------------|----------------------------------|
+| Default       | `/category/news` | All posts in the "News" category |
+| Custom prefix | `/topics/news`   | All posts in the "News" category |
 
-However, browsing by category can be disabled with the `CATEGORY_ENABLED` setting. This is set to `True` by default.
+Enable/disable with `CATEGORY_ENABLED` (default: `True`).
 
-### Author page
+### Author Page
 
-URL structure - a prefix and the author's username:
+Author URLs follow this pattern:
 
-- /{{ AUTHOR_PREFIX }}/{{ author_username }}
+```text
+/{{ AUTHOR_PREFIX }}/{{ username }}
+```
 
-The prefix is configurable with the `AUTHOR_PREFIX` setting, but is not optional:
+The `AUTHOR_PREFIX` is required (default is "author"):
 
-- /writer/{{ author_username }}
-- /a/{{ author_username }}
+| Example       | URL               | Content                     |
+|---------------|-------------------|-----------------------------|
+| Default       | `/author/johndoe` | All posts by user "johndoe" |
+| Custom prefix | `/writer/johndoe` | All posts by user "johndoe" |
 
-However, browsing by author can be disabled with the `AUTHOR_ENABLED` setting. This is set to `True` by default.
+Enable/disable with `AUTHOR_ENABLED` (default: `True`).
 
-### Tag page
+### Tag Page
 
-URL structure - a prefix and the tag slug.
+Tag URLs follow this pattern:
 
-- /{{ TAG_PREFIX }}/{{ tag_slug }}
+```text
+/{{ TAG_PREFIX }}/{{ tag_slug }}
+```
 
-Multiple tags can be combined so that only posts with all tags are displayed:
+For multiple tags:
 
-- /{{ TAG_PREFIX }}/{{ tag_slug }}+{{ tag_slug }}
+```text
+/{{ TAG_PREFIX }}/{{ tag_slug }}+{{ tag_slug }}
+```
 
-The prefix is configurable with the `{{ TAG_PREFIX }}` setting, but is not optional:
+The `TAG_PREFIX` is required (default is "tag"):
 
-- /topic/{{ tag_slug }}
-- /t/{{ tag_slug }}
+| Example       | URL                  | Content                                      |
+|---------------|----------------------|----------------------------------------------|
+| Single tag    | `/tag/python`        | Posts tagged with "python"                   |
+| Multiple tags | `/tag/python+django` | Posts tagged with both "python" and "django" |
+| Custom prefix | `/topics/python`     | Posts tagged with "python"                   |
 
-However, browsing by tag can be disabled with the `TAG_ENABLED` setting. This is set to `True` by default.
+Enable/disable with `TAG_ENABLED` (default: `True`).
 
 ### Special URLs
 
-There may be additional URL patterns that need to be resolved, that are not covered by the above rules.
+These special URLs serve specific purposes:
 
-#### RSS feed
+| URL Pattern       | Description              | Setting                     |
+|-------------------|--------------------------|-----------------------------|
+| `/{{ RSS_PATH }}` | RSS feed of recent posts | `RSS_PATH` (default: "rss") |
 
-- /{{ RSS_PATH }}
+## URL Resolution Priority
 
-The `{{ RSS_PATH }}` setting is configurable but not optional. This is set to `rss` by default.
+When a user visits a URL, DJ Press determines what content to display using this resolution order:
 
-However, the RSS feed can be disabled with the `RSS_ENABLED` settings. This is set to `True` by default.
+1. **Special URLs** (highest priority)
+   - RSS feed (`/rss` by default)
+   - Any other special URLs configured by plugins
 
-## URL Resolution
+2. **Explicit URL patterns with prefixes** (second priority)
+   - Single post matching post prefix pattern
+   - Archive pages matching date patterns
+   - Category pages matching category prefix
+   - Tag pages matching tag prefix
+   - Author pages matching author prefix
 
-The order in which URLs are resolved is important since with non-unique slugs, and configurable prefixes, it's possible to create "overlapping" URLs. For example, consider the following URLs:
+3. **Pages** (lowest priority)
+   - Any URL not matching the above patterns is treated as a page URL
 
-- A post with the URL: /2024/01/31/news
-- A page with the URL: /news
+### Conflict Resolution
 
-Those two URLs are completely valid, but later the user could choose to remove the `POST_PREFIX` and then we would end up with the following two URLs:
+When URL patterns could match multiple content types, the above priority order determines which content is shown. For
+example:
 
-- A post with the URL: /news
-- A page with the URL: /news
+```text
+/news/
+```
 
-To avoid excessive, and complex validation when modifying the settings, we will implement a URL resolution heirarchy which will determine which URL pattern matches first. Given the above example, we could choose to resolve posts first or to resolve pages first, which would determine which piece of content is displayed. This section will outline the order of priority.
+Could potentially be:
 
-1. Look for special URLs:
-    1. RSS_PATH
-2. Look for known prefixes:
-    1. POST_PREFIX - this is a single post
-    2. ARCHIVE_PREFIX - this is an archives index
-    3. CATEGORY_PREFIX - this is a category index
-    4. AUTHOR_PREFIX - this is an author index
-    5. TAG_PREFIX - this is a tag index
-3. If no valid prefix - this is a page
+- A post with slug "news" (if POST_PREFIX is empty)
+- A page with slug "news"
 
-### Notes
+In this case, the post would be displayed because posts have higher priority than pages in URL resolution.
 
-1. POST_PREFIX
-    - Translate the POST_PREFIX into a regex
-    - Components used to make up the prefix (all optional):
-        - Free form text, e.g. "post"
-        - Year = {{ year }}  = `(?P<year>\d{4})`
-        - Month = {{ month }} = `(?P<month>\d{2})`
-        - Day = {{ day }} = `(?P<day>\d{2})`
-    - e.g. "post/{{ year }}/{{ month }}/{{ day }}" = `r"/post/(?P<year>\d{4})/(?P<month>\d{2})/(?P<day>\d{2})"`
-    - The rest of the path is assumed to be the slug and used to find the post
-        - If the POST_PREFIX has a date, use this to ensure the post matches the date
-        - If multiple posts match, get the most recent post, e.g.
-            - /post/2024/01/test-post - this could have been published on 2024/01/01
-            - /post/2024/01/test-post - this could have been published on 2024/01/31
-            - Both have the same URL, choose the most recent one.
-2. ARCHIVE_PREFIX
-    - First we need to calculate the "prefix" (effectively the full URL)
-    - e.g. `r"/archives/(?P<year>\d{4})(?:/(?P<month>\d{2})(?:/(?P<day>\d{2}))?)?$"`
-    - After matching, the year, month and day would need to be tested to ensure they are valid
-    - If the date isn't valid, return an error (400?)
-    - Then retrieve all posts matching that date
+To avoid conflicts, use distinctive prefixes for your content types:
 
-Unfinished notes...
+```python
+DJPRESS_SETTINGS = {
+    "POST_PREFIX": "blog",     # Posts: /blog/my-post
+    "CATEGORY_PREFIX": "topic", # Categories: /topic/news
+    "TAG_PREFIX": "tagged",    # Tags: /tagged/python
+}
+```
 
-1. CATEGORY_PREFIX
-    - e.g. /category/...
-    - The rest of the path is the category
-    - If the category doesn't exist, return a 404
-2. TAG_PREFIX
-    - e.g. /tag/...
-    - The rest of the path is the tag
-    - If the tag doesn't exist, return a 404
-3. AUTHOR_PREFIX
-    - e.g. /author/...
-    - The rest of the path is the author
-    - If the author doesn't exist, return a 404
-4. Other prefixes?
-    - Media uploads?
-    - What if we put the blog at the root of the site, and then created a page called "/static"? would that interfere with static files, or is that resolved earlier?
-5. There is only one possible scenario left:
-    - The URL is a page
-    - We need to break up any URL parts to look for parents, e.g.
-        - /company/news
-        - /charities/news
-        - /news
-        - All three of those are different pages but with the same page-slug
+## SEO Considerations
+
+### URL Structure Best Practices
+
+1. **Use descriptive slugs**
+   - Good: `/blog/django-template-guide`
+   - Avoid: `/blog/post-12345`
+
+2. **Keep URLs consistent**
+   - Once you define your URL structure, avoid changing it to prevent broken links
+   - If you must change URLs, implement proper 301 redirects
+
+3. **Keep URLs short**
+   - Consider using `POST_PREFIX` with just the year or year/month instead of full dates
+   - Example: `/2024/django-template-guide` vs. `/2024/05/20/django-template-guide`
+
+4. **Use hyphens for word separation**
+   - Good: `/blog/seo-best-practices`
+   - Avoid: `/blog/seo_best_practices` or `/blog/seobestpractices`
+
+5. **Leverage canonical URLs**
+   - DJ Press automatically adds canonical URLs to prevent duplicate content issues
+   - For posts accessible via multiple URLs (like date archives), the single post URL is canonical
+
+### Recommended Configurations
+
+For a blog focused on SEO:
+
+```python
+DJPRESS_SETTINGS = {
+    "POST_PREFIX": "{{ year }}/{{ month }}",  # Shorter URLs with just year/month
+    "CATEGORY_PREFIX": "category",            # Clear content type in URL
+    "TAG_PREFIX": "tag",                      # Clear content type in URL
+    "AUTHOR_PREFIX": "author",                # Clear content type in URL
+}
+```
+
+For a documentation site:
+
+```python
+DJPRESS_SETTINGS = {
+    "POST_PREFIX": "docs",                   # Simple prefix without dates
+    "CATEGORY_PREFIX": "section",            # Represents documentation sections
+    "TAG_PREFIX": "topic",                   # Represents documentation topics
+    "ARCHIVE_ENABLED": False,                # Disable date-based archives
+}
+```

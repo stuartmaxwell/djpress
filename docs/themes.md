@@ -1,50 +1,316 @@
 # Themes
 
-A DJ Press theme is a collection of one or more Django template files. and any static files required to style those
-templates.
+A DJ Press theme is a collection of Django template files and static assets that control the look and feel of your blog.
+This guide explains how to use existing themes, customise them, or create your own theme from scratch.
 
-## Template Files
+## Theme Structure
 
-Template files should be copied to: `./templates/djpress/{{ your_theme_name }}/`. At a minimum, the theme must include
-an `index.html` file. You can build an entire theme with just this one file, and an example can be seen in the DJ Press
-included theme called `default`.
+### Template Files
 
-Other template files that can be included are as follows:
+Template files must be placed in: `./templates/djpress/{{ your_theme_name }}/`
 
-- `home.html` - used on the home page view, i.e. `https://yourblog.com/`
-- `archives.html` - used to display the date-based archives views, e.g. `https://yourblog.com/2024/`
-- `category.html` - used to display blog posts in a particular category, e.g. `https://yourblog.com/category/news/`
-- `author.html` - used to display blog posts by a particular author, e.g. `https://yourblog.com/author/sam/`
-- `single.html` - used to display a single blog post, e.g. `https://yourblog.com/2024/09/30/my-interesting-blog-post/`
-- `page.html` - used to display a single page, e.g. `https://yourblog.com/colophon/`
+At minimum, a theme needs an `index.html` template. If this is the only template you provide, it will be used for all
+views. For more specialised layouts, you can create these additional templates:
 
-In all cases, if the above file is not found, the `index.html` page will be displayed instead.
+| Template Name   | Used For            | Example URL                                |
+|-----------------|---------------------|--------------------------------------------|
+| `home.html`     | Home page           | `https://yourblog.com/`                    |
+| `single.html`   | Individual posts    | `https://yourblog.com/2024/05/20/my-post/` |
+| `page.html`     | Static pages        | `https://yourblog.com/about/`              |
+| `archives.html` | Date-based archives | `https://yourblog.com/2024/`               |
+| `category.html` | Category pages      | `https://yourblog.com/category/news/`      |
+| `tag.html`      | Tag pages           | `https://yourblog.com/tag/python/`         |
+| `author.html`   | Author pages        | `https://yourblog.com/author/sam/`         |
 
-## Static Files
+When a specific template isn't available, DJ Press falls back to `index.html`.
 
-Static files should be copied to: `./static/djpress/{{ your_theme_name }}/`. Static files are typically grouped into
-sub-directories for CSS or JavaScript or image files, e.g. `./static/djpress/{{ your_theme_name }}/css/` or
-`./static/djpress/{{ your_theme_name }}/js/` or `./static/djpress/{{ your_theme_name }}/img`, but these
-sub-directories are optional and up to the theme developer how or if to use them.
+### Static Files
 
-From within the template files, static assets can be referenced using standard Django template tags, e.g.
-`{% static 'djpress/{{ your_theme_name }}/css/style.css' %}`, depending on the aforementioned directory structure.
+Static files (CSS, JavaScript, images) should be placed in: `./static/djpress/{{ your_theme_name }}/`
 
-## Configure a Theme
+Recommended organisation:
 
-In your Django project settings file, configure the `THEME` setting in the `DJPRESS_SETTINGS` object, e.g.
+- `./static/djpress/{{ your_theme_name }}/css/`
+- `./static/djpress/{{ your_theme_name }}/js/`
+- `./static/djpress/{{ your_theme_name }}/img/`
+
+Access static files in your templates using the Django `static` tag:
+
+```django
+{% load static %}
+<link rel="stylesheet" href="{% static 'djpress/mytheme/css/style.css' %}">
+<script src="{% static 'djpress/mytheme/js/main.js' %}"></script>
+<img src="{% static 'djpress/mytheme/img/logo.png' %}" alt="Logo">
+```
+
+## Activating a Theme
+
+To use a theme, set the `THEME` setting in your Django project's settings:
 
 ```python
 DJPRESS_SETTINGS = {
-  "THEME": "your_theme_name",
+    "THEME": "mytheme",
 }
 ```
 
-In the example configuration, `your_theme_name` must match exactly the directory name that the theme's template files
-are copied to. If this directory cannot be found, or if there is no matching template file in it, your site will crash
-with a `TemplateDoesNotExist` error.
+The theme name must match the directory name under `templates/djpress/` and `static/djpress/`.
 
-## Examples
+## Creating a Custom Theme
 
-There are currently two themes included in DJ Press: `default` and `simple`. The `default` theme demonstrates how to
-build a theme with just a single `index.html` file, whereas the `simple` theme uses all available template types.
+Creating a custom theme involves these steps:
+
+1. Create the necessary directories:
+
+   ```bash
+   mkdir -p templates/djpress/mytheme
+   mkdir -p static/djpress/mytheme/css
+   mkdir -p static/djpress/mytheme/js
+   mkdir -p static/djpress/mytheme/img
+   ```
+
+2. Create an `index.html` template (minimum requirement):
+
+   ```django
+   {% load static %}
+   {% load djpress_tags %}
+
+   <!DOCTYPE html>
+   <html lang="en">
+   <head>
+       <meta charset="UTF-8">
+       <meta name="viewport" content="width=device-width, initial-scale=1.0">
+       <title>{% page_title post_text="| " %}{% site_title %}</title>
+       <link rel="stylesheet" href="{% static 'djpress/mytheme/css/style.css' %}">
+       {% rss_link %}
+   </head>
+   <body>
+       <header>
+           <h1>{% site_title_link %}</h1>
+           <nav>{% site_pages %}</nav>
+       </header>
+
+       <main>
+           {% if post %}
+               {% post_wrap %}
+                   <h1>{% get_post_title %}</h1>
+                   <div class="meta">
+                       By {% post_author %} | {% post_date %}
+                   </div>
+                   <div class="content">
+                       {% post_content %}
+                   </div>
+                   <div class="taxonomy">
+                       Categories: {% post_categories %}
+                       Tags: {% post_tags %}
+                   </div>
+               {% end_post_wrap %}
+           {% else %}
+               <h1>Latest Posts</h1>
+               {% for post in posts %}
+                   {% post_wrap %}
+                       <h2>{% post_title %}</h2>
+                       <div class="meta">
+                           By {% post_author %} | {% post_date %}
+                       </div>
+                       <div class="content">
+                           {% post_content %}
+                       </div>
+                   {% end_post_wrap %}
+               {% empty %}
+                   <p>No posts found.</p>
+               {% endfor %}
+
+               {% pagination_links %}
+           {% endif %}
+       </main>
+
+       <aside>
+           <h3>Categories</h3>
+           {% blog_categories %}
+
+           <h3>Tags</h3>
+           {% blog_tags %}
+
+           <h3>Archives</h3>
+           <!-- Custom archive links could go here -->
+       </aside>
+
+       <footer>
+           <p>&copy; {% now "Y" %} | Powered by DJ Press</p>
+       </footer>
+   </body>
+   </html>
+   ```
+
+3. Create a basic CSS file (`static/djpress/mytheme/css/style.css`):
+
+   ```css
+   /* Basic styling for the theme */
+   body {
+       font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+       line-height: 1.6;
+       margin: 0;
+       padding: 0;
+       display: grid;
+       grid-template-columns: 1fr 300px;
+       grid-template-areas:
+           "header header"
+           "main sidebar"
+           "footer footer";
+       gap: 20px;
+       max-width: 1200px;
+       margin: 0 auto;
+       padding: 20px;
+   }
+
+   header {
+       grid-area: header;
+       border-bottom: 1px solid #eee;
+       padding-bottom: 20px;
+       margin-bottom: 20px;
+   }
+
+   main {
+       grid-area: main;
+   }
+
+   aside {
+       grid-area: sidebar;
+       background: #f7f7f7;
+       padding: 20px;
+       border-radius: 5px;
+   }
+
+   footer {
+       grid-area: footer;
+       border-top: 1px solid #eee;
+       padding-top: 20px;
+       margin-top: 20px;
+       text-align: center;
+   }
+
+   article {
+       margin-bottom: 30px;
+       padding-bottom: 20px;
+       border-bottom: 1px solid #eee;
+   }
+
+   h1, h2, h3 {
+       color: #333;
+   }
+
+   a {
+       color: #0066cc;
+       text-decoration: none;
+   }
+
+   a:hover {
+       text-decoration: underline;
+   }
+
+   .meta {
+       color: #666;
+       font-size: 0.9em;
+       margin-bottom: 15px;
+   }
+
+   .taxonomy {
+       font-size: 0.9em;
+       margin-top: 15px;
+   }
+   ```
+
+4. Activate your theme in settings:
+
+   ```python
+   DJPRESS_SETTINGS = {
+       "THEME": "mytheme",
+   }
+   ```
+
+## Template Context
+
+DJ Press provides these context variables to your templates:
+
+| Context Variable | Type                | Available In           | Description                              |
+|------------------|---------------------|------------------------|------------------------------------------|
+| `post`           | Post object         | Single post/page views | The current post or page                 |
+| `posts`          | Paginator Page      | Index views            | Collection of posts for the current page |
+| `category`       | Category object     | Category views         | The current category                     |
+| `author`         | User object         | Author views           | The current author                       |
+| `tags`           | List of Tag objects | Tag views              | The current tag(s)                       |
+
+## Conditional Template Logic
+
+You can use conditional logic to create different layouts based on the view type:
+
+```django
+{% if post %}
+    {# Single post/page view #}
+    <h1>{{ post.title }}</h1>
+{% elif category %}
+    {# Category view #}
+    <h1>Category: {{ category.title }}</h1>
+{% elif author %}
+    {# Author view #}
+    <h1>Posts by {{ author.get_full_name }}</h1>
+{% else %}
+    {# Home or archive view #}
+    <h1>Blog Posts</h1>
+{% endif %}
+```
+
+## Built-in Themes
+
+DJ Press includes two reference themes:
+
+1. **default** - A minimalist theme with a single `index.html` template
+2. **simple** - A basic theme that demonstrates using different template types
+
+You can use these as starting points for your own themes.
+
+## Recommended Workflow
+
+1. Start by copying one of the built-in themes
+2. Modify templates and styles to match your design
+3. Test with different content types (posts, pages, archives)
+4. Optimise for mobile devices with responsive CSS
+
+## Advanced Theme Techniques
+
+### Template Inheritance
+
+For more maintainable themes, use Django's template inheritance:
+
+```django
+{# base.html #}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{% block title %}{% site_title %}{% endblock %}</title>
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <header>{% block header %}{% endblock %}</header>
+    <main>{% block content %}{% endblock %}</main>
+    <footer>{% block footer %}{% endblock %}</footer>
+</body>
+</html>
+```
+
+```django
+{# single.html #}
+{% extends "djpress/mytheme/base.html" %}
+
+{% block title %}{{ post.title }} | {% site_title %}{% endblock %}
+
+{% block content %}
+    <article>{{ post.content_markdown }}</article>
+{% endblock %}
+```
+
+### Custom Filters
+
+You can create custom template filters for your theme by creating a `templatetags` directory in your app. But if there
+are missing tags, then it would help us to raise an [issue on GitHub](https://github.com/stuartmaxwell/djpress/issues)
+so we can consider adding them in DJ Press core.
