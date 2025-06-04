@@ -50,7 +50,7 @@ settings = DJPressSettings()
 
 
 @register()
-def check_djpress_settings(**_) -> None:  # noqa: ANN003
+def check_djpress_settings(**_) -> list[Error]:  # noqa: ANN003
     """Validate DJPress settings.
 
     This runs on start up to ensure that the settings are valid.
