@@ -3,7 +3,7 @@
 import datetime
 import logging
 from collections.abc import Iterable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict
 
 from django.contrib.auth.models import User
 from django.core.cache import cache
@@ -27,6 +27,13 @@ render_markdown = get_markdown_renderer()
 
 
 PUBLISHED_POSTS_CACHE_KEY = "published_posts"
+
+
+class PageNode(TypedDict):
+    """Type for representing a page node in the page tree."""
+
+    page: "Post"
+    children: list["PageNode"]
 
 
 class AdminManager(models.Manager):
@@ -143,7 +150,7 @@ class PagesManager(models.Manager):
 
         return current_page
 
-    def get_page_tree(self) -> list[dict["Post", list[dict]]]:
+    def get_page_tree(self) -> list[PageNode]:
         """Return the page tree.
 
         This returns a list of top-level pages. Each page is a dict containing the Post object and a list of children.
@@ -173,16 +180,16 @@ class PagesManager(models.Manager):
         ```
 
         Returns:
-            list[dict["Post", list[dict]]]: A list of top-level pages - each page is a dict containing the Post object
+            PageNode: A list of top-level pages - each page is a dict containing the Post object
             and a list of children. Each child is a dict containing the Post object and a list of children, and so on.
         """
-        pages = self.get_published_pages().select_related("parent")
-        page_dict = {page.id: {"page": page, "children": []} for page in pages}
+        pages: models.QuerySet[Post] = self.get_published_pages().select_related("parent")
+        page_dict = {page.pk: {"page": page, "children": []} for page in pages}
         root_pages = []
         for page_data in page_dict.values():
             page = page_data["page"]
             if page.parent:
-                page_dict[page.parent.id]["children"].append(page_data)
+                page_dict[page.parent.pk]["children"].append(page_data)
 
             else:
                 root_pages.append(page_data)

@@ -6,6 +6,7 @@ from django.utils.safestring import mark_safe
 
 from djpress.conf import settings as djpress_settings
 from djpress.models import Category, Post, Tag
+from djpress.models.post import PageNode
 
 
 def categories_html(
@@ -193,14 +194,18 @@ def post_read_more_link(
     Returns:
         str: The read more link.
     """
-    read_more_text = read_more_text if read_more_text else djpress_settings.POST_READ_MORE_TEXT
+    post_read_more_text = djpress_settings.POST_READ_MORE_TEXT
+    if not isinstance(post_read_more_text, str):
+        msg = f"Expected a string for POST_READ_MORE_TEXT, got {type(post_read_more_text).__name__}"
+        raise TypeError(msg)
+    read_more_text = read_more_text if read_more_text else post_read_more_text
     link_class_html = f' class="{link_class}"' if link_class else ""
 
     return f'<p><a href="{post.url}"{link_class_html}>{read_more_text}</a></p>'
 
 
 def get_site_pages_list(
-    pages: list[dict[Post, list]],
+    pages: list[PageNode],
     li_class: str = "",
     a_class: str = "",
     ul_child_class: str = "",
