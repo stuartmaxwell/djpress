@@ -22,7 +22,7 @@ def upload_to_path(_instance: "Media", filename: str) -> str:
         str: The path where the file should be uploaded
     """
     now = timezone.now()
-    path_template = djpress_settings.MEDIA_UPLOAD_PATH
+    path_template = str(djpress_settings.MEDIA_UPLOAD_PATH)
 
     # Remove spaces from the path - this lets us use {{year}} or {{ year }}
     path_template = path_template.replace(" ", "")
