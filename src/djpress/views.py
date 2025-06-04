@@ -22,7 +22,7 @@ from djpress.utils import get_template_name, validate_date_parts
 logger = logging.getLogger(__name__)
 
 
-def dispatcher(request: HttpRequest, path: str) -> HttpResponse | None:  # noqa: C901, PLR0911
+def dispatcher(request: HttpRequest, path: str) -> HttpResponse:  # noqa: C901, PLR0911
     """Dispatch the request to the appropriate view based on the path."""
     # 1. Check for special URLs first
     if djpress_settings.RSS_ENABLED and (path in (djpress_settings.RSS_PATH, f"{djpress_settings.RSS_PATH}/")):
@@ -73,8 +73,13 @@ def dispatcher(request: HttpRequest, path: str) -> HttpResponse | None:  # noqa:
 
     # 7. Any other path is considered a page
     page_match = re.fullmatch(get_path_regex("page"), path)
-    page_path = page_match.group("path")
-    return single_page(request, path=page_path)
+    if page_match:
+        page_path = page_match.group("path")
+        return single_page(request, path=page_path)
+
+    # If the path doesn't match any of the above, it's not a valid path
+    msg = "Post not found"
+    raise Http404(msg)
 
 
 def entry(
@@ -105,9 +110,14 @@ def index(
     """
     template: str = get_template_name("index")
 
+    recent_published_posts_count = djpress_settings.RECENT_PUBLISHED_POSTS_COUNT
+    if not isinstance(recent_published_posts_count, int) or recent_published_posts_count < 0:  # pragma: no cover
+        msg = "RECENT_PUBLISHED_POSTS_COUNT must be a positive integer"
+        raise ValueError(msg)
+
     posts = Paginator(
         Post.post_objects.get_published_posts(),
-        djpress_settings.RECENT_PUBLISHED_POSTS_COUNT,
+        recent_published_posts_count,
     )
     page_number = request.GET.get("page")
     page = posts.get_page(page_number)
@@ -143,6 +153,13 @@ def archive_posts(
     """
     template: str = get_template_name(view_name="archive_posts")
 
+    recent_published_posts_count = djpress_settings.RECENT_PUBLISHED_POSTS_COUNT
+    if (
+        not isinstance(recent_published_posts_count, int) or recent_published_posts_count <= 0
+    ):  # TODO: test for 0?  # pragma: no cover
+        msg = "RECENT_PUBLISHED_POSTS_COUNT must be a positive integer"
+        raise ValueError(msg)
+
     try:
         date_parts = validate_date_parts(year=year, month=month, day=day)
     except ValueError:
@@ -155,7 +172,7 @@ def archive_posts(
     if "day" in date_parts:
         filtered_posts = filtered_posts.filter(_date__day=date_parts["day"])
 
-    posts = Paginator(filtered_posts, djpress_settings.RECENT_PUBLISHED_POSTS_COUNT)
+    posts = Paginator(filtered_posts, recent_published_posts_count)
     page_number = request.GET.get("page")
     page = posts.get_page(page_number)
 
@@ -182,6 +199,13 @@ def category_posts(request: HttpRequest, slug: str) -> HttpResponse:
     """
     template: str = get_template_name(view_name="category_posts")
 
+    recent_published_posts_count = djpress_settings.RECENT_PUBLISHED_POSTS_COUNT
+    if (
+        not isinstance(recent_published_posts_count, int) or recent_published_posts_count <= 0
+    ):  # TODO: test for 0?  # pragma: no cover
+        msg = "RECENT_PUBLISHED_POSTS_COUNT must be a positive integer"
+        raise ValueError(msg)
+
     try:
         category: Category = Category.objects.get_category_by_slug(slug=slug)
     except ValueError as exc:
@@ -190,7 +214,7 @@ def category_posts(request: HttpRequest, slug: str) -> HttpResponse:
 
     posts = Paginator(
         Post.post_objects.get_published_posts_by_category(category),
-        djpress_settings.RECENT_PUBLISHED_POSTS_COUNT,
+        recent_published_posts_count,
     )
     page_number = request.GET.get("page")
     page = posts.get_page(page_number)
@@ -222,12 +246,19 @@ def tag_posts(request: HttpRequest, slug: str) -> HttpResponse:
     """
     template: str = get_template_name(view_name="tag_posts")
 
+    recent_published_posts_count = djpress_settings.RECENT_PUBLISHED_POSTS_COUNT
+    if (
+        not isinstance(recent_published_posts_count, int) or recent_published_posts_count <= 0
+    ):  # TODO: test for 0?  # pragma: no cover
+        msg = "RECENT_PUBLISHED_POSTS_COUNT must be a positive integer"
+        raise ValueError(msg)
+
     # Create a list of slugs from the slug
     slugs = slug.split("+")
 
     posts = Paginator(
         Post.post_objects.get_published_posts_by_tags(slugs),
-        djpress_settings.RECENT_PUBLISHED_POSTS_COUNT,
+        recent_published_posts_count,
     )
     page_number = request.GET.get("page")
     page = posts.get_page(page_number)
@@ -255,6 +286,13 @@ def author_posts(request: HttpRequest, author: str) -> HttpResponse:
     """
     template: str = get_template_name(view_name="author_posts")
 
+    recent_published_posts_count = djpress_settings.RECENT_PUBLISHED_POSTS_COUNT
+    if (
+        not isinstance(recent_published_posts_count, int) or recent_published_posts_count <= 0
+    ):  # TODO: test for 0?  # pragma: no cover
+        msg = "RECENT_PUBLISHED_POSTS_COUNT must be a positive integer"
+        raise ValueError(msg)
+
     try:
         user: User = User.objects.get(username=author)
     except User.DoesNotExist as exc:
@@ -263,7 +301,7 @@ def author_posts(request: HttpRequest, author: str) -> HttpResponse:
 
     posts = Paginator(
         Post.post_objects.get_published_posts_by_author(user),
-        djpress_settings.RECENT_PUBLISHED_POSTS_COUNT,
+        recent_published_posts_count,
     )
     page_number = request.GET.get("page")
     page = posts.get_page(page_number)

@@ -1,13 +1,15 @@
 """Plugin system for DJ Press."""
 
-import contextlib  # Ruff: SIM105
+import logging
+from collections.abc import Callable
 from enum import Enum
 from typing import Any
 
 from django.utils.module_loading import import_string
 
 from djpress.conf import settings as djpress_settings
-from djpress.exceptions import PluginLoadError
+
+logger = logging.getLogger(__name__)
 
 
 # Hook definitions
@@ -30,8 +32,10 @@ class PluginRegistry:
         self.plugins = []
         self.hooks = {}
         self._loaded = False
+        # Any errors encountered during plugin loading will be stored here for the Django checks system to report.
+        self.plugin_errors = []
 
-    def register_hook(self, hook_name: Hooks | str, callback: callable) -> None:
+    def register_hook(self, hook_name: Hooks | str, callback: Callable) -> None:
         """Register a callback function for a specific hook.
 
         Args:
@@ -42,13 +46,30 @@ class PluginRegistry:
         Raises:
             TypeError: If hook_name is not a Hooks enum member.
         """
-        # Convert string to Enum if needed, and supress error if not possible
+        # Convert string to Enum if needed, and log a warning if invalid
         if isinstance(hook_name, str):
-            with contextlib.suppress(ValueError):
+            try:
                 hook_name = Hooks(hook_name)
+            except ValueError:
+                # Not a valid hook name, return early
+                msg = f"Invalid hook str name: {hook_name}. Hook not registered by callback."
+                self.plugin_errors.append(msg)
+                logger.warning(msg)
+                return
 
+        # If it's already an enum, check if it's valid
+        if isinstance(hook_name, Enum) and not isinstance(hook_name, Hooks):
+            # Not a valid hook enum, return early
+            msg = f"Invalid hook enum: {hook_name}. Hook not registered by callback."
+            self.plugin_errors.append(msg)
+            logger.warning(msg)
+            return
+
+        # If the hook is not already registered, create a new list for it in the hooks dictionary
         if hook_name not in self.hooks:
             self.hooks[hook_name] = []
+
+        # Append the callback to the list for this hook
         self.hooks[hook_name].append(callback)
 
     def run_hook(self, hook_name: Hooks, value: Any = None, *args: Any, **kwargs: Any) -> Any:  # noqa: ANN401
@@ -68,10 +89,11 @@ class PluginRegistry:
         """
         if not isinstance(hook_name, Hooks):
             msg = f"hook_name must be a Hooks enum member, got {type(hook_name)}"
-            raise TypeError(msg)
+            logger.warning(msg)
 
-        if not self._loaded:
-            self.load_plugins()
+        # If there are no plugins loaded, exit early
+        if not self.plugins:
+            return value
 
         if hook_name in self.hooks:
             for callback in self.hooks[hook_name]:
@@ -82,7 +104,13 @@ class PluginRegistry:
                 try:
                     callback_value = callback(value, *args, **kwargs)
                     value = callback_value
-                except Exception:  # noqa: BLE001, PERF203, S112
+                except Exception:  # noqa: BLE001, PERF203
+                    # Log the error but continue with the next callback
+                    msg = (
+                        f"Error running callback {callback.__name__} for hook: {hook_name.name}. "
+                        f"The callback will be skipped."
+                    )
+                    logger.warning(msg, exc_info=True)
                     # Continue with the next callback
                     continue
 
@@ -100,8 +128,22 @@ class PluginRegistry:
         if self._loaded:
             return
 
-        plugin_names: list = djpress_settings.PLUGINS
-        plugin_settings: dict = djpress_settings.PLUGIN_SETTINGS
+        # Clear previous errors to avoid duplicates on reload
+        self.plugin_errors.clear()
+
+        plugin_names = djpress_settings.PLUGINS
+        if not plugin_names:
+            return
+        if not isinstance(plugin_names, list):  # pragma: no cover
+            msg = f"Expected PLUGINS to be a list, got {type(plugin_names).__name__}"
+            raise TypeError(msg)
+
+        plugin_settings = djpress_settings.PLUGIN_SETTINGS
+        if not plugin_settings:
+            plugin_settings = {}
+        if not isinstance(plugin_settings, dict):  # pragma: no cover
+            msg = f"Expected PLUGIN_SETTINGS to be a dict, got {type(plugin_settings).__name__}"
+            raise TypeError(msg)
 
         try:
             for plugin_path in plugin_names:
@@ -110,9 +152,10 @@ class PluginRegistry:
                 self.plugins.append(plugin)
 
             self._loaded = True
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             msg = f"Failed to load plugins: {exc}"
-            raise PluginLoadError(msg) from exc
+            self.plugin_errors.append(msg)
+            logger.warning(msg)
 
     def _import_plugin_class(self, plugin_path: str) -> type:
         """Import the plugin class from either custom path or standard location.
@@ -145,7 +188,12 @@ class PluginRegistry:
             )
             raise ImproperlyConfigured(msg) from exc
 
-    def _instantiate_plugin(self, plugin_class: type, plugin_path: str, plugin_settings: dict) -> "DJPressPlugin":
+    def _instantiate_plugin(
+        self,
+        plugin_class: type,
+        plugin_path: str,
+        plugin_settings: dict,
+    ) -> "DJPressPlugin":
         """Create and set up a plugin instance.
 
         Args:
@@ -167,7 +215,7 @@ class PluginRegistry:
             # Create plugin instance with optional config
             plugin = plugin_class(config=plugin_config) if plugin_config else plugin_class()
 
-            # Set up the plugin
+            # Set up the plugin - this is where the hooks are registered
             plugin.setup(self)
 
         except Exception as exc:
@@ -183,11 +231,11 @@ class PluginRegistry:
 class DJPressPlugin:
     """Base class for DJ Press plugins."""
 
-    name: str | None = None
+    name: str
 
     def __init__(self, config: dict | None = None) -> None:
         """Initialize the plugin."""
-        if self.name is None:
+        if not hasattr(self, "name") or not self.name:
             msg = "Plugin must define a name"
             raise ValueError(msg)
         self.config = config or {}

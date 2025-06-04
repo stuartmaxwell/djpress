@@ -250,7 +250,7 @@ def bad_plugin_registry(clean_registry):
 
 @pytest.fixture
 def superuser() -> User:
-    return User.objects.create_superuser(username="admin", password="adminpass")
+    return User.objects.create_superuser(username="admin", password="adminpass")  # type: ignore
 
 
 @pytest.fixture

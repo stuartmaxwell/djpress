@@ -1,7 +1,6 @@
 import pytest
 
 from django import test
-from django.conf.locale import te
 from django.core.cache import cache
 from django.utils.text import slugify
 from django.utils import timezone

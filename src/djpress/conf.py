@@ -32,9 +32,14 @@ class DJPressSettings:
         if hasattr(django_settings, "DJPRESS_SETTINGS") and key in django_settings.DJPRESS_SETTINGS:
             value = django_settings.DJPRESS_SETTINGS[key]
             expected_type = DJPRESS_SETTINGS[key][1]
+            # Ensure that the value is of the expected type
             if not isinstance(value, expected_type):
                 msg = f"Expected {expected_type.__name__} for {key}, got {type(value).__name__}"
                 raise TypeError(msg)
+            # Ensure that int types are greater than or equal to 0
+            if isinstance(value, int) and value < 0:
+                msg = f"{key} must be greater than or equal to 0."
+                raise ValueError(msg)
             return value
 
         # If no override, fall back to the default in app_settings.py
@@ -50,7 +55,7 @@ settings = DJPressSettings()
 
 
 @register()
-def check_djpress_settings(**_) -> None:  # noqa: ANN003
+def check_djpress_settings(**_) -> list[Error]:  # noqa: ANN003
     """Validate DJPress settings.
 
     This runs on start up to ensure that the settings are valid.

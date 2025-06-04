@@ -79,6 +79,47 @@ def test_type_validation_for_overridden_settings(settings):
         _ = djpress_settings.ARCHIVE_ENABLED
 
 
+def test_int_validation_settings(settings):
+    """Test that int settings are greater than or equal to 0."""
+    # Valid setting with the correct value
+    settings.DJPRESS_SETTINGS = {
+        "MAX_TAGS_PER_QUERY": 5,
+    }
+    assert djpress_settings.MAX_TAGS_PER_QUERY == 5
+
+    # Invalid setting with negative value: should raise ValueError
+    settings.DJPRESS_SETTINGS = {
+        "MAX_TAGS_PER_QUERY": -1,
+    }
+    with pytest.raises(ValueError):
+        assert djpress_settings.MAX_TAGS_PER_QUERY == -1
+
+    # Valid setting with zero value
+    settings.DJPRESS_SETTINGS = {
+        "MAX_TAGS_PER_QUERY": 0,
+    }
+    assert djpress_settings.MAX_TAGS_PER_QUERY == 0
+
+    # Valid setting with the correct value
+    settings.DJPRESS_SETTINGS = {
+        "RECENT_PUBLISHED_POSTS_COUNT": 5,
+    }
+    assert djpress_settings.RECENT_PUBLISHED_POSTS_COUNT == 5
+
+    # Invalid setting with negative value: should raise ValueError
+    settings.DJPRESS_SETTINGS = {
+        "RECENT_PUBLISHED_POSTS_COUNT": -1,
+    }
+    with pytest.raises(ValueError):
+        assert djpress_settings.RECENT_PUBLISHED_POSTS_COUNT == -1
+
+    # Valid setting with zero value
+    settings.DJPRESS_SETTINGS = {
+        "RECENT_PUBLISHED_POSTS_COUNT": 0,
+    }
+    assert djpress_settings.RECENT_PUBLISHED_POSTS_COUNT == 0
+
+
 def test_invalid_setting_key():
     """Test that requesting an invalid setting raises an AttributeError."""
     with pytest.raises(AttributeError):

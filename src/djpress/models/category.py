@@ -1,5 +1,7 @@
 """Category model."""
 
+from typing import TYPE_CHECKING
+
 from django.core.cache import cache
 from django.db import IntegrityError, models, transaction
 from django.db.models import Max
@@ -54,7 +56,7 @@ class CategoryManager(models.Manager):
 
         return category
 
-    def get_categories_with_published_posts(self) -> "Category":
+    def get_categories_with_published_posts(self) -> models.QuerySet:
         """Return a queryset of categories that have published posts.
 
         We can use the has_posts property to include only categories with published posts.
@@ -69,6 +71,11 @@ class Category(models.Model):
     slug = models.SlugField(unique=True, blank=True)
     description = models.TextField(blank=True)
     menu_order = models.IntegerField(default=0)
+    # Type hint for Django's reverse relationship
+    if TYPE_CHECKING:
+        from djpress.models.post import Post
+
+        _posts: models.Manager["Post"]
 
     # Custom Manager
     objects: "CategoryManager" = CategoryManager()
@@ -106,7 +113,7 @@ class Category(models.Model):
         return get_category_url(self)
 
     @property
-    def posts(self) -> models.QuerySet:
+    def posts(self: "Category") -> models.QuerySet:
         """Return only published posts.
 
         Note: this mirrors the queryset in PostsManager.
