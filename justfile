@@ -119,6 +119,11 @@ BUILDDIR      := "docs/_build"
     uv run bumpver update --patch {{ ARGS }}
     uv sync
 
+# Use Bumpver to create a minor beta version. Use just bump-minor-beta -d to view a dry-run.
+@bump-beta *ARGS:
+    uv run bumpver update --patch --tag beta {{ ARGS }}
+    uv sync
+
 # Use BumpVer to increase the minor version number. Use just bump -d to view a dry-run.
 @bump-minor *ARGS:
     uv run bumpver update --minor {{ ARGS }}
