@@ -1113,38 +1113,38 @@ def test_post_get_years(test_post1, test_post2, test_post3):
     # type should be a queryset
     assert isinstance(Post.post_objects.get_years(), QuerySet)
     # Queryset should have 1 item
-    assert len(Post.post_objects.get_years()) == 1
+    assert len(list(Post.post_objects.get_years())) == 1
     # The item should be the year of the post
-    assert Post.post_objects.get_years()[0].year == test_post1.published_at.year
+    assert list(Post.post_objects.get_years())[0].year == test_post1.published_at.year
 
     test_post2.published_at = timezone.make_aware(timezone.datetime(2023, 1, 1, 12, 0, 0))
     test_post2.save()
 
     # Queryset should have 2 items
-    assert len(Post.post_objects.get_years()) == 2
+    assert len(list(Post.post_objects.get_years())) == 2
     # The items should be the years of the posts
-    assert Post.post_objects.get_years()[0].year == test_post2.published_at.year
-    assert Post.post_objects.get_years()[1].year == test_post1.published_at.year
+    assert list(Post.post_objects.get_years())[0].year == test_post2.published_at.year
+    assert list(Post.post_objects.get_years())[1].year == test_post1.published_at.year
 
     test_post3.published_at = timezone.make_aware(timezone.datetime(2022, 1, 1, 12, 0, 0))
     test_post3.save()
 
     # Queryset should have 3 items
-    assert len(Post.post_objects.get_years()) == 3
+    assert len(list(Post.post_objects.get_years())) == 3
     # The items should be the years of the posts
-    assert Post.post_objects.get_years()[0].year == test_post3.published_at.year
-    assert Post.post_objects.get_years()[1].year == test_post2.published_at.year
-    assert Post.post_objects.get_years()[2].year == test_post1.published_at.year
+    assert list(Post.post_objects.get_years())[0].year == test_post3.published_at.year
+    assert list(Post.post_objects.get_years())[1].year == test_post2.published_at.year
+    assert list(Post.post_objects.get_years())[2].year == test_post1.published_at.year
 
     # Change a post to draft status
     test_post1.status = "draft"
     test_post1.save()
 
     # Queryset should have 2 items
-    assert len(Post.post_objects.get_years()) == 2
+    assert len(list(Post.post_objects.get_years())) == 2
     # The items should be the years of the posts
-    assert Post.post_objects.get_years()[0].year == test_post3.published_at.year
-    assert Post.post_objects.get_years()[1].year == test_post2.published_at.year
+    assert list(Post.post_objects.get_years())[0].year == test_post3.published_at.year
+    assert list(Post.post_objects.get_years())[1].year == test_post2.published_at.year
 
 
 @pytest.mark.django_db
@@ -1166,7 +1166,7 @@ def test_post_get_months(test_post1, test_post2, test_post3):
     test_post3.published_at = timezone.make_aware(timezone.datetime(2022, 3, 1, 12, 0, 0))
     test_post3.save()
 
-    months = Post.post_objects.get_months(test_post1.published_at.year)
+    months = list(Post.post_objects.get_months(test_post1.published_at.year))
 
     # Queryset should have 3 items
     assert len(months) == 3
@@ -1179,7 +1179,7 @@ def test_post_get_months(test_post1, test_post2, test_post3):
     test_post1.status = "draft"
     test_post1.save()
 
-    months = Post.post_objects.get_months(test_post1.published_at.year)
+    months = list(Post.post_objects.get_months(test_post1.published_at.year))
 
     # Queryset should have 2 items
     assert len(months) == 2
@@ -1205,7 +1205,7 @@ def test_post_get_days(test_post1, test_post2, test_post3):
     test_post3.published_at = timezone.make_aware(timezone.datetime(2022, 1, 3, 12, 0, 0))
     test_post3.save()
 
-    days = Post.post_objects.get_days(test_post1.published_at.year, test_post1.published_at.month)
+    days = list(Post.post_objects.get_days(test_post1.published_at.year, test_post1.published_at.month))
 
     # Queryset should have 3 items
     assert len(days) == 3
@@ -1218,7 +1218,7 @@ def test_post_get_days(test_post1, test_post2, test_post3):
     test_post1.status = "draft"
     test_post1.save()
 
-    days = Post.post_objects.get_days(test_post1.published_at.year, test_post1.published_at.month)
+    days = list(Post.post_objects.get_days(test_post1.published_at.year, test_post1.published_at.month))
 
     # Queryset should have 2 items
     assert len(days) == 2

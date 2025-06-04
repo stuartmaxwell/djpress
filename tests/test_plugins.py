@@ -107,13 +107,13 @@ def test_run_hook_with_exception(clean_registry):
 def test_run_hook_with_string_fails(clean_registry):
     """Test running hook with string fails."""
     with pytest.raises(TypeError, match="hook_name must be a Hooks enum member"):
-        registry.run_hook("pre_render_content", "test")
+        registry.run_hook("pre_render_content", "test")  # type: ignore
 
 
 def test_run_hook_type_error_message(clean_registry):
     """Test specific error message when running hook with wrong type."""
     with pytest.raises(TypeError) as exc_info:
-        registry.run_hook("pre_render_content", "test")
+        registry.run_hook("pre_render_content", "test")  # type: ignore
     assert "hook_name must be a Hooks enum member" in str(exc_info.value)
     assert "got <class 'str'>" in str(exc_info.value)
 

@@ -32,7 +32,7 @@ def test_check_unknown_hook(clean_registry):
     assert isinstance(warning, Warning)
     assert warning.id == "djpress.W001"
     assert "unknown hook 'unknown_hook'" in str(warning)
-    assert "deprecated hook or a hook from a newer version" in warning.hint
+    assert "deprecated hook or a hook from a newer version" in warning.hint  # type: ignore
 
 
 def test_check_multiple_hooks(clean_registry):
