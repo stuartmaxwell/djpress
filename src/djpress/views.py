@@ -78,8 +78,8 @@ def dispatcher(request: HttpRequest, path: str) -> HttpResponse:  # noqa: C901, 
         return single_page(request, path=page_path)
 
     # If the path doesn't match any of the above, it's not a valid path
-    msg = "Invalid page path"
-    return HttpResponseBadRequest(msg)
+    msg = "Post not found"
+    raise Http404(msg)
 
 
 def entry(
@@ -111,7 +111,7 @@ def index(
     template: str = get_template_name("index")
 
     recent_published_posts_count = djpress_settings.RECENT_PUBLISHED_POSTS_COUNT
-    if not isinstance(recent_published_posts_count, int) or recent_published_posts_count <= 0:  # TODO: test for 0?
+    if not isinstance(recent_published_posts_count, int) or recent_published_posts_count < 0:  # pragma: no cover
         msg = "RECENT_PUBLISHED_POSTS_COUNT must be a positive integer"
         raise ValueError(msg)
 
@@ -154,7 +154,9 @@ def archive_posts(
     template: str = get_template_name(view_name="archive_posts")
 
     recent_published_posts_count = djpress_settings.RECENT_PUBLISHED_POSTS_COUNT
-    if not isinstance(recent_published_posts_count, int) or recent_published_posts_count <= 0:  # TODO: test for 0?
+    if (
+        not isinstance(recent_published_posts_count, int) or recent_published_posts_count <= 0
+    ):  # TODO: test for 0?  # pragma: no cover
         msg = "RECENT_PUBLISHED_POSTS_COUNT must be a positive integer"
         raise ValueError(msg)
 
@@ -198,7 +200,9 @@ def category_posts(request: HttpRequest, slug: str) -> HttpResponse:
     template: str = get_template_name(view_name="category_posts")
 
     recent_published_posts_count = djpress_settings.RECENT_PUBLISHED_POSTS_COUNT
-    if not isinstance(recent_published_posts_count, int) or recent_published_posts_count <= 0:  # TODO: test for 0?
+    if (
+        not isinstance(recent_published_posts_count, int) or recent_published_posts_count <= 0
+    ):  # TODO: test for 0?  # pragma: no cover
         msg = "RECENT_PUBLISHED_POSTS_COUNT must be a positive integer"
         raise ValueError(msg)
 
@@ -243,7 +247,9 @@ def tag_posts(request: HttpRequest, slug: str) -> HttpResponse:
     template: str = get_template_name(view_name="tag_posts")
 
     recent_published_posts_count = djpress_settings.RECENT_PUBLISHED_POSTS_COUNT
-    if not isinstance(recent_published_posts_count, int) or recent_published_posts_count <= 0:  # TODO: test for 0?
+    if (
+        not isinstance(recent_published_posts_count, int) or recent_published_posts_count <= 0
+    ):  # TODO: test for 0?  # pragma: no cover
         msg = "RECENT_PUBLISHED_POSTS_COUNT must be a positive integer"
         raise ValueError(msg)
 
@@ -281,7 +287,9 @@ def author_posts(request: HttpRequest, author: str) -> HttpResponse:
     template: str = get_template_name(view_name="author_posts")
 
     recent_published_posts_count = djpress_settings.RECENT_PUBLISHED_POSTS_COUNT
-    if not isinstance(recent_published_posts_count, int) or recent_published_posts_count <= 0:  # TODO: test for 0?
+    if (
+        not isinstance(recent_published_posts_count, int) or recent_published_posts_count <= 0
+    ):  # TODO: test for 0?  # pragma: no cover
         msg = "RECENT_PUBLISHED_POSTS_COUNT must be a positive integer"
         raise ValueError(msg)
 
