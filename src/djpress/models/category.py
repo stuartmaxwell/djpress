@@ -1,5 +1,7 @@
 """Category model."""
 
+from typing import TYPE_CHECKING
+
 from django.core.cache import cache
 from django.db import IntegrityError, models, transaction
 from django.db.models import Max
@@ -69,6 +71,11 @@ class Category(models.Model):
     slug = models.SlugField(unique=True, blank=True)
     description = models.TextField(blank=True)
     menu_order = models.IntegerField(default=0)
+    # Type hint for Django's reverse relationship
+    if TYPE_CHECKING:
+        from djpress.models.post import Post
+
+        _posts: models.Manager["Post"]
 
     # Custom Manager
     objects: "CategoryManager" = CategoryManager()
