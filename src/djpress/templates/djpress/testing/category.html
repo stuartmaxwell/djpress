@@ -1,0 +1,34 @@
+{% extends "djpress/testing/base.html" %}
+{% load djpress_tags %}
+
+{% block main %}
+
+  <h1>Category Template of the Testing Theme</h1>
+
+  {% category_title "h1" pre_text="View Posts in the " post_text=" Category" %}
+
+  {% for post in posts %}
+
+    {% post_wrap %}
+
+      {% post_title outer_tag="h1" %}
+
+      {% post_content outer_tag="section" %}
+
+      <footer>
+        <p>By: {% post_author %}. <a href="{% get_post_url %}">{% get_post_date %}</a></p>
+        <p>Categories: {% post_categories outer_tag="span" link_class="badge" %}</p>
+        <p>Tags: {% post_tags outer_tag="span"  link_class="badge" %}</p>
+      </footer>
+
+    {% end_post_wrap %}
+
+  {% empty %}
+
+    <p>No category posts available.</p>
+
+  {% endfor %}
+
+  {% pagination_links %}
+
+{% endblock main %}
