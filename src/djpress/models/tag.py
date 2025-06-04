@@ -1,5 +1,7 @@
 """Tag model."""
 
+from typing import TYPE_CHECKING
+
 from django.core.cache import cache
 from django.db import IntegrityError, models, transaction
 from django.db.models import Max
@@ -96,6 +98,11 @@ class Tag(models.Model):
 
     title = models.CharField(max_length=100, unique=True)
     slug = models.SlugField(max_length=100, unique=True)
+    # Type hint for Django's reverse relationship
+    if TYPE_CHECKING:
+        from djpress.models.post import Post
+
+        _posts: models.Manager["Post"]
 
     class Meta:
         """Meta options for the tag model."""
