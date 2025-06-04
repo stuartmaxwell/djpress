@@ -1,26 +1,20 @@
 """Custom checks for DJPress."""
 
-from django.core.checks import Warning
+from django.core.checks import Tags, Warning, register
+
+from djpress.plugins import registry
 
 
-def check_plugin_hooks(app_configs, **kwargs) -> list[Warning]:  # noqa: ANN001, ANN003, ARG001
-    """Check for unknown plugin hooks."""
-    from djpress.plugins import Hooks, registry
-
-    # Ensure plugins are loaded
-    if not registry._loaded:  # noqa: SLF001
-        registry.load_plugins()
-
+@register(Tags.compatibility)
+def check_plugin_loading(app_configs, **kwargs) -> list[Warning]:  # noqa: ANN001, ANN003, ARG001
+    """Report any plugin loading warnings."""
     warnings = []
 
-    for hook_name in registry.hooks:
-        if not isinstance(hook_name, Hooks):
-            warning = Warning(
-                f"Plugin registering unknown hook '{hook_name}'.",
-                hint=("This might indicate use of a deprecated hook or a hook from a newer version of DJPress."),
-                obj=hook_name,
-                id="djpress.W001",
-            )
-            warnings.append(warning)
+    for plugin_error in registry.plugin_errors:
+        warning = Warning(
+            f"Plugin loading error: {plugin_error}",
+            id="djpress.W001",
+        )
+        warnings.append(warning)
 
     return warnings
