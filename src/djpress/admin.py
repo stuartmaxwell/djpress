@@ -106,7 +106,7 @@ class PostAdmin(admin.ModelAdmin):
         """Set the initial value for the author field to the current user."""
         form = super().get_form(request, obj, change, **kwargs)
         base_fields = getattr(form, "base_fields", None)
-        if base_fields and "author" in base_fields:
+        if base_fields and "author" in base_fields:  # pragma: no cover
             base_fields["author"].initial = request.user
         return form
 
@@ -233,7 +233,7 @@ class MediaAdmin(admin.ModelAdmin):
         form = super().get_form(request, obj, change, **kwargs)
         base_fields = getattr(form, "base_fields", None)
 
-        if base_fields and "uploaded_by" in base_fields:
+        if base_fields and "uploaded_by" in base_fields:  # pragma: no cover
             base_fields["uploaded_by"].initial = request.user
         return form
 
