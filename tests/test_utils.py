@@ -100,30 +100,6 @@ def test_render_markdown_image_with_title():
     )
 
 
-def test_get_template_name(settings):
-    # Test case 1 - template exists
-    templates = [
-        "djpress/not-exists.html",
-        "djpress/default/index.html",
-    ]
-    template_name = get_template_name(templates)
-    assert template_name == "djpress/default/index.html"
-
-    # Test case 2 - template does not exist - fall back to default
-    templates = [
-        "djpress/not-exists.html",
-        "djpress/not-exists-2.html",
-    ]
-    template_name = get_template_name(templates)
-    assert template_name == "djpress/default/index.html"
-
-    # Test case 3 - default template file does not exist
-    settings.DJPRESS_SETTINGS["THEME"] = "not-exists"
-
-    with pytest.raises(TemplateDoesNotExist):
-        get_template_name(templates)
-
-
 def test_get_templates(settings):
     """Make sure the get_templates function returns the correct list of templates."""
     settings.DJPRESS_SETTINGS["THEME"] = "test-theme"
@@ -182,3 +158,22 @@ def test_get_templates(settings):
     assert templates == [
         "djpress/test-theme/index.html",
     ]
+
+
+def test_get_template_name(settings):
+    # Test case 1 - template for view exists
+    template_name = get_template_name("index")
+    assert template_name == "djpress/default/index.html"
+
+    # Test case 2 - template for home view does not exist, defaults to index
+    template_name = get_template_name("home")
+    assert template_name == "djpress/default/index.html"
+
+    # Test case 3 - template for new view does not exist, defaults to index
+    template_name = get_template_name("foobar")
+    assert template_name == "djpress/default/index.html"
+
+    # Test case 4 - theme is set to a non-existent theme, therefore the template will not be found
+    settings.DJPRESS_SETTINGS["THEME"] = "test-theme"
+    with pytest.raises(TemplateDoesNotExist):
+        get_template_name("index")
