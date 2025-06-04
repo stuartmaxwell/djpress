@@ -25,8 +25,8 @@ def regex_post() -> str:
         str: The regex pattern.
     """
     prefix = djpress_settings.POST_PREFIX
-    if not isinstance(prefix, str):
-        msg = f"Expected POST_PREFIX to be a string, got {type(prefix).__name__}"
+    if not isinstance(prefix, str):  # pragma: no cover
+        msg = f"Expected string for POST_PREFIX, got {type(prefix).__name__}"
         raise TypeError(msg)
 
     regex_parts = []
@@ -72,7 +72,7 @@ def regex_post() -> str:
 def get_post_url(post: Post) -> str:
     """Return the URL for the post."""
     prefix = djpress_settings.POST_PREFIX
-    if not isinstance(prefix, str):
+    if not isinstance(prefix, str):  # pragma: no cover
         msg = f"Expected POST_PREFIX to be a string, got {type(prefix).__name__}"
         raise TypeError(msg)
 
@@ -114,7 +114,7 @@ def regex_archives() -> str:
         str: The regex pattern.
     """
     archive_prefix = djpress_settings.ARCHIVE_PREFIX
-    if not isinstance(archive_prefix, str):
+    if not isinstance(archive_prefix, str):  # pragma: no cover
         msg = f"Expected ARCHIVE_PREFIX to be a string, got {type(archive_prefix).__name__}"
         raise TypeError(msg)
 
@@ -151,7 +151,7 @@ def regex_category() -> str:
     The category URL must have the CATEGORY_PREFIX. If not, an error occurs on startup: E002. See conf.py for details.
     """
     category_prefix = djpress_settings.CATEGORY_PREFIX
-    if not isinstance(category_prefix, str):
+    if not isinstance(category_prefix, str):  # pragma: no cover
         msg = f"Expected CATEGORY_PREFIX to be a string, got {type(category_prefix).__name__}"
         raise TypeError(msg)
 
@@ -179,7 +179,7 @@ def regex_tag() -> str:
     The tag URL must have the TAG_PREFIX. If not, an error occurs on startup: E004. See conf.py for details.
     """
     tag_prefix = djpress_settings.TAG_PREFIX
-    if not isinstance(tag_prefix, str):
+    if not isinstance(tag_prefix, str):  # pragma: no cover
         msg = f"Expected TAG_PREFIX to be a string, got {type(tag_prefix).__name__}"
         raise TypeError(msg)
 
@@ -196,7 +196,7 @@ def regex_tag() -> str:
 def regex_author() -> str:
     """Generate the regex path for the author view."""
     author_prefix = djpress_settings.AUTHOR_PREFIX
-    if not isinstance(author_prefix, str):
+    if not isinstance(author_prefix, str):  # pragma: no cover
         msg = f"Expected AUTHOR_PREFIX to be a string, got {type(author_prefix).__name__}"
         raise TypeError(msg)
 
