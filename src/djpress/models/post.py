@@ -3,6 +3,7 @@
 import datetime
 import logging
 from collections.abc import Iterable
+from typing import TYPE_CHECKING
 
 from django.contrib.auth.models import User
 from django.core.cache import cache
@@ -124,20 +125,18 @@ class PagesManager(models.Manager):
         # Strip leading and trailing slashes and split the path into parts
         path_parts = path.strip("/").split("/")
 
-        current_page = None
-
         for i, slug in enumerate(path_parts):
             if i == 0:
                 try:
                     # The first item must be a top-level page
-                    current_page = self.get(slug=slug, parent__isnull=True)
+                    current_page: Post = self.get(slug=slug, parent__isnull=True)
                 except Post.DoesNotExist as exc:
                     msg = "Page not found"
                     raise PageNotFoundError(msg) from exc
             else:
                 try:
                     # Subsequent items must be children of the previous page
-                    current_page = self.get(slug=slug, parent=current_page)
+                    current_page: Post = self.get(slug=slug, parent=current_page)
                 except Post.DoesNotExist as exc:
                     msg = "Page not found"
                     raise PageNotFoundError(msg) from exc
@@ -316,13 +315,13 @@ class PostsManager(models.Manager):
         filters = {"slug": slug}
 
         if year:
-            filters["published_at__year"] = year
+            filters["published_at__year"] = str(year)
 
         if month:
-            filters["published_at__month"] = month
+            filters["published_at__month"] = str(month)
 
         if day:
-            filters["published_at__day"] = day
+            filters["published_at__day"] = str(day)
 
         try:
             return self.get_published_posts().get(**filters)
@@ -357,7 +356,12 @@ class PostsManager(models.Manager):
         Returns:
             models.QuerySet: A queryset of posts that belong to all the tags in the list.
         """
-        if len(tag_slugs) > djpress_settings.MAX_TAGS_PER_QUERY:
+        max_tags_per_query = djpress_settings.MAX_TAGS_PER_QUERY
+        if not isinstance(max_tags_per_query, int):
+            msg = f"MAX_TAGS_PER_QUERY must be an integer, got {type(max_tags_per_query).__name__}"
+            raise TypeError(msg)
+
+        if len(tag_slugs) > max_tags_per_query:
             return self.none()
 
         # Get all tags first
@@ -495,6 +499,9 @@ class Post(models.Model):
         related_name="_children",  # Danger! This returns all children of a parent, published or not.
         limit_choices_to={"post_type": "page"},
     )
+    # Type hint for Django's reverse relationship
+    if TYPE_CHECKING:
+        _children: models.Manager["Post"]
 
     class Meta:
         """Meta options for the Post model."""
@@ -523,10 +530,10 @@ class Post(models.Model):
         # Generate the _date field from the date field.
         # We only do this if the post is new or if the date has changed. This ensures the _date field doesn't change
         # unless the date field has been specifically changed.
-        if self.id is None:
+        if self.pk is None:
             self._date = self.published_at.date()
         else:
-            old = self.__class__.admin_objects.filter(id=self.id).only("published_at").first()
+            old = self.__class__.admin_objects.filter(pk=self.pk).only("published_at").first()
             if old is None or old.published_at != self.published_at:
                 self._date = self.local_datetime.date()
 
@@ -647,14 +654,22 @@ class Post(models.Model):
     @property
     def truncated_content_markdown(self) -> str:
         """Return the truncated content as HTML converted from Markdown."""
-        read_more_index = self.content.find(djpress_settings.TRUNCATE_TAG)
+        truncate_tag = djpress_settings.TRUNCATE_TAG
+        if not isinstance(truncate_tag, str) or not truncate_tag:
+            msg = "TRUNCATE_TAG must be a non-empty string."
+            raise ValueError(msg)
+        read_more_index = self.content.find(truncate_tag)
         truncated_content = self.content[:read_more_index] if read_more_index != -1 else self.content
         return render_markdown(truncated_content)
 
     @property
     def is_truncated(self) -> bool:
         """Return whether the content is truncated."""
-        return djpress_settings.TRUNCATE_TAG in self.content
+        truncate_tag = djpress_settings.TRUNCATE_TAG
+        if not isinstance(truncate_tag, str) or not truncate_tag:
+            msg = "TRUNCATE_TAG must be a non-empty string."
+            raise ValueError(msg)
+        return truncate_tag in self.content
 
     @property
     def url(self) -> str:
