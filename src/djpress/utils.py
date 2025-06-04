@@ -142,10 +142,11 @@ def get_template_name(view_name: str) -> str:
     """
     templates = get_templates(view_name)
 
-    selected_template = getattr(select_template(templates), "template", None)
-    template_name = getattr(selected_template, "name", None)
-    if template_name is None:
+    try:
+        selected_template = getattr(select_template(templates), "template", None)
+        template_name = getattr(selected_template, "name", None)
+    except TemplateDoesNotExist as exc:
         msg = f"No template found for view '{view_name}'"
-        raise TemplateDoesNotExist(msg)
+        raise TemplateDoesNotExist(msg) from exc
 
-    return template_name
+    return str(template_name)
