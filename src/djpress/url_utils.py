@@ -25,6 +25,9 @@ def regex_post() -> str:
         str: The regex pattern.
     """
     prefix = djpress_settings.POST_PREFIX
+    if not isinstance(prefix, str):
+        msg = f"Expected POST_PREFIX to be a string, got {type(prefix).__name__}"
+        raise TypeError(msg)
 
     regex_parts = []
 
@@ -69,11 +72,18 @@ def regex_post() -> str:
 def get_post_url(post: Post) -> str:
     """Return the URL for the post."""
     prefix = djpress_settings.POST_PREFIX
+    if not isinstance(prefix, str):
+        msg = f"Expected POST_PREFIX to be a string, got {type(prefix).__name__}"
+        raise TypeError(msg)
 
     # Remove spaces from the prefix so that either {{ year }} or {{year}} will work
     prefix = prefix.replace(" ", "")
 
     post_date = post._date  # noqa: SLF001
+
+    if post_date is None:
+        msg = "Post date is not set. Cannot generate URL."
+        raise ValueError(msg)
 
     # Replace the placeholders in the prefix with the actual values
     if "{{year}}" in prefix:
@@ -103,6 +113,11 @@ def regex_archives() -> str:
     Returns:
         str: The regex pattern.
     """
+    archive_prefix = djpress_settings.ARCHIVE_PREFIX
+    if not isinstance(archive_prefix, str):
+        msg = f"Expected ARCHIVE_PREFIX to be a string, got {type(archive_prefix).__name__}"
+        raise TypeError(msg)
+
     # Regex explanation:
     # - (?P<year>\d{4}): Required - this matches the year in the format of 4 digits.
     # - (/(?P<month>\d{2}))?: Optional - this matches the month in the format of 2 digits.
@@ -110,7 +125,7 @@ def regex_archives() -> str:
     regex = r"(?P<year>\d{4})(/(?P<month>\d{2}))?(/(?P<day>\d{2}))?"
 
     if djpress_settings.ARCHIVE_PREFIX:
-        regex = rf"{re.escape(djpress_settings.ARCHIVE_PREFIX)}/{regex}"
+        regex = rf"{re.escape(archive_prefix)}/{regex}"
 
     return regex
 
@@ -135,12 +150,17 @@ def regex_category() -> str:
 
     The category URL must have the CATEGORY_PREFIX. If not, an error occurs on startup: E002. See conf.py for details.
     """
+    category_prefix = djpress_settings.CATEGORY_PREFIX
+    if not isinstance(category_prefix, str):
+        msg = f"Expected CATEGORY_PREFIX to be a string, got {type(category_prefix).__name__}"
+        raise TypeError(msg)
+
     # Regex explanation:
     # - (?P<slug>[\w-]+): This is a named capture group that matches any word character (alphanumeric or underscore)
     #   or a hyphen.
     regex = r"(?P<slug>[\w-]+)"
 
-    return rf"{re.escape(djpress_settings.CATEGORY_PREFIX)}/{regex}"
+    return rf"{re.escape(category_prefix)}/{regex}"
 
 
 def regex_tag() -> str:
@@ -158,6 +178,11 @@ def regex_tag() -> str:
 
     The tag URL must have the TAG_PREFIX. If not, an error occurs on startup: E004. See conf.py for details.
     """
+    tag_prefix = djpress_settings.TAG_PREFIX
+    if not isinstance(tag_prefix, str):
+        msg = f"Expected TAG_PREFIX to be a string, got {type(tag_prefix).__name__}"
+        raise TypeError(msg)
+
     # Regex explanation:
     # - (?P<slug> )   This is a named capture group called slug
     # - [\w-]+        This matches any word character (alphanumeric or underscore) or a hyphen, one or more times
@@ -165,18 +190,23 @@ def regex_tag() -> str:
     #                 one or more times. This group can be repeated zero or more times.
     regex = r"(?P<slug>[\w-]+(?:\+[\w-]+)*)"
 
-    return rf"{re.escape(djpress_settings.TAG_PREFIX)}/{regex}"
+    return rf"{re.escape(tag_prefix)}/{regex}"
 
 
 def regex_author() -> str:
     """Generate the regex path for the author view."""
+    author_prefix = djpress_settings.AUTHOR_PREFIX
+    if not isinstance(author_prefix, str):
+        msg = f"Expected AUTHOR_PREFIX to be a string, got {type(author_prefix).__name__}"
+        raise TypeError(msg)
+
     # Regex explanation:
     # - (?P<author>[\w-]+): This is a named capture group that matches any word character (alphanumeric or underscore)
     #   or a hyphen.
     regex = r"(?P<author>[\w-]+)"
 
     if djpress_settings.AUTHOR_PREFIX:
-        regex = rf"{re.escape(djpress_settings.AUTHOR_PREFIX)}/{regex}"
+        regex = rf"{re.escape(author_prefix)}/{regex}"
 
     return regex
 
