@@ -1,8 +1,5 @@
 """djpress admin configuration."""
 
-from typing import Any
-
-from django import forms
 from django.contrib import admin
 from django.db.models.query import QuerySet
 from django.http import HttpRequest
@@ -105,10 +102,12 @@ class PostAdmin(admin.ModelAdmin):
 
     formatted_date.short_description = "Date"
 
-    def get_form(self, request: HttpRequest, obj: Any | None = None, **kwargs: dict[str, Any]) -> forms.ModelForm:  # noqa: ANN401
+    def get_form(self, request, obj, change=None, **kwargs):  # noqa: ANN001, ANN003, ANN201
         """Set the initial value for the author field to the current user."""
-        form = super().get_form(request, obj, **kwargs)
-        form.base_fields["author"].initial = request.user
+        form = super().get_form(request, obj, change, **kwargs)
+        base_fields = getattr(form, "base_fields", None)
+        if base_fields and "author" in base_fields:
+            base_fields["author"].initial = request.user
         return form
 
     def get_queryset(self, request: HttpRequest) -> QuerySet[Post]:
@@ -136,7 +135,7 @@ class PostAdmin(admin.ModelAdmin):
         # Authors and Contributors see only their own posts
         return qs.filter(author=request.user)
 
-    def has_change_permission(self, request: HttpRequest, obj: Post = None) -> bool:
+    def has_change_permission(self, request: HttpRequest, obj: Post | None = None) -> bool:
         """Limit the change permission based on user role.
 
         Args:
@@ -165,7 +164,7 @@ class PostAdmin(admin.ModelAdmin):
         # Others can only change their own posts
         return obj.author == request.user
 
-    def get_readonly_fields(self, request: HttpRequest, _: Post = None) -> tuple[str, ...]:
+    def get_readonly_fields(self, request: HttpRequest, _: Post | None = None):  # noqa: ANN201
         """Limit the readonly fields based on user role.
 
         Args:
@@ -226,10 +225,16 @@ class MediaAdmin(admin.ModelAdmin):
         ),
     ]
 
-    def get_form(self, request: HttpRequest, obj: Any | None = None, **kwargs: dict[str, Any]) -> forms.ModelForm:  # noqa: ANN401
-        """Set the initial value for the uploaded_by field to the current user."""
-        form = super().get_form(request, obj, **kwargs)
-        form.base_fields["uploaded_by"].initial = request.user
+    def get_form(self, request, obj=None, change=False, **kwargs):  # noqa: ANN001, ANN003, ANN201, FBT002
+        """Set the initial value for the uploaded_by field to the current user.
+
+        This is over-riding a Django method and should not have type hints.
+        """
+        form = super().get_form(request, obj, change, **kwargs)
+        base_fields = getattr(form, "base_fields", None)
+
+        if base_fields and "uploaded_by" in base_fields:
+            base_fields["uploaded_by"].initial = request.user
         return form
 
     def preview(self, obj: Media) -> str:
