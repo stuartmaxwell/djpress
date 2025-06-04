@@ -48,8 +48,8 @@ BUILDDIR      := "docs/_build"
     {{uv}} example/manage.py check
 
 # Run pytest
-@test:
-    {{uv}} pytest
+@test *ARGS:
+    {{uv}} pytest {{ ARGS }}
 
 @test-tz tz:
     TEST_TIME_ZONE={{tz}} {{uv}} pytest
