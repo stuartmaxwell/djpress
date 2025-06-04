@@ -364,7 +364,7 @@ class PostsManager(models.Manager):
             models.QuerySet: A queryset of posts that belong to all the tags in the list.
         """
         max_tags_per_query = djpress_settings.MAX_TAGS_PER_QUERY
-        if not isinstance(max_tags_per_query, int):
+        if not isinstance(max_tags_per_query, int):  # pragma: no cover
             msg = f"MAX_TAGS_PER_QUERY must be an integer, got {type(max_tags_per_query).__name__}"
             raise TypeError(msg)
 
@@ -662,7 +662,7 @@ class Post(models.Model):
     def truncated_content_markdown(self) -> str:
         """Return the truncated content as HTML converted from Markdown."""
         truncate_tag = djpress_settings.TRUNCATE_TAG
-        if not isinstance(truncate_tag, str) or not truncate_tag:
+        if not isinstance(truncate_tag, str) or not truncate_tag:  # pragma: no cover
             msg = "TRUNCATE_TAG must be a non-empty string."
             raise ValueError(msg)
         read_more_index = self.content.find(truncate_tag)
@@ -673,7 +673,7 @@ class Post(models.Model):
     def is_truncated(self) -> bool:
         """Return whether the content is truncated."""
         truncate_tag = djpress_settings.TRUNCATE_TAG
-        if not isinstance(truncate_tag, str) or not truncate_tag:
+        if not isinstance(truncate_tag, str) or not truncate_tag:  # pragma: no cover
             msg = "TRUNCATE_TAG must be a non-empty string."
             raise ValueError(msg)
         return truncate_tag in self.content
