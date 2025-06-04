@@ -195,7 +195,7 @@ def post_read_more_link(
         str: The read more link.
     """
     post_read_more_text = djpress_settings.POST_READ_MORE_TEXT
-    if not isinstance(post_read_more_text, str):
+    if not isinstance(post_read_more_text, str):  # pragma: no cover
         msg = f"Expected a string for POST_READ_MORE_TEXT, got {type(post_read_more_text).__name__}"
         raise TypeError(msg)
     read_more_text = read_more_text if read_more_text else post_read_more_text

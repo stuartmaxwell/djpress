@@ -84,7 +84,7 @@ def site_title() -> str:
         str: The site title.
     """
     site_title = djpress_settings.SITE_TITLE
-    if not isinstance(site_title, str):
+    if not isinstance(site_title, str):  # pragma: no cover
         msg = f"Expected SITE_TITLE to be a string, got {type(site_title).__name__}"
         raise TypeError(msg)
     return site_title
