@@ -1,5 +1,7 @@
 """Utility functions that are used in the project."""
 
+from collections.abc import Callable
+
 from django.contrib.auth.models import User
 from django.template.loader import TemplateDoesNotExist, select_template
 from django.utils import timezone
@@ -8,13 +10,16 @@ from django.utils.module_loading import import_string
 from djpress.conf import settings as djpress_settings
 
 
-def get_markdown_renderer() -> callable:
+def get_markdown_renderer() -> Callable:
     """Get the configured markdown renderer function.
 
     Returns:
         callable: The markdown renderer function.
     """
     renderer_path = djpress_settings.MARKDOWN_RENDERER
+    if not isinstance(renderer_path, str):
+        msg = f"Expected MARKDOWN_RENDERER to be a string, got {type(renderer_path).__name__}"
+        raise TypeError(msg)
 
     try:
         return import_string(renderer_path)
