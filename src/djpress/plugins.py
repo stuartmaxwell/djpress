@@ -1,6 +1,7 @@
 """Plugin system for DJ Press."""
 
 import contextlib  # Ruff: SIM105
+from collections.abc import Callable
 from enum import Enum
 from typing import Any
 
@@ -31,7 +32,7 @@ class PluginRegistry:
         self.hooks = {}
         self._loaded = False
 
-    def register_hook(self, hook_name: Hooks | str, callback: callable) -> None:
+    def register_hook(self, hook_name: Hooks | str, callback: Callable) -> None:
         """Register a callback function for a specific hook.
 
         Args:
@@ -100,8 +101,19 @@ class PluginRegistry:
         if self._loaded:
             return
 
-        plugin_names: list = djpress_settings.PLUGINS
-        plugin_settings: dict = djpress_settings.PLUGIN_SETTINGS
+        plugin_names = djpress_settings.PLUGINS
+        if not plugin_names:
+            return
+        if not isinstance(plugin_names, list):
+            msg = f"Expected PLUGINS to be a list, got {type(plugin_names).__name__}"
+            raise TypeError(msg)
+
+        plugin_settings = djpress_settings.PLUGIN_SETTINGS
+        if not plugin_settings:
+            plugin_settings = {}
+        if not isinstance(plugin_settings, dict):
+            msg = f"Expected PLUGIN_SETTINGS to be a dict, got {type(plugin_settings).__name__}"
+            raise TypeError(msg)
 
         try:
             for plugin_path in plugin_names:
@@ -145,7 +157,12 @@ class PluginRegistry:
             )
             raise ImproperlyConfigured(msg) from exc
 
-    def _instantiate_plugin(self, plugin_class: type, plugin_path: str, plugin_settings: dict) -> "DJPressPlugin":
+    def _instantiate_plugin(
+        self,
+        plugin_class: type,
+        plugin_path: str,
+        plugin_settings: dict,
+    ) -> "DJPressPlugin":
         """Create and set up a plugin instance.
 
         Args:
@@ -183,11 +200,11 @@ class PluginRegistry:
 class DJPressPlugin:
     """Base class for DJ Press plugins."""
 
-    name: str | None = None
+    name: str
 
     def __init__(self, config: dict | None = None) -> None:
         """Initialize the plugin."""
-        if self.name is None:
+        if not hasattr(self, "name") or not self.name:
             msg = "Plugin must define a name"
             raise ValueError(msg)
         self.config = config or {}
