@@ -1,3 +1,4 @@
+from unittest.mock import patch
 import pytest
 
 from djpress.utils import get_author_display_name, get_markdown_renderer, get_template_name, get_templates
@@ -160,20 +161,56 @@ def test_get_templates(settings):
     ]
 
 
-def test_get_template_name(settings):
+def test_get_template_name_default_theme(settings):
+    """These only return index.html because that's the only template that exists in the default theme."""
     # Test case 1 - template for view exists
     template_name = get_template_name("index")
     assert template_name == "djpress/default/index.html"
 
     # Test case 2 - template for home view does not exist, defaults to index
-    template_name = get_template_name("home")
+    template_name = get_template_name("single_page")
     assert template_name == "djpress/default/index.html"
 
     # Test case 3 - template for new view does not exist, defaults to index
     template_name = get_template_name("foobar")
     assert template_name == "djpress/default/index.html"
 
-    # Test case 4 - theme is set to a non-existent theme, therefore the template will not be found
+
+def test_get_template_name_non_existent_theme(settings):
+    # Theme is set to a non-existent theme, therefore the template will not be found
     settings.DJPRESS_SETTINGS["THEME"] = "test-theme"
-    with pytest.raises(TemplateDoesNotExist):
+    with pytest.raises(TemplateDoesNotExist, match="No template found for view 'index'"):
         get_template_name("index")
+
+
+def test_get_template_name_testing_theme(settings):
+    """These only return index.html because that's the only template that exists in the default theme."""
+    settings.DJPRESS_SETTINGS["THEME"] = "testing"
+
+    # Test case 1 - template for index view when category.html exists
+    template_name = get_template_name("index")
+    assert template_name == "djpress/testing/home.html"
+
+    # Test case 2 - template for category_posts view when category.html exists
+    template_name = get_template_name("category_posts")
+    assert template_name == "djpress/testing/category.html"
+
+    # Test case 3 - template for author_posts view when author.html exists
+    template_name = get_template_name("author_posts")
+    assert template_name == "djpress/testing/author.html"
+
+    # Test case 4 - template for tag_posts view when tag.html exists
+    template_name = get_template_name("tag_posts")
+    assert template_name == "djpress/testing/tag.html"
+
+    # Test case 5 - template for single_post view when single.html exists
+    template_name = get_template_name("single_post")
+    assert template_name == "djpress/testing/single.html"
+
+    # Test case 6 - template for single_page view when page.html exists
+    template_name = get_template_name("single_page")
+    assert template_name == "djpress/testing/page.html"
+
+    # Test case 7 - template for archive_posts view when archives.html exists
+    template_name = get_template_name("archive_posts")
+    assert template_name == "djpress/testing/archives.html"

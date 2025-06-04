@@ -477,6 +477,14 @@ def test_get_post_url(settings, test_post1):
     assert url == expected_url
 
 
+@pytest.mark.django_db
+def test_get_post_url_no_date(settings, test_post1):
+    """Test with no post _date"""
+    test_post1._date = None
+    with pytest.raises(ValueError):
+        get_post_url(test_post1)
+
+
 def test_get_rss_url(settings):
     with pytest.raises(KeyError):
         assert settings.DJPRESS_SETTINGS["RSS_ENABLED"] == "True"

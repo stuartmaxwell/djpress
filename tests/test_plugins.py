@@ -1,3 +1,4 @@
+from enum import Enum
 import pytest
 from djpress.plugins import PluginRegistry, DJPressPlugin, Hooks
 from djpress.plugins import registry
@@ -54,15 +55,36 @@ def test_register_hook_with_valid_string(clean_registry):
     assert test_callback in registry.hooks[Hooks.PRE_RENDER_CONTENT]
 
 
-def test_register_unknown_hook_name(clean_registry):
-    """Test registering unknown hook name - should accept but trigger warning."""
+def test_register_unknown_str_hook_name(clean_registry, caplog):
+    """Test registering unknown hook name - should accept but log a warning."""
+
+    caplog.set_level("WARNING")
 
     def test_callback(content: str) -> str:
         return content
 
+    registry._loaded = True  # Simulate that plugins are loaded
+    registry.plugins = ["test_plugin"]  # Simulate a loaded plugin
+
     registry.register_hook("unknown_hook", test_callback)
-    assert "unknown_hook" in registry.hooks
-    assert test_callback in registry.hooks["unknown_hook"]
+    # Check the output from logger.warning
+    assert "Invalid hook str name: unknown_hook. Hook not registered by callback." in caplog.text
+
+
+def test_register_unknown_enum_hook_name(clean_registry, caplog):
+    caplog.set_level("WARNING")
+
+    def test_callback(content: str) -> str:
+        return content
+
+    registry._loaded = True  # Simulate that plugins are loaded
+    registry.plugins = ["test_plugin"]  # Simulate a loaded plugin
+
+    class Hooks(Enum):
+        UNKNOWN_HOOK = "unknown_hook"
+
+    registry.register_hook(Hooks.UNKNOWN_HOOK, test_callback)  # type: ignore
+    assert "Invalid hook enum: Hooks.UNKNOWN_HOOK. Hook not registered by callback." in caplog.text
 
 
 # Tests for hook execution (strict)
@@ -72,9 +94,26 @@ def test_run_hook_with_enum(clean_registry):
     def test_callback(content: str) -> str:
         return content + " modified"
 
+    registry._loaded = True  # Simulate that plugins are loaded
+    registry.plugins = ["test_plugin"]  # Simulate a loaded plugin
     registry.register_hook(Hooks.PRE_RENDER_CONTENT, test_callback)
     result = registry.run_hook(Hooks.PRE_RENDER_CONTENT, "test value")
     assert result == "test value modified"
+
+
+def test_run_hook_not_registered(clean_registry):
+    """Test running hook that hasn't been registered.
+
+    Nothing happens the value just gets returned.
+    """
+
+    def test_callback(content: str) -> str:
+        return content + " modified"
+
+    registry._loaded = True  # Simulate that plugins are loaded
+    registry.plugins = ["test_plugin"]  # Simulate a loaded plugin
+    result = registry.run_hook(Hooks.PRE_RENDER_CONTENT, "test value")
+    assert result == "test value"
 
 
 # Tests for hook execution (strict)
@@ -87,48 +126,43 @@ def test_run_hook_with_multiple_hooks(clean_registry):
     def second_test_callback(content: str) -> str:
         return content + " modified by second test_callback"
 
+    registry._loaded = True  # Simulate that plugins are loaded
+    registry.plugins = ["test_plugin"]  # Simulate a loaded plugin
     registry.register_hook(Hooks.PRE_RENDER_CONTENT, test_callback)
     registry.register_hook(Hooks.PRE_RENDER_CONTENT, second_test_callback)
     result = registry.run_hook(Hooks.PRE_RENDER_CONTENT, "test value")
     assert result == "test value modified by test_callback modified by second test_callback"
 
 
-def test_run_hook_with_exception(clean_registry):
+def test_run_hook_with_exception(clean_registry, caplog):
     """Test running hook with an exception doesn't modify the value."""
+    caplog.set_level("WARNING")
 
     def test_callback(content: str) -> str:
         raise ValueError("Test error")
 
+    registry._loaded = True  # Simulate that plugins are loaded
+    registry.plugins = ["test_plugin"]  # Simulate a loaded plugin
     registry.register_hook(Hooks.PRE_RENDER_CONTENT, test_callback)
     result = registry.run_hook(Hooks.PRE_RENDER_CONTENT, "test value")
     assert result == "test value"
 
+    assert "Error running callback" in caplog.text
 
-def test_run_hook_with_string_fails(clean_registry):
+
+def test_run_hook_with_string_fails(clean_registry, caplog):
+    caplog.set_level("WARNING")
     """Test running hook with string fails."""
-    with pytest.raises(TypeError, match="hook_name must be a Hooks enum member"):
-        registry.run_hook("pre_render_content", "test")  # type: ignore
+    registry.run_hook("pre_render_content", "test")  # type: ignore
+    assert "hook_name must be a Hooks enum member" in caplog.text
 
 
-def test_run_hook_type_error_message(clean_registry):
+def test_run_hook_type_error_message(clean_registry, caplog):
+    caplog.set_level("WARNING")
     """Test specific error message when running hook with wrong type."""
-    with pytest.raises(TypeError) as exc_info:
-        registry.run_hook("pre_render_content", "test")  # type: ignore
-    assert "hook_name must be a Hooks enum member" in str(exc_info.value)
-    assert "got <class 'str'>" in str(exc_info.value)
-
-
-# For lines 48-50 (contextlib.suppress for ValueError)
-def test_register_hook_with_invalid_string(clean_registry):
-    """Test registering hook with invalid string - should store as string."""
-
-    def test_callback(content: str) -> str:
-        return content
-
-    registry.register_hook("not_a_real_hook", test_callback)
-    # Should store with string key since conversion to Enum failed
-    assert "not_a_real_hook" in registry.hooks
-    assert test_callback in registry.hooks["not_a_real_hook"]
+    registry.run_hook("pre_render_content", "test")  # type: ignore
+    assert "hook_name must be a Hooks enum member" in caplog.text
+    assert "got <class 'str'>" in caplog.text
 
 
 # For line 90 (value is None in hooks dict)
@@ -142,6 +176,13 @@ def test_run_hook_nonexistent_hook(clean_registry):
 def test_load_plugins_already_loaded(clean_registry):
     """Test that load_plugins doesn't reload if already loaded."""
     registry._loaded = True
+    registry.load_plugins()
+    assert len(registry.plugins) == 0  # Should not have loaded any plugins
+
+
+def test_load_plugins_not_loaded(clean_registry):
+    """Test that load_plugins doesn't reload if already loaded."""
+    registry._loaded = False
     registry.load_plugins()
     assert len(registry.plugins) == 0  # Should not have loaded any plugins
 
@@ -204,22 +245,6 @@ def test_instantiate_plugin_fails(clean_registry):
     with pytest.raises(ImproperlyConfigured) as exc_info:
         registry._instantiate_plugin(BrokenPlugin, "broken_plugin", {})
     assert "Error initializing plugin" in str(exc_info.value)
-
-
-# For lines 48-50 (contextlib.suppress and string conversion)
-def test_register_hook_conversion_from_string(clean_registry):
-    """Test string to enum conversion in register_hook."""
-
-    def callback(content: str) -> str:
-        return content
-
-    # This should try to convert the string to enum and succeed
-    registry.register_hook("pre_render_content", callback)
-    assert Hooks.PRE_RENDER_CONTENT in registry.hooks
-
-    # This should try to convert and silently fail
-    registry.register_hook("not_a_hook", callback)
-    assert "not_a_hook" in registry.hooks
 
 
 # For lines 96-98 (early return if already loaded)
@@ -304,8 +329,9 @@ def test_load_plugins_successful(clean_registry, monkeypatch):
     assert isinstance(registry.plugins[0], TestPlugin)
 
 
-def test_load_plugins_exception(clean_registry, monkeypatch):
+def test_load_plugins_exception(clean_registry, monkeypatch, caplog):
     """Test plugin loading with exception."""
+    caplog.set_level("WARNING")
 
     class TestPlugin(DJPressPlugin):
         name = "test"
@@ -327,9 +353,9 @@ def test_load_plugins_exception(clean_registry, monkeypatch):
     monkeypatch.setattr(djpress_settings, "PLUGINS", ["test_plugin"])
     monkeypatch.setattr(djpress_settings, "PLUGIN_SETTINGS", {})
 
-    # Load plugins - will raise exception
-    with pytest.raises(PluginLoadError):
-        registry.load_plugins()
+    # Load plugins - will log a warning
+    registry.load_plugins()
+    assert "Failed to load plugins:" in caplog.text
 
 
 def test_plugin_missing_name():
@@ -352,6 +378,9 @@ def test_register_multiple_callbacks(clean_registry):
     def callback2(content: str) -> str:
         return content + "2"
 
+    registry._loaded = True  # Simulate that plugins are loaded
+    registry.plugins = ["test_plugin"]  # Simulate a loaded plugin
+
     # Register first callback - should create new list
     registry.register_hook(Hooks.PRE_RENDER_CONTENT, callback1)
     assert len(registry.hooks[Hooks.PRE_RENDER_CONTENT]) == 1
@@ -368,11 +397,60 @@ def test_register_multiple_callbacks(clean_registry):
     assert result == "test12"
 
 
+def test_register_multiple_callbacks_with_error(clean_registry, caplog):
+    """Test registering multiple callbacks for the same hook.
+
+    The first and third callbacks should execute normally by appending text to the value.
+    The second callback should raise an error, which should be logged but not stop the execution of the other
+    callbacks.
+    """
+    caplog.set_level("WARNING")
+
+    def callback1(content: str) -> str:
+        return content + "1"
+
+    def callback2(content: str) -> str:
+        raise ValueError("Test error in callback2")
+
+    def callback3(content: str) -> str:
+        return content + "3"
+
+    registry._loaded = True  # Simulate that plugins are loaded
+    registry.plugins = ["test_plugin"]  # Simulate a loaded plugin
+
+    # Register first callback - should create new list
+    registry.register_hook(Hooks.PRE_RENDER_CONTENT, callback1)
+    assert len(registry.hooks[Hooks.PRE_RENDER_CONTENT]) == 1
+    assert registry.hooks[Hooks.PRE_RENDER_CONTENT][0] == callback1
+
+    # Register second callback - should append to existing list
+    registry.register_hook(Hooks.PRE_RENDER_CONTENT, callback2)
+    assert len(registry.hooks[Hooks.PRE_RENDER_CONTENT]) == 2
+    assert registry.hooks[Hooks.PRE_RENDER_CONTENT][0] == callback1
+    assert registry.hooks[Hooks.PRE_RENDER_CONTENT][1] == callback2
+
+    # Register third callback - should append to existing list
+    registry.register_hook(Hooks.PRE_RENDER_CONTENT, callback3)
+    assert len(registry.hooks[Hooks.PRE_RENDER_CONTENT]) == 3
+    assert registry.hooks[Hooks.PRE_RENDER_CONTENT][0] == callback1
+    assert registry.hooks[Hooks.PRE_RENDER_CONTENT][1] == callback2
+    assert registry.hooks[Hooks.PRE_RENDER_CONTENT][2] == callback3
+
+    # Verify all callbacks are executed in order with the error logged and ignored
+    result = registry.run_hook(Hooks.PRE_RENDER_CONTENT, "test")
+    assert result == "test13"
+
+    assert "Error running callback" in caplog.text
+
+
 def test_content_modification_hook(clean_registry):
     """Test hooks that modify and return content."""
 
     def test_callback(content: str) -> str:
         return content + " modified"
+
+    registry._loaded = True  # Simulate that plugins are loaded
+    registry.plugins = ["test_plugin"]  # Simulate a loaded plugin
 
     registry.register_hook(Hooks.PRE_RENDER_CONTENT, test_callback)
     result = registry.run_hook(Hooks.PRE_RENDER_CONTENT, "test")

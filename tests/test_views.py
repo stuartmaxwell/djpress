@@ -1,5 +1,6 @@
 from collections.abc import Iterable
 
+from django.http import Http404, HttpRequest
 import pytest
 
 from datetime import datetime
@@ -10,6 +11,7 @@ from django.utils import timezone
 
 from djpress.models import Post
 from djpress.url_utils import get_archives_url, get_author_url, get_category_url, get_tag_url
+from djpress.views import dispatcher
 
 
 @pytest.mark.django_db
@@ -433,3 +435,19 @@ def test_date_archives_day_no_posts(client, test_post1):
     assert b"No posts available" in response.content
     assert "posts" in response.context
     assert isinstance(response.context["posts"], Iterable)
+
+
+def test_dispatcher_with_invalid_url(client):
+    """Test that the dispatcher returns 404 for invalid URLs.
+
+    This should never happen because the URL matcher should only call the dispatcher with a valid URL."""
+    invalid_url = "/!@#$/"
+    # The following test doesn't get to the dispatcher function because the URL matcher already returns 404.
+    response = client.get(invalid_url)
+    assert response.status_code == 404
+
+    # But if we pass the invalid URL directly to the dispatcher, it should raise Http404.
+    request = HttpRequest()
+    request.method = "GET"
+    with pytest.raises(Http404):
+        dispatcher(request, invalid_url)
