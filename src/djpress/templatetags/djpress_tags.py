@@ -83,7 +83,11 @@ def site_title() -> str:
     Returns:
         str: The site title.
     """
-    return djpress_settings.SITE_TITLE
+    site_title = djpress_settings.SITE_TITLE
+    if not isinstance(site_title, str):
+        msg = f"Expected SITE_TITLE to be a string, got {type(site_title).__name__}"
+        raise TypeError(msg)
+    return site_title
 
 
 @register.simple_tag
