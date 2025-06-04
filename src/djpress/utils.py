@@ -17,7 +17,7 @@ def get_markdown_renderer() -> Callable:
         callable: The markdown renderer function.
     """
     renderer_path = djpress_settings.MARKDOWN_RENDERER
-    if not isinstance(renderer_path, str):
+    if not isinstance(renderer_path, str):  # pragma: no cover
         msg = f"Expected MARKDOWN_RENDERER to be a string, got {type(renderer_path).__name__}"
         raise TypeError(msg)
 
