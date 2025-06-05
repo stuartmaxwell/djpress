@@ -3,22 +3,17 @@
 import logging
 from collections.abc import Callable
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from django.utils.module_loading import import_string
 
 from djpress.conf import settings as djpress_settings
+from djpress.plugins.hook_registry import Hooks
+
+if TYPE_CHECKING:
+    from djpress.plugins.base_plugin import DJPressPlugin
 
 logger = logging.getLogger(__name__)
-
-
-# Hook definitions
-class Hooks(Enum):
-    """Available hook points in DJ Press."""
-
-    PRE_RENDER_CONTENT = "pre_render_content"
-    POST_RENDER_CONTENT = "post_render_content"
-    POST_SAVE_POST = "post_save_post"
 
 
 class PluginRegistry:
@@ -226,46 +221,6 @@ class PluginRegistry:
 
         else:
             return plugin
-
-
-class DJPressPlugin:
-    """Base class for DJ Press plugins."""
-
-    name: str
-
-    def __init__(self, config: dict | None = None) -> None:
-        """Initialize the plugin."""
-        if not hasattr(self, "name") or not self.name:
-            msg = "Plugin must define a name"
-            raise ValueError(msg)
-        self.config = config or {}
-
-    def setup(self, registry: PluginRegistry) -> None:
-        """Set up the plugin.
-
-        Args:
-            registry (PluginRegistry): The plugin registry.
-        """
-
-    def get_data(self) -> dict:
-        """Get this plugin's stored data.
-
-        Returns:
-            dict: The plugin's stored data, or empty dict if none exists.
-        """
-        from djpress.models import PluginStorage
-
-        return PluginStorage.objects.get_data(self.name)
-
-    def save_data(self, data: dict) -> None:
-        """Save this plugin's data.
-
-        Args:
-            data: The data to store for this plugin.
-        """
-        from djpress.models import PluginStorage
-
-        PluginStorage.objects.save_data(self.name, data)
 
 
 # Instantiate the global plugin registry
