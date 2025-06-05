@@ -30,6 +30,9 @@ def test_hook_enum_values():
     """Test that Hook enum has the expected values."""
     assert Hooks.PRE_RENDER_CONTENT.value == "pre_render_content"
     assert Hooks.POST_RENDER_CONTENT.value == "post_render_content"
+    assert Hooks.POST_SAVE_POST.value == "post_save_post"
+    assert Hooks.DJ_HEADER.value == "dj_header"
+    assert Hooks.DJ_FOOTER.value == "dj_footer"
 
 
 # Tests for plugin registration (flexible)
