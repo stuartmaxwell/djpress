@@ -471,10 +471,10 @@ class Post(models.Model):
     CONTENT_TYPE_CHOICES = [("post", "Post"), ("page", "Page")]
 
     # Managers
-    admin_objects: AdminManager = AdminManager()  # Unfiltered - for admin use only
     objects: PostsAndPagesManager = PostsAndPagesManager()  # Default manager returns only published content
     page_objects: PagesManager = PagesManager()
     post_objects: PostsManager = PostsManager()
+    admin_objects: AdminManager = AdminManager()  # Unfiltered - for admin use only
 
     title = models.CharField(max_length=200, blank=True, help_text="Title is only required for pages.")
     slug = models.SlugField(
