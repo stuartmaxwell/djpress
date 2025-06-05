@@ -93,3 +93,10 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 # Required for django-debug-toolbar
 INTERNAL_IPS = ["127.0.0.1"]
+
+DJPRESS_SETTINGS = {
+    "THEME": "testing",
+    "PLUGINS": [
+        "djpress_example_plugin",
+    ],
+}
