@@ -1974,3 +1974,20 @@ def test_get_pagination_range_no_page_in_context():
     # Test with non-Page object in posts
     context = Context({"posts": "not a Page object"})
     assert djpress_tags.get_pagination_range(context) == range(0)
+
+
+# Tests for new hook-based template tags
+
+
+def test_dj_header_no_plugins():
+    """Test dj_header template tag when no plugins are loaded."""
+    result = djpress_tags.dj_header()
+    assert result == ""
+    assert isinstance(result, str)
+
+
+def test_dj_footer_no_plugins():
+    """Test dj_footer template tag when no plugins are loaded."""
+    result = djpress_tags.dj_footer()
+    assert result == ""
+    assert isinstance(result, str)
