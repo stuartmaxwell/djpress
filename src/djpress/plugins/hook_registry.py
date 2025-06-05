@@ -13,3 +13,5 @@ class Hooks(Enum):
     PRE_RENDER_CONTENT = "pre_render_content"
     POST_RENDER_CONTENT = "post_render_content"
     POST_SAVE_POST = "post_save_post"
+    DJ_HEADER = "dj_header"
+    DJ_FOOTER = "dj_footer"

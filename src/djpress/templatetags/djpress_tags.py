@@ -12,6 +12,7 @@ from djpress import url_utils
 from djpress.conf import settings as djpress_settings
 from djpress.exceptions import PageNotFoundError
 from djpress.models import Category, Post, Tag
+from djpress.plugins import Hooks, registry
 from djpress.templatetags import helpers
 from djpress.utils import get_author_display_name
 
@@ -1129,3 +1130,43 @@ def post_wrapper_tag(parser: template.base.Parser, token: template.base.Token) -
     parser.delete_first_token()
 
     return helpers.BlogPostWrapper(nodelist, tag, css_class)
+
+
+# Plugin hook template tags
+
+
+@register.simple_tag()
+def dj_header() -> str:
+    """Return HTML content from plugins registered to the dj_header hook.
+
+    This allows plugins to inject HTML content into the <head> section of templates.
+    Plugins can register callbacks for the DJ_HEADER hook to add meta tags, styles,
+    scripts, or other head content.
+
+    Args:
+        context: The template context.
+
+    Returns:
+        str: HTML content from all registered dj_header hook callbacks, marked as safe.
+    """
+    content = registry.run_hook(Hooks.DJ_HEADER)
+    return mark_safe(content or "")
+
+
+@register.simple_tag()
+def dj_footer() -> str:
+    """Return HTML content from plugins registered to the dj_footer hook.
+
+    This allows plugins to inject HTML content near the end of HTML documents,
+    typically before the closing </body> tag or within <footer> elements.
+    Plugins can register callbacks for the DJ_FOOTER hook to add analytics,
+    scripts, or other footer content.
+
+    Args:
+        context: The template context.
+
+    Returns:
+        str: HTML content from all registered dj_footer hook callbacks, marked as safe.
+    """
+    content = registry.run_hook(Hooks.DJ_FOOTER)
+    return mark_safe(content or "")
