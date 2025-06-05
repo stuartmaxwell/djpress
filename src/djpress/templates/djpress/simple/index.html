@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="{% static "simple/css/simple.min.css" %}">
     <link rel="stylesheet" href="{% static "simple/css/style.css" %}">
     {% rss_link %}
+    {% dj_header %}
   </head>
   <body>
     <header>
@@ -92,6 +93,7 @@
 
     <footer>
       <p>{% site_title_link %}</p>
+      {% dj_footer %}
     </footer>
   </body>
 </html>
