@@ -67,14 +67,12 @@ class PluginRegistry:
         # Append the callback to the list for this hook
         self.hooks[hook_name].append(callback)
 
-    def run_hook(self, hook_name: Hooks, value: Any = None, *args: Any, **kwargs: Any) -> Any:  # noqa: ANN401
+    def run_hook(self, hook_name: Hooks, value: Any = None) -> Any:  # noqa: ANN401
         """Run all registered callbacks for a given hook.
 
         Args:
             hook_name (Hooks): The name of the hook to run, this should be in the form of a Hooks enum member.
             value: The value to be modified by the callbacks.
-            *args: Additional positional arguments to pass to the callbacks.
-            **kwargs: Additional keyword arguments to pass to the callbacks.
 
         Returns:
             The value after all callbacks have been run.
@@ -97,7 +95,7 @@ class PluginRegistry:
                 # plugins. With this approach, if one fails, the `value` won't be modified and we'll continue to the
                 # next one.
                 try:
-                    callback_value = callback(value, *args, **kwargs)
+                    callback_value = callback(value)
                     value = callback_value
                 except Exception:  # noqa: BLE001, PERF203
                     # Log the error but continue with the next callback
