@@ -12,7 +12,8 @@ from djpress import url_utils
 from djpress.conf import settings as djpress_settings
 from djpress.exceptions import PageNotFoundError
 from djpress.models import Category, Post, Tag
-from djpress.plugins import Hooks, registry
+from djpress.plugins import registry
+from djpress.plugins.hook_registry import DJ_FOOTER, DJ_HEADER
 from djpress.templatetags import helpers
 from djpress.utils import get_author_display_name
 
@@ -1143,13 +1144,10 @@ def dj_header() -> str:
     Plugins can register callbacks for the DJ_HEADER hook to add meta tags, styles,
     scripts, or other head content.
 
-    Args:
-        context: The template context.
-
     Returns:
         str: HTML content from all registered dj_header hook callbacks, marked as safe.
     """
-    content = registry.run_hook(Hooks.DJ_HEADER)
+    content = registry.run_hook(DJ_HEADER)
     return mark_safe(content or "")
 
 
@@ -1162,11 +1160,8 @@ def dj_footer() -> str:
     Plugins can register callbacks for the DJ_FOOTER hook to add analytics,
     scripts, or other footer content.
 
-    Args:
-        context: The template context.
-
     Returns:
         str: HTML content from all registered dj_footer hook callbacks, marked as safe.
     """
-    content = registry.run_hook(Hooks.DJ_FOOTER)
+    content = registry.run_hook(DJ_FOOTER)
     return mark_safe(content or "")
