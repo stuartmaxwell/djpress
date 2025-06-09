@@ -17,15 +17,15 @@ class DJPressPlugin:
     name: str
     hooks: list[tuple[_Hook, str]] = []
 
-    def __init__(self, config: dict) -> None:
+    def __init__(self, settings: dict) -> None:
         """Initialize the plugin with a configuration dictionary.
 
-        If there is no config, then an empty dict will be passed.
+        If there are no settings, then an empty dict will be passed.
 
         Args:
-            config: A dictionary containing configuration options for the plugin.
+            settings: A dictionary containing the settings for the plugin.
         """
-        self.config = config
+        self.settings = settings
 
     def get_data(self) -> dict:
         """Get this plugin's stored data.

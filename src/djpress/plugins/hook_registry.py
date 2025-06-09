@@ -36,8 +36,14 @@ class _Hook:
     def __hash__(self) -> int:
         """Return a hash based on the hook name.
 
+        This method makes _Hook instances hashable, allowing them to be used as keys in dictionaries
+        (e.g., in PluginRegistry.hooks) or elements in sets. The hash is derived from the hook's 'name' attribute.
+
+        This implementation ensures that if two _Hook instances are considered equal by __eq__
+        (i.e., they have the same name), they will also have the same hash value.
+
         Returns:
-            The hash of the hook's name.
+            The integer hash of the hook's name.
         """
         return hash(self.name)
 
@@ -66,17 +72,25 @@ def _validate_hook_callback(hook: _Hook, callback: Callable[..., Any]) -> tuple[
         if inspect.isfunction(callback) or inspect.ismethod(callback):
             callback_sig = inspect.signature(callback)
             callback_params = list(callback_sig.parameters.values())
-        elif callable(callback):
-            # For callable objects, __call__ is already bound, so do NOT skip self
-            callback_sig = inspect.signature(callback.__call__)
-            callback_params = list(callback_sig.parameters.values())
         else:
-            return False, "Callback is not callable"
+            return False, "Callback is expected to be a method or function."
 
         if len(protocol_params) != len(callback_params):
             return False, f"Expected {len(protocol_params)} parameters, got {len(callback_params)}"
-    except (TypeError, AttributeError, ValueError) as e:
-        return False, f"Signature validation error: {e}"
+
+        # Parameter type hint validation
+        for p_param, c_param in zip(protocol_params, callback_params, strict=False):
+            p_type = p_param.annotation
+            c_type = c_param.annotation
+
+            if p_type != c_type:
+                return False, (
+                    f"Parameter type mismatch: expected {p_type}, got {c_type} "
+                    f"for parameter '{c_param.name}' in hook '{hook.name}'"
+                )
+
+    except Exception as exc:  # noqa: BLE001
+        return False, f"Signature validation error: {exc}"
     return True, ""
 
 

@@ -75,7 +75,7 @@ def _run_object_provider(
     try:
         callback(value)
     except Exception as exc:  # noqa: BLE001
-        msg = f"Error running callback {callback}. Callback skipped: {exc}"
+        msg = f"Error running callback '{callback}'. Callback skipped: {exc}"
         logger.warning(msg)
 
     return original_post

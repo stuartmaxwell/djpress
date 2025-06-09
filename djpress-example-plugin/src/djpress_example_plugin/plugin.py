@@ -36,29 +36,33 @@ class Plugin(DJPressPlugin):
 
         This is a pre-render hook, so the content is still in Markdown format.
 
+        `greet_text` can be set in the plugin settings, or defaults to "Hello!".
+
         Args:
             content: The content to modify.
 
         Returns:
             The modified content.
         """
-        pre_text = self.config.get("pre_text", "Hello!")
-        return f"{pre_text} This was added by `add_greeting` in `djpress_example_plugin`!\n\n---\n\n{content}"
+        greet_text = self.settings.get("greet_text", "Hello!")
+        return f"{greet_text} This was added by `add_greeting` in `djpress_example_plugin`!\n\n---\n\n{content}"
 
     def add_goodbye(self, content: str) -> str:
         """Add a goodbye message to the content.
 
         This is a post-render hook, so the content has already been rendered from Markdown to HTML.
 
+        `bye_text` can be set in the plugin settings, or defaults to "Goodbye!".
+
         Args:
             content: The content to modify.
 
         Returns:
             The modified content.
         """
-        pre_text = self.config.get("pre_text", "Goodbye!")
+        bye_text = self.settings.get("bye_text", "Goodbye!")
         return (
-            f"{content}<hr><p>{pre_text} Added by <code>add_goodbye</code> in <code>djpress_example_plugin</code>!</p>"
+            f"{content}<hr><p>{bye_text} Added by <code>add_goodbye</code> in <code>djpress_example_plugin</code>!</p>"
         )
 
     def add_header_content(self) -> str:

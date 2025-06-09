@@ -58,7 +58,7 @@ class PluginRegistry:
         if not plugin_names:
             return
         # If plugin names is not a list, log a warning and exit.
-        if not isinstance(plugin_names, list):
+        if not isinstance(plugin_names, list):  # pragma: no cover
             msg = f"Expected PLUGINS to be a list, got {type(plugin_names).__name__}"
             self.plugin_errors.append(msg)
             logger.warning(msg)
@@ -70,15 +70,15 @@ class PluginRegistry:
         if not plugin_settings:
             plugin_settings = {}
         # If plugin settings is not a dict, log a warning and exit.
-        if not isinstance(plugin_settings, dict):
+        if not isinstance(plugin_settings, dict):  # pragma: no cover
             msg = f"Expected PLUGIN_SETTINGS to be a dict, got {type(plugin_settings).__name__}"
             self.plugin_errors.append(msg)
             logger.warning(msg)
             return
 
         # Try to import each plugin and register its hooks.
-        try:
-            for plugin_path in plugin_names:
+        for plugin_path in plugin_names:
+            try:
                 # Get the plugin class.
                 plugin_class = self._import_plugin_class(plugin_path)
                 # Load the plugin
@@ -90,18 +90,20 @@ class PluginRegistry:
                     for hook, method_name in hooks:
                         callback = getattr(plugin, method_name)
                         self.register_hook(hook, callback)
+
+                    # If we get to this point the plugin has been successfully loaded.
+                    self.plugins.append(plugin)
                 except TypeError as exc:
                     logger.warning(
                         f"Plugin '{plugin_path}' has a non-iterable 'hooks' attribute: {exc}. "
                         "Skipping hook registration.",
                     )
-                # If we get to this point the plugin has been successfully loaded.
-                self.plugins.append(plugin)
-            self._loaded = True
-        except Exception as exc:  # noqa: BLE001
-            msg = f"Failed to load plugins: {exc}"
-            self.plugin_errors.append(msg)
-            logger.warning(msg)
+
+            except Exception as exc:  # noqa: BLE001, PERF203
+                msg = f"Failed to load plugin: '{plugin_path}' {exc}"
+                self.plugin_errors.append(msg)
+                logger.warning(msg)
+        self._loaded = True
 
     def register_hook(self, hook: "_Hook", callback: Callable[..., Any]) -> None:
         """Register a callback function for a specific hook.
@@ -114,9 +116,9 @@ class PluginRegistry:
             TypeError: If the hook is not a _Hook object.
             TypeError: If the callback does not match the expected protocol.
         """
-        # If the hook doesn't have the required attributes, log a warning and exit.
-        if not hasattr(hook, "protocol") or not hasattr(hook, "name"):
-            msg = f"Invalid hook: {hook!r}. Must be a _Hook object."
+        # If the hook doesn't have the required attribute typer, log a warning and exit.
+        if not isinstance(hook.protocol, object) or not isinstance(hook.name, str):
+            msg = f"Invalid hook: '{hook!r}'. Must be a _Hook object."
             self.plugin_errors.append(msg)
             logger.warning(msg)
             return
@@ -124,7 +126,7 @@ class PluginRegistry:
         # Validate the callback against the hook's protocol.
         is_valid, error = _validate_hook_callback(hook, callback)
         if not is_valid:
-            msg = f"Invalid callback signature for hook {hook.name}: {error}"
+            msg = f"Invalid callback signature for hook '{hook.name}': {error}"
             self.plugin_errors.append(msg)
             logger.warning(msg)
             return
@@ -133,7 +135,7 @@ class PluginRegistry:
         if hook not in self.hooks:
             self.hooks[hook] = []
 
-        # Register the callback for the hook.S
+        # Register the callback for the hooks.
         self.hooks[hook].append(callback)
 
     def run_hook(self, hook: "_Hook", value: object | None = None) -> object:
@@ -162,7 +164,7 @@ class PluginRegistry:
         protocol = getattr(hook, "protocol", None)
         handler = getattr(protocol, "handler", None)
         if not handler:
-            msg = f"No handler found for hook {hook.name} (protocol: {protocol})"
+            msg = f"No handler found for hook '{hook.name}' (protocol: '{protocol}')"
             raise RuntimeError(msg)
 
         # Get the callbacks for the hook.
@@ -190,16 +192,19 @@ class PluginRegistry:
             return import_string(plugin_path)
         except ImportError:
             pass
+
         try:
             return import_string(f"{plugin_path}.plugin.Plugin")
         except ImportError as exc:
             from django.core.exceptions import ImproperlyConfigured
 
             msg = (
-                f"Could not load plugin '{plugin_path}'. "
+                f"Could not load plugin: '{plugin_path}'. "
                 f"Tried both custom path and standard plugin.py location. "
                 f"Error: {exc}"
             )
+            self.plugin_errors.append(msg)
+            logger.warning(msg)
             raise ImproperlyConfigured(msg) from exc
 
     def _instantiate_plugin(
@@ -222,10 +227,10 @@ class PluginRegistry:
         try:
             # If there's no name, this will raise an error.
             plugin_name = plugin_class.name
-            # Get the plugin cokfig from the settimgs or an empty dict.
-            plugin_config = plugin_settings.get(plugin_name, {})
-            # Instantiate the plugin with its config, if available.
-            plugin = plugin_class(config=plugin_config)
+            # Get the plugin's settings from the plugin_settimgs or an empty dict.
+            this_plugin_settings = plugin_settings.get(plugin_name, {})
+            # Instantiate the plugin with its settingr, if available.
+            plugin = plugin_class(settings=this_plugin_settings)
         except Exception as exc:
             msg = f"Error initializing plugin '{plugin_class}': {exc!s}"
             raise ImproperlyConfigured(msg) from exc

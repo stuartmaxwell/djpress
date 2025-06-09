@@ -6,11 +6,13 @@ from io import BytesIO
 from django.utils import timezone
 from django.contrib.auth.models import User
 from django.conf import settings
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 from djpress.url_converters import SlugPathConverter
 from djpress.models import Category, Media, Post, Tag
-from djpress.plugins import DJPressPlugin, registry
-from django.core.files.uploadedfile import SimpleUploadedFile
+from djpress.plugins import DJPressPlugin
+from djpress.plugins.plugin_registry import PluginRegistry
+from djpress.plugins.hook_registry import POST_RENDER_CONTENT, PRE_RENDER_CONTENT, DJ_HEADER, DJ_FOOTER, POST_SAVE_POST
 
 from example.config import settings_testing
 
@@ -216,14 +218,15 @@ def test_page5(user):
 
 
 @pytest.fixture
-def clean_registry():
-    """Reset the plugin registry before and after each test."""
+def registry():
+    """Provides a fresh, empty PluginRegistry instance for each test."""
+    registry = PluginRegistry()
     # Reset before test
     registry.hooks = {}
     registry.plugins = []
     registry._loaded = False
 
-    yield
+    yield registry
 
     # Reset after test
     registry.hooks = {}
@@ -232,7 +235,7 @@ def clean_registry():
 
 
 @pytest.fixture
-def bad_plugin_registry(clean_registry):
+def bad_plugin_registry(registry):
     """Create a registry with a plugin that uses an unknown hook."""
 
     class BadPlugin(DJPressPlugin):
@@ -242,10 +245,66 @@ def bad_plugin_registry(clean_registry):
             registry.register_hook("foobar", lambda x: x)
 
     # Manually create and setup the plugin
-    plugin = BadPlugin()
+    plugin = BadPlugin({})
     plugin.setup(registry)
 
     return registry
+
+
+@pytest.fixture
+def content_transformer_plugin():
+    class ContentTransformerPlugin(DJPressPlugin):
+        """A simple plugin that modifies content."""
+
+        name = "content_modifier"
+        hooks = [
+            (PRE_RENDER_CONTENT, "add_prefix"),
+            (POST_RENDER_CONTENT, "add_suffix"),
+        ]
+
+        def add_prefix(self, content: str) -> str:
+            return f"prefixed_{content}"
+
+        def add_suffix(self, content: str) -> str:
+            return f"{content}_suffixed"
+
+    return ContentTransformerPlugin({})
+
+
+@pytest.fixture
+def content_provider_plugin():
+    class ContentProviderPlugin(DJPressPlugin):
+        """A simple plugin that provides content."""
+
+        name = "content_provider"
+        hooks = [
+            (DJ_HEADER, "add_header"),
+            (DJ_FOOTER, "add_suffix"),
+        ]
+
+        def add_header(self) -> str:
+            return "header"
+
+        def add_suffix(self) -> str:
+            return "footer"
+
+    return ContentProviderPlugin({})
+
+
+@pytest.fixture
+def object_provider_plugin():
+    class ObjectProviderPlugin(DJPressPlugin):
+        """A simple plugin that provides an object."""
+
+        name = "object_provider"
+        hooks = [
+            (POST_SAVE_POST, "do_nothing"),
+        ]
+
+        def do_nothing(self, object):
+            return None
+
+    return ObjectProviderPlugin({})
 
 
 @pytest.fixture
