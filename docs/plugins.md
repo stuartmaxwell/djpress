@@ -30,7 +30,8 @@ djpress_my_plugin/
 In `plugin.py`, create a class called `Plugin` that inherits from `DJPressPlugin`:
 
 ```python
-from djpress.plugins import DJPressPlugin, Hooks
+from djpress.plugins import DJPressPlugin
+from djpress.plugin.hook_registry import PRE_RENDER_CONTENT, POST_RENDER_CONTENT, POST_SAVE_POST
 
 class Plugin(DJPressPlugin):
     name = "djpress_my_plugin"  # Required - use same name as package
@@ -41,16 +42,18 @@ class Plugin(DJPressPlugin):
         self.initialized = True
 
     def setup(self, registry):
-        # Register your hook callbacks
-        registry.register_hook(Hooks.PRE_RENDER_CONTENT, self.modify_content)
-        registry.register_hook(Hooks.POST_RENDER_CONTENT, self.modify_html)
-        registry.register_hook(Hooks.POST_SAVE_POST, self.notify_on_publish)
+        # Register your hook callbacks with proper type annotations
+        registry.register_hook(PRE_RENDER_CONTENT, "modify_content")
+        registry.register_hook(POST_RENDER_CONTENT, "modify_html")
+        registry.register_hook(POST_SAVE_POST, "notify_on_publish")
 
         # Load any saved configuration or state
         self.my_saved_state = self.get_data()
 
     def modify_content(self, content: str) -> str:
         """Modify the markdown content before rendering.
+
+        This callback implements the PreRenderHook signature.
 
         Args:
             content: The raw markdown content
