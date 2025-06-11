@@ -24,7 +24,7 @@ class PluginRegistry:
 
     Provides three key features:
 
-    1. Load thw plugins defined in DJPRESS_SETTINGS['PLUGINS'] into `self.plugins`.
+    1. Load the plugins defined in DJPRESS_SETTINGS['PLUGINS'] into `self.plugins`.
     2. Register hooks and their callbacks into `self.hooks`, ensuring they match the expected protocol.
     3. Run the callbacks for a given hook.
     """

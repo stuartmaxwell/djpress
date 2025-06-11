@@ -1,4 +1,4 @@
-"""Handlers that executf the callbacks."""
+"""Handlers that execute the callbacks."""
 
 import logging
 from typing import TYPE_CHECKING
