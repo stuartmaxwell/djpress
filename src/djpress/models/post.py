@@ -18,7 +18,12 @@ from djpress.conf import settings as djpress_settings
 from djpress.exceptions import PageNotFoundError, PostNotFoundError
 from djpress.models.category import Category
 from djpress.models.tag import Tag
-from djpress.plugins import Hooks, registry
+from djpress.plugins import registry
+from djpress.plugins.hook_registry import (
+    POST_RENDER_CONTENT,
+    POST_SAVE_POST,
+    PRE_RENDER_CONTENT,
+)
 from djpress.utils import get_markdown_renderer
 
 logger = logging.getLogger(__name__)
@@ -549,7 +554,7 @@ class Post(models.Model):
 
         # If the post is a post and it's published, run the post_save_post hook after the transaction is committed
         if self.post_type == "post" and self.is_published:
-            on_commit(lambda: registry.run_hook(Hooks.POST_SAVE_POST, self))
+            on_commit(lambda: registry.run_hook(POST_SAVE_POST, self))
 
     def clean(self) -> None:
         """Custom validation for the Post model."""
@@ -650,13 +655,13 @@ class Post(models.Model):
         content = self.content
 
         # Let plugins modify the markdown before rendering
-        content = registry.run_hook(Hooks.PRE_RENDER_CONTENT, content)
+        content = registry.run_hook(PRE_RENDER_CONTENT, content)
 
         # Render the markdown
         html_content = render_markdown(content)
 
         # Let the plugins modify the markdown after rendering and return the results
-        return registry.run_hook(Hooks.POST_RENDER_CONTENT, html_content)
+        return str(registry.run_hook(POST_RENDER_CONTENT, html_content) or "")
 
     @property
     def truncated_content_markdown(self) -> str:

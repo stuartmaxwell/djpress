@@ -9,10 +9,9 @@ use while still being powerful enough for complex extensions.
 The DJ Press plugin system follows this lifecycle:
 
 1. **Discovery** - Plugins are loaded from the `PLUGINS` setting during application startup
-2. **Initialisation** - Each plugin's `__init__` and `setup` methods are called
-3. **Registration** - Plugins register callbacks for specific hooks
-4. **Execution** - Callbacks are executed when hooks are triggered during normal application operation
-5. **Cleanup** - When Django shuts down, plugins can perform cleanup (if needed)
+2. **Registration** - Plugins register callbacks for specific hooks
+3. **Execution** - Callbacks are executed when hooks are triggered during normal application operation
+4. **Cleanup** - When Django shuts down, plugins can perform cleanup (if needed)
 
 ## Creating a Plugin
 
@@ -30,27 +29,22 @@ djpress_my_plugin/
 In `plugin.py`, create a class called `Plugin` that inherits from `DJPressPlugin`:
 
 ```python
-from djpress.plugins import DJPressPlugin, Hooks
+from djpress.plugins import DJPressPlugin
+from djpress.plugin.hook_registry import PRE_RENDER_CONTENT, POST_RENDER_CONTENT, POST_SAVE_POST
 
 class Plugin(DJPressPlugin):
     name = "djpress_my_plugin"  # Required - use same name as package
+    hooks = [
+        (PRE_RENDER_CONTENT, "modify_content"),
+        (POST_RENDER_CONTENT, "modify_html"),
+        (POST_SAVE_POST, "notify_on_publish"),
+    ]
 
-    def __init__(self):
-        super().__init__()
-        # Initialise your plugin here if needed
-        self.initialized = True
-
-    def setup(self, registry):
-        # Register your hook callbacks
-        registry.register_hook(Hooks.PRE_RENDER_CONTENT, self.modify_content)
-        registry.register_hook(Hooks.POST_RENDER_CONTENT, self.modify_html)
-        registry.register_hook(Hooks.POST_SAVE_POST, self.notify_on_publish)
-
-        # Load any saved configuration or state
-        self.my_saved_state = self.get_data()
 
     def modify_content(self, content: str) -> str:
         """Modify the markdown content before rendering.
+
+        This callback implements the PreRenderHook signature.
 
         Args:
             content: The raw markdown content
@@ -153,19 +147,23 @@ The data must be JSON-serialisable (dictionaries, lists, strings, numbers, boole
 
 DJ Press provides these hooks for plugins:
 
-| Hook Name             | Description                                        | Arguments                 | Expected Return           |
-|-----------------------|----------------------------------------------------|---------------------------|---------------------------|
-| `PRE_RENDER_CONTENT`  | Called before markdown content is rendered to HTML | `content: str` (markdown) | Modified markdown content |
-| `POST_RENDER_CONTENT` | Called after markdown content is rendered to HTML  | `content: str` (HTML)     | Modified HTML content     |
-| `POST_SAVE_POST`      | Called after saving a published post               | `post: Post` (object)     | None (return ignored)     |
+| Hook Name             | Description                                           | Arguments                 | Expected Return           |
+|-----------------------|-------------------------------------------------------|---------------------------|---------------------------|
+| `PRE_RENDER_CONTENT`  | Called before markdown content is rendered to HTML    | `content: str` (markdown) | Modified markdown content |
+| `POST_RENDER_CONTENT` | Called after markdown content is rendered to HTML     | `content: str` (HTML)     | Modified HTML content     |
+| `POST_SAVE_POST`      | Called after saving a published post                  | `post: Post` (object)     | None (return ignored)     |
+| `DJ_HEADER`           | Used to insert HTML into the template's `<head>` tag. | None                      | HTML content (`str`)      |
+| `DJ_FOOTER`           | Called after saving a published post                  | `post: Post` (object)     | None (return ignored)     |
 
-You can reference hooks using the `Hooks` enum:
+Hooks are imported from the `hook_registry` module, and then assigned to a list called `hooks` in the `Plugin` class.
+The hook is added to the list as a tuple with the first element being the hook, and the second element being the string
+name of the callable.
 
 ```python
-from djpress.plugins import Hooks
+from djpress.plugin.hook_registry import PRE_RENDER_CONTENT
 
-# Use in your plugin setup
-registry.register_hook(Hooks.PRE_RENDER_CONTENT, self.my_callback)
+# Define a hooks list of tuples:
+    hooks = [(PRE_RENDER_CONTENT, "modify_content")]
 ```
 
 ## Installing Plugins
@@ -247,31 +245,6 @@ def my_hook_handler(self, content):
         logging.error(f"Plugin error in my_hook_handler: {e}")
         # Return original content to avoid breaking the site
         return content
-```
-
-## Testing Your Plugin
-
-Create tests in the `tests` directory:
-
-```python
-# tests/test_plugin.py
-from django.test import TestCase
-from djpress.plugins import registry
-from djpress_my_plugin.plugin import Plugin
-
-class MyPluginTest(TestCase):
-    def setUp(self):
-        self.plugin = Plugin()
-
-    def test_modify_content(self):
-        original = "# Test Content"
-        modified = self.plugin.modify_content(original)
-        self.assertIn("Test Content", modified)
-
-    def test_plugin_registration(self):
-        # Test that plugin registers correctly
-        registry.load_plugins()
-        self.assertIn(self.plugin.name, [p.name for p in registry.plugins])
 ```
 
 ## Plugin Development Guidelines

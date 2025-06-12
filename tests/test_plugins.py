@@ -1,463 +1,489 @@
-from enum import Enum
+"""Tests for the DJ Press plugin system."""
+
+import logging
+from typing import Protocol
+from unittest.mock import MagicMock, patch
+
 import pytest
-from djpress.plugins import PluginRegistry, DJPressPlugin, Hooks
-from djpress.plugins import registry
-from djpress.exceptions import PluginLoadError
+from django.core.exceptions import ImproperlyConfigured
 
-from djpress.conf import settings as djpress_settings
-
-
-def test_registry_initialization():
-    """Test that registry initializes with empty plugins and hooks."""
-    registry = PluginRegistry()
-    assert registry.plugins == []
-    assert registry.hooks == {}
-    assert registry._loaded is False
-
-
-def test_register_hook():
-    """Test registering a hook callback."""
-    registry = PluginRegistry()
-
-    def test_callback(content: str) -> str:
-        return content
-
-    registry.register_hook(Hooks.PRE_RENDER_CONTENT, test_callback)
-    assert test_callback in registry.hooks[Hooks.PRE_RENDER_CONTENT]
+# Import the components to be tested
+from djpress.models import Post
+from djpress.plugins import DJPressPlugin
+from djpress.plugins.hook_registry import (
+    DJ_FOOTER,
+    DJ_HEADER,
+    POST_RENDER_CONTENT,
+    POST_SAVE_POST,
+    PRE_RENDER_CONTENT,
+    _Hook,
+    _validate_hook_callback,
+)
+from djpress.plugins.plugin_registry import PluginRegistry
+from djpress.plugins.protocols import ContentTransformer, SimpleContentProvider
 
 
-def test_hook_enum_values():
-    """Test that Hook enum has the expected values."""
-    assert Hooks.PRE_RENDER_CONTENT.value == "pre_render_content"
-    assert Hooks.POST_RENDER_CONTENT.value == "post_render_content"
-    assert Hooks.POST_SAVE_POST.value == "post_save_post"
-    assert Hooks.DJ_HEADER.value == "dj_header"
-    assert Hooks.DJ_FOOTER.value == "dj_footer"
+class HeaderFooterPlugin(DJPressPlugin):
+    """A plugin that adds content to the header and footer."""
+
+    name = "Header/Footer Plugin"
+    hooks = [
+        (DJ_HEADER, "render_header"),
+        (DJ_FOOTER, "render_footer"),
+    ]
+
+    def render_header(self) -> str:
+        return "<!-- render_header HeaderFooterPlugin Plugin -->"
+
+    def render_footer(self) -> str:
+        return "<!-- render_footer HeaderFooterPlugin Plugin -->"
 
 
-# Tests for plugin registration (flexible)
-def test_register_hook_with_enum(clean_registry):
-    """Test registering hook using Enum."""
+class PostSaveNotificationPlugin(DJPressPlugin):
+    """A plugin that 'sends a notification' when a post is saved."""
 
-    def test_callback(content: str) -> str:
-        return content
+    name = "Post-Save Notifier"
+    hooks = [
+        (POST_SAVE_POST, "send_notification"),
+    ]
 
-    registry.register_hook(Hooks.PRE_RENDER_CONTENT, test_callback)
-    assert Hooks.PRE_RENDER_CONTENT in registry.hooks
-    assert test_callback in registry.hooks[Hooks.PRE_RENDER_CONTENT]
+    def __init__(self, settings: dict):
+        super().__init__(settings)
+        self.notification_sent = False
+        self.saved_post_slug = ""
 
-
-def test_register_hook_with_valid_string(clean_registry):
-    """Test registering hook using valid string name."""
-
-    def test_callback(content: str) -> str:
-        return content
-
-    registry.register_hook("pre_render_content", test_callback)
-    assert Hooks.PRE_RENDER_CONTENT in registry.hooks
-    assert test_callback in registry.hooks[Hooks.PRE_RENDER_CONTENT]
+    def send_notification(self, post: object) -> None:
+        """Simulates sending a notification."""
+        self.notification_sent = True
+        self.saved_post_slug = getattr(post, "slug", "unknown")
 
 
-def test_register_unknown_str_hook_name(clean_registry, caplog):
-    """Test registering unknown hook name - should accept but log a warning."""
+class PluginWithConfig(DJPressPlugin):
+    """A plugin that uses configuration."""
 
-    caplog.set_level("WARNING")
+    name = "Configurable Plugin"
 
-    def test_callback(content: str) -> str:
-        return content
-
-    registry._loaded = True  # Simulate that plugins are loaded
-    registry.plugins = ["test_plugin"]  # Simulate a loaded plugin
-
-    registry.register_hook("unknown_hook", test_callback)
-    # Check the output from logger.warning
-    assert "Invalid hook str name: unknown_hook. Hook not registered by callback." in caplog.text
+    def get_greeting(self) -> str:
+        return self.settings.get("greeting", "Hello")
 
 
-def test_register_unknown_enum_hook_name(clean_registry, caplog):
-    caplog.set_level("WARNING")
+class FaultyPlugin(DJPressPlugin):
+    """A plugin designed to fail during initialization."""
 
-    def test_callback(content: str) -> str:
-        return content
+    name = "Faulty Plugin"
 
-    registry._loaded = True  # Simulate that plugins are loaded
-    registry.plugins = ["test_plugin"]  # Simulate a loaded plugin
-
-    class Hooks(Enum):
-        UNKNOWN_HOOK = "unknown_hook"
-
-    registry.register_hook(Hooks.UNKNOWN_HOOK, test_callback)  # type: ignore
-    assert "Invalid hook enum: Hooks.UNKNOWN_HOOK. Hook not registered by callback." in caplog.text
+    def __init__(self, settings: dict):
+        # This will raise an exception
+        super().__init__(settings)
+        raise RuntimeError("I am a faulty plugin!")
 
 
-# Tests for hook execution (strict)
-def test_run_hook_with_enum(clean_registry):
-    """Test running hook with Enum succeeds."""
+class PluginWithBadHooks(DJPressPlugin):
+    """A plugin with a non-iterable hooks attribute."""
 
-    def test_callback(content: str) -> str:
-        return content + " modified"
-
-    registry._loaded = True  # Simulate that plugins are loaded
-    registry.plugins = ["test_plugin"]  # Simulate a loaded plugin
-    registry.register_hook(Hooks.PRE_RENDER_CONTENT, test_callback)
-    result = registry.run_hook(Hooks.PRE_RENDER_CONTENT, "test value")
-    assert result == "test value modified"
+    name = "Bad Hooks Plugin"
+    hooks = None  # type: ignore
 
 
-def test_run_hook_not_registered(clean_registry):
-    """Test running hook that hasn't been registered.
+def test_hook_equality_and_hash():
+    """Test that Hooks with the same name are considered equal and have the same hash.
 
-    Nothing happens the value just gets returned.
+    Tests the `__eq__` method of the _Hook class.
     """
+    hook1 = _Hook("my_hook", ContentTransformer)
+    hook2 = _Hook("my_hook", SimpleContentProvider)
+    hook3 = _Hook("another_hook", ContentTransformer)
 
-    def test_callback(content: str) -> str:
-        return content + " modified"
-
-    registry._loaded = True  # Simulate that plugins are loaded
-    registry.plugins = ["test_plugin"]  # Simulate a loaded plugin
-    result = registry.run_hook(Hooks.PRE_RENDER_CONTENT, "test value")
-    assert result == "test value"
-
-
-# Tests for hook execution (strict)
-def test_run_hook_with_multiple_hooks(clean_registry):
-    """Test running hook with multiple hooks."""
-
-    def test_callback(content: str) -> str:
-        return content + " modified by test_callback"
-
-    def second_test_callback(content: str) -> str:
-        return content + " modified by second test_callback"
-
-    registry._loaded = True  # Simulate that plugins are loaded
-    registry.plugins = ["test_plugin"]  # Simulate a loaded plugin
-    registry.register_hook(Hooks.PRE_RENDER_CONTENT, test_callback)
-    registry.register_hook(Hooks.PRE_RENDER_CONTENT, second_test_callback)
-    result = registry.run_hook(Hooks.PRE_RENDER_CONTENT, "test value")
-    assert result == "test value modified by test_callback modified by second test_callback"
+    assert hook1 == hook2
+    assert hook1 != hook3
+    assert hook1 != "my_hook"
+    assert hash(hook1) == hash(hook2)
+    assert hash(hook1) != hash(hook3)
 
 
-def test_run_hook_with_exception(clean_registry, caplog):
-    """Test running hook with an exception doesn't modify the value."""
-    caplog.set_level("WARNING")
+def test_validate_hook_callback():
+    """Test the signature validation helper function."""
 
-    def test_callback(content: str) -> str:
-        raise ValueError("Test error")
+    def valid_content_transformer(content: str) -> str:
+        return content
 
-    registry._loaded = True  # Simulate that plugins are loaded
-    registry.plugins = ["test_plugin"]  # Simulate a loaded plugin
-    registry.register_hook(Hooks.PRE_RENDER_CONTENT, test_callback)
-    result = registry.run_hook(Hooks.PRE_RENDER_CONTENT, "test value")
-    assert result == "test value"
+    def invalid_too_many_args(content: str, extra: int) -> str:
+        return content
 
-    assert "Error running callback" in caplog.text
+    def invalid_no_args() -> str:
+        return ""
+
+    def invalid_content_transformer(content: int) -> int:
+        return content
+
+    hook_no_protocol = _Hook("my_hook", None)  # type: ignore
+
+    class BadProtocolWithNoCall:
+        """A protocol whose __call__ method is not callable."""
+
+        __call__ = 123
+
+    BAD_HOOK = _Hook("static_empty_call_hook", BadProtocolWithNoCall)
+
+    def callback_for_bad_protocol(content: str) -> str:
+        """A standard callback, its signature won't be fully checked due to earlier error."""
+        return content
+
+    is_valid, msg = _validate_hook_callback(PRE_RENDER_CONTENT, valid_content_transformer)
+    assert is_valid is True
+    assert msg == ""
+
+    is_valid, msg = _validate_hook_callback(PRE_RENDER_CONTENT, invalid_too_many_args)
+    print(msg)
+    assert is_valid is False
+    assert "Expected 1 parameters, got 2" in msg
+
+    is_valid, msg = _validate_hook_callback(DJ_HEADER, invalid_no_args)
+    assert is_valid is True
+
+    is_valid, msg = _validate_hook_callback(DJ_HEADER, valid_content_transformer)
+    assert is_valid is False
+    assert "Expected 0 parameters, got 1" in msg
+
+    is_valid, msg = _validate_hook_callback(hook_no_protocol, valid_content_transformer)
+    assert is_valid is False
+    assert "No protocol defined for hook my_hook" in msg
+
+    is_valid, msg = _validate_hook_callback(PRE_RENDER_CONTENT, None)  # type: ignore
+    assert is_valid is False
+    assert "Callback is expected to be a method or function" in msg
+
+    is_valid, msg = _validate_hook_callback(PRE_RENDER_CONTENT, invalid_content_transformer)
+    assert is_valid is False
+    assert "Parameter type mismatch" in msg
+
+    is_valid, msg = _validate_hook_callback(BAD_HOOK, callback_for_bad_protocol)
+    assert is_valid is False
+    assert "Signature validation error" in msg
 
 
-def test_run_hook_with_string_fails(clean_registry, caplog):
-    caplog.set_level("WARNING")
-    """Test running hook with string fails."""
-    registry.run_hook("pre_render_content", "test")  # type: ignore
-    assert "hook_name must be a Hooks enum member" in caplog.text
+def test_load_plugins_none(registry):
+    """Test successful loading of plugins with valid hooks."""
 
+    assert registry._loaded is False
+    registry.load_plugins()
 
-def test_run_hook_type_error_message(clean_registry, caplog):
-    caplog.set_level("WARNING")
-    """Test specific error message when running hook with wrong type."""
-    registry.run_hook("pre_render_content", "test")  # type: ignore
-    assert "hook_name must be a Hooks enum member" in caplog.text
-    assert "got <class 'str'>" in caplog.text
+    assert registry._loaded is False
+    assert len(registry.plugins) == 0
+    assert not registry.plugin_errors
 
-
-# For line 90 (value is None in hooks dict)
-def test_run_hook_nonexistent_hook(clean_registry):
-    """Test running hook that hasn't been registered."""
-    result = registry.run_hook(Hooks.PRE_RENDER_CONTENT, "test")
-    assert result == "test"  # Should return original value unchanged
-
-
-# For lines 96-98 (plugin loading already done)
-def test_load_plugins_already_loaded(clean_registry):
-    """Test that load_plugins doesn't reload if already loaded."""
+    # Load again should exit early
     registry._loaded = True
-    registry.load_plugins()
-    assert len(registry.plugins) == 0  # Should not have loaded any plugins
+    assert registry.load_plugins() is None
 
 
-def test_load_plugins_not_loaded(clean_registry):
-    """Test that load_plugins doesn't reload if already loaded."""
-    registry._loaded = False
-    registry.load_plugins()
-    assert len(registry.plugins) == 0  # Should not have loaded any plugins
+def test_load_plugins_not_exist(registry, settings, caplog):
+    """Test successful loading of plugins with valid hooks."""
+    caplog.set_level("WARNING")
+    settings.DJPRESS_SETTINGS["PLUGINS"] = ["do_not_exist"]
+
+    assert registry.load_plugins() is None
+    assert "Could not load plugin: 'do_not_exist'" in caplog.text
+    assert "Tried both custom path and standard plugin.py location" in caplog.text
+    assert "Failed to load plugin: 'do_not_exist'" in caplog.text
 
 
-# For lines 115-131 (_import_plugin_class)
-def test_import_plugin_standard_location(clean_registry, tmp_path):
-    """Test importing plugin from standard location."""
+def test_load_plugins_exists(registry, settings, caplog, tmp_path):
+    """Test successful loading of plugins with valid hooks."""
+    caplog.set_level("WARNING")
+
     # Create a temporary plugin package
-    plugin_dir = tmp_path / "test_plugin"
+    plugin_dir = tmp_path / "test_load_plugins_exists"
     plugin_dir.mkdir()
     (plugin_dir / "__init__.py").write_text("")
     (plugin_dir / "plugin.py").write_text("""
 from djpress.plugins import DJPressPlugin
-class Plugin(DJPressPlugin):
+from djpress.plugins.hook_registry import (
+    POST_RENDER_CONTENT,
+    PRE_RENDER_CONTENT,
+)
+class TestPlugin(DJPressPlugin):
     name = "test_plugin"
-    """)
+    hooks = [
+        (PRE_RENDER_CONTENT, "add_prefix"),
+        (POST_RENDER_CONTENT, "add_suffix"),
+    ]
+
+    def add_prefix(self, content: str) -> str:
+        return f"prefixed_{content}"
+
+    def add_suffix(self, content: str) -> str:
+        return f"{content}_suffixed"
+""")
 
     # Add to Python path and try to import
     import sys
 
     sys.path.insert(0, str(tmp_path))
 
-    try:
-        plugin_class = registry._import_plugin_class("test_plugin")
-        assert plugin_class.__name__ == "Plugin"
-    finally:
-        sys.path.pop(0)
+    settings.DJPRESS_SETTINGS["PLUGINS"] = ["test_load_plugins_exists.plugin.TestPlugin"]
 
-
-def test_import_plugin_custom_location(clean_registry, tmp_path):
-    """Test importing plugin from custom location."""
-    # Similar setup but with custom path
-    # Test both successful and failing imports
-
-
-# For lines 147-165 and 175-178 (_instantiate_plugin)
-def test_instantiate_plugin_with_config(clean_registry):
-    """Test instantiating plugin with configuration."""
-
-    class TestPlugin(DJPressPlugin):
-        name = "test_plugin"
-
-    plugin_settings = {"test_plugin": {"setting": "value"}}
-    plugin = registry._instantiate_plugin(TestPlugin, "test_plugin", plugin_settings)
-    assert isinstance(plugin, DJPressPlugin)
-    assert plugin.config == {"setting": "value"}
-
-
-def test_instantiate_plugin_fails(clean_registry):
-    """Test handling of plugin instantiation failure."""
-
-    class BrokenPlugin(DJPressPlugin):
-        name = "broken_plugin"
-
-        def __init__(self, config=None):
-            raise RuntimeError("Plugin broken")
-
-    from django.core.exceptions import ImproperlyConfigured
-
-    with pytest.raises(ImproperlyConfigured) as exc_info:
-        registry._instantiate_plugin(BrokenPlugin, "broken_plugin", {})
-    assert "Error initializing plugin" in str(exc_info.value)
-
-
-# For lines 96-98 (early return if already loaded)
-def test_load_plugins_early_return(clean_registry):
-    """Test that load_plugins returns early if already loaded."""
-    registry._loaded = True
-    original_plugins = registry.plugins.copy()
-    registry.load_plugins()
-    assert registry.plugins == original_plugins
-
-
-# For lines 123-131 (import error handling)
-def test_import_plugin_both_paths_fail(clean_registry):
-    """Test when both import attempts fail."""
-    from django.core.exceptions import ImproperlyConfigured
-
-    with pytest.raises(ImproperlyConfigured) as exc_info:
-        registry._import_plugin_class("nonexistent_plugin")
-
-    assert "Could not load plugin 'nonexistent_plugin'" in str(exc_info.value)
-    assert "Tried both custom path and standard plugin.py location" in str(exc_info.value)
-
-
-# For lines 176-177 (plugin instantiation error)
-def test_instantiate_plugin_setup_fails(clean_registry):
-    """Test handling of plugin setup failure."""
-
-    class PluginWithBadSetup(DJPressPlugin):
-        name = "bad_setup"
-
-        def setup(self, registry):
-            raise RuntimeError("Setup failed")
-
-    from django.core.exceptions import ImproperlyConfigured
-
-    with pytest.raises(ImproperlyConfigured) as exc_info:
-        registry._instantiate_plugin(PluginWithBadSetup, "bad_setup", {})
-
-    assert "Error initializing plugin 'bad_setup'" in str(exc_info.value)
-
-
-def test_register_hook_first_callback(clean_registry):
-    """Test registering first callback for a hook."""
-
-    def callback(content: str) -> str:
-        return content
-
-    # This should create new list and add callback
-    registry.register_hook(Hooks.PRE_RENDER_CONTENT, callback)
-    assert len(registry.hooks[Hooks.PRE_RENDER_CONTENT]) == 1
-    assert registry.hooks[Hooks.PRE_RENDER_CONTENT][0] == callback
-
-
-def test_load_plugins_successful(clean_registry, monkeypatch):
-    """Test successful plugin loading process."""
-
-    class TestPlugin(DJPressPlugin):
-        name = "test"
-
-        def setup(self, registry):
-            pass
-
-    # Mock the import and instantiate methods to return known values
-    def mock_import(self, path):
-        return TestPlugin
-
-    def mock_instantiate(self, plugin_class, path, settings):
-        return TestPlugin()
-
-    monkeypatch.setattr(PluginRegistry, "_import_plugin_class", mock_import)
-    monkeypatch.setattr(PluginRegistry, "_instantiate_plugin", mock_instantiate)
-
-    # Set up test settings
-    monkeypatch.setattr(djpress_settings, "PLUGINS", ["test_plugin"])
-    monkeypatch.setattr(djpress_settings, "PLUGIN_SETTINGS", {})
-
-    # Load plugins
     registry.load_plugins()
 
-    # Verify plugin was added
+    assert registry._loaded is True
     assert len(registry.plugins) == 1
-    assert isinstance(registry.plugins[0], TestPlugin)
+    assert not registry.plugin_errors
 
 
-def test_load_plugins_exception(clean_registry, monkeypatch, caplog):
-    """Test plugin loading with exception."""
+def test_load_plugins_non_iterable_hooks(registry, settings, caplog, tmp_path):
+    """Test successful loading of plugins with valid hooks."""
+    assert len(registry.plugins) == 0
     caplog.set_level("WARNING")
 
-    class TestPlugin(DJPressPlugin):
-        name = "test"
+    # Create a temporary plugin package
+    plugin_dir = tmp_path / "test_load_plugins_non_iterable_hooks"
+    plugin_dir.mkdir()
+    (plugin_dir / "__init__.py").write_text("")
+    (plugin_dir / "plugin.py").write_text("""
+from djpress.plugins import DJPressPlugin
+from djpress.plugins.hook_registry import PRE_RENDER_CONTENT
 
-        def setup(self, registry):
-            pass
+class TestPlugin(DJPressPlugin):
+    name = "test_plugin"
+    hooks = (PRE_RENDER_CONTENT, "add_prefix")
 
-    # Mock the import and instantiate methods to return known values
-    def mock_import(self, path):
-        return TestPlugin
+    def add_prefix(self, content: str) -> str:
+        return f"prefixed_{content}"
 
-    def mock_instantiate(self, plugin_class, path, settings):
-        raise RuntimeError("Plugin setup failed")
+    def add_suffix(self, content: str) -> str:
+        return f"{content}_suffixed"
+""")
 
-    monkeypatch.setattr(PluginRegistry, "_import_plugin_class", mock_import)
-    monkeypatch.setattr(PluginRegistry, "_instantiate_plugin", mock_instantiate)
+    # Add to Python path and try to import
+    import sys
 
-    # Set up test settings
-    monkeypatch.setattr(djpress_settings, "PLUGINS", ["test_plugin"])
-    monkeypatch.setattr(djpress_settings, "PLUGIN_SETTINGS", {})
+    sys.path.insert(0, str(tmp_path))
 
-    # Load plugins - will log a warning
+    settings.DJPRESS_SETTINGS["PLUGINS"] = ["test_load_plugins_non_iterable_hooks.plugin.TestPlugin"]
+
     registry.load_plugins()
-    assert "Failed to load plugins:" in caplog.text
+
+    assert registry._loaded is True
+    assert len(registry.plugins) == 0
+    assert (
+        f"Plugin 'test_load_plugins_non_iterable_hooks.plugin.TestPlugin' has a non-iterable 'hooks' attribute"
+        in caplog.text
+    )
 
 
-def test_plugin_missing_name():
-    """Test plugin initialization with missing name."""
-
-    class NoNamePlugin(DJPressPlugin):
-        pass  # No name defined
-
-    with pytest.raises(ValueError) as exc_info:
-        NoNamePlugin()
-    assert str(exc_info.value) == "Plugin must define a name"
-
-
-def test_register_multiple_callbacks(clean_registry):
-    """Test registering multiple callbacks for the same hook."""
-
-    def callback1(content: str) -> str:
-        return content + "1"
-
-    def callback2(content: str) -> str:
-        return content + "2"
-
-    registry._loaded = True  # Simulate that plugins are loaded
-    registry.plugins = ["test_plugin"]  # Simulate a loaded plugin
-
-    # Register first callback - should create new list
-    registry.register_hook(Hooks.PRE_RENDER_CONTENT, callback1)
-    assert len(registry.hooks[Hooks.PRE_RENDER_CONTENT]) == 1
-    assert registry.hooks[Hooks.PRE_RENDER_CONTENT][0] == callback1
-
-    # Register second callback - should append to existing list
-    registry.register_hook(Hooks.PRE_RENDER_CONTENT, callback2)
-    assert len(registry.hooks[Hooks.PRE_RENDER_CONTENT]) == 2
-    assert registry.hooks[Hooks.PRE_RENDER_CONTENT][0] == callback1
-    assert registry.hooks[Hooks.PRE_RENDER_CONTENT][1] == callback2
-
-    # Verify both callbacks are executed in order
-    result = registry.run_hook(Hooks.PRE_RENDER_CONTENT, "test")
-    assert result == "test12"
-
-
-def test_register_multiple_callbacks_with_error(clean_registry, caplog):
-    """Test registering multiple callbacks for the same hook.
-
-    The first and third callbacks should execute normally by appending text to the value.
-    The second callback should raise an error, which should be logged but not stop the execution of the other
-    callbacks.
-    """
+def test_load_plugins_no_name(registry, settings, caplog, tmp_path):
+    """Test successful loading of plugins with valid hooks."""
+    assert len(registry.plugins) == 0
     caplog.set_level("WARNING")
 
-    def callback1(content: str) -> str:
-        return content + "1"
+    # Create a temporary plugin package
+    plugin_dir = tmp_path / "test_load_plugins_no_name"
+    plugin_dir.mkdir()
+    (plugin_dir / "__init__.py").write_text("")
+    (plugin_dir / "plugin.py").write_text("""
+from djpress.plugins import DJPressPlugin
+from djpress.plugins.hook_registry import PRE_RENDER_CONTENT
 
-    def callback2(content: str) -> str:
-        raise ValueError("Test error in callback2")
+class TestPlugin(DJPressPlugin):
+    hooks = (PRE_RENDER_CONTENT, "add_prefix")
 
-    def callback3(content: str) -> str:
-        return content + "3"
+    def add_prefix(self, content: str) -> str:
+        return f"prefixed_{content}"
 
-    registry._loaded = True  # Simulate that plugins are loaded
-    registry.plugins = ["test_plugin"]  # Simulate a loaded plugin
+    def add_suffix(self, content: str) -> str:
+        return f"{content}_suffixed"
+""")
 
-    # Register first callback - should create new list
-    registry.register_hook(Hooks.PRE_RENDER_CONTENT, callback1)
-    assert len(registry.hooks[Hooks.PRE_RENDER_CONTENT]) == 1
-    assert registry.hooks[Hooks.PRE_RENDER_CONTENT][0] == callback1
+    # Add to Python path and try to import
+    import sys
 
-    # Register second callback - should append to existing list
-    registry.register_hook(Hooks.PRE_RENDER_CONTENT, callback2)
-    assert len(registry.hooks[Hooks.PRE_RENDER_CONTENT]) == 2
-    assert registry.hooks[Hooks.PRE_RENDER_CONTENT][0] == callback1
-    assert registry.hooks[Hooks.PRE_RENDER_CONTENT][1] == callback2
+    sys.path.insert(0, str(tmp_path))
 
-    # Register third callback - should append to existing list
-    registry.register_hook(Hooks.PRE_RENDER_CONTENT, callback3)
-    assert len(registry.hooks[Hooks.PRE_RENDER_CONTENT]) == 3
-    assert registry.hooks[Hooks.PRE_RENDER_CONTENT][0] == callback1
-    assert registry.hooks[Hooks.PRE_RENDER_CONTENT][1] == callback2
-    assert registry.hooks[Hooks.PRE_RENDER_CONTENT][2] == callback3
+    settings.DJPRESS_SETTINGS["PLUGINS"] = ["test_load_plugins_no_name.plugin.TestPlugin"]
 
-    # Verify all callbacks are executed in order with the error logged and ignored
-    result = registry.run_hook(Hooks.PRE_RENDER_CONTENT, "test")
-    assert result == "test13"
+    registry.load_plugins()
 
-    assert "Error running callback" in caplog.text
+    assert registry._loaded is True
+    assert len(registry.plugins) == 0
+    assert f"Error initializing plugin '<class 'test_load_plugins_no_name.plugin.TestPlugin'>'" in caplog.text
 
 
-def test_content_modification_hook(clean_registry):
-    """Test hooks that modify and return content."""
+def test_register_hook_success(registry, content_transformer_plugin):
+    """Test successful registration of a valid hook and a plugin's callback."""
+
+    registry.register_hook(PRE_RENDER_CONTENT, content_transformer_plugin.add_prefix)
+
+    assert PRE_RENDER_CONTENT in registry.hooks
+    assert registry.hooks[PRE_RENDER_CONTENT] == [content_transformer_plugin.add_prefix]
+    assert not registry.plugin_errors
+
+    registry.register_hook(PRE_RENDER_CONTENT, content_transformer_plugin.add_suffix)
+
+    assert PRE_RENDER_CONTENT in registry.hooks
+    assert registry.hooks[PRE_RENDER_CONTENT] == [
+        content_transformer_plugin.add_prefix,
+        content_transformer_plugin.add_suffix,
+    ]
+    assert not registry.plugin_errors
+
+
+def test_register_hook_fail_no_name(registry, caplog):
+    """Test successful registration of a valid hook and callback."""
+    caplog.set_level("WARNING")
+
+    def test_handler(callback, value) -> object:
+        return value
+
+    class TestProtocol(Protocol):
+        handler = test_handler
+
+        def __call__(self, content: str) -> str: ...
 
     def test_callback(content: str) -> str:
-        return content + " modified"
+        return content
 
-    registry._loaded = True  # Simulate that plugins are loaded
-    registry.plugins = ["test_plugin"]  # Simulate a loaded plugin
+    NO_NAME_HOOK = _Hook(name=None, protocol=TestProtocol)  # type: ignore
+    registry.register_hook(NO_NAME_HOOK, test_callback)
+    assert NO_NAME_HOOK not in registry.hooks
+    assert "Must be a _Hook object" in caplog.text
 
-    registry.register_hook(Hooks.PRE_RENDER_CONTENT, test_callback)
-    result = registry.run_hook(Hooks.PRE_RENDER_CONTENT, "test")
-    assert result == "test modified"
+    NO_NAME_HOOK = _Hook(name="Test", protocol="TestProtocol")  # type: ignore
+    registry.register_hook(NO_NAME_HOOK, test_callback)
+    assert NO_NAME_HOOK not in registry.hooks
+    assert "Must be a _Hook object" in caplog.text
+
+
+def test_bad_hook_run(registry):
+    with pytest.raises(TypeError, match="Invalid hook: 'foobar'. Must be a valid _Hook object."):
+        registry.run_hook("foobar")
+
+
+def test_hook_not_registered(registry):
+    class TestProtocol(Protocol):
+        def __call__(self, content: str) -> str: ...
+
+    NEW_HOOK = _Hook(name="new_hook", protocol=TestProtocol)
+
+    assert NEW_HOOK not in registry.hooks
+    assert registry.run_hook(NEW_HOOK, "test") == "test"
+
+
+def test_run_hook_no_handler(registry):
+    class TestProtocol(Protocol):
+        def __call__(self, content: str) -> str: ...
+
+    def test_callback(content: str) -> str:
+        return content
+
+    NEW_HOOK = _Hook(name="new_hook", protocol=TestProtocol)
+
+    registry.register_hook(NEW_HOOK, test_callback)
+    with pytest.raises(RuntimeError):
+        registry.run_hook(NEW_HOOK, "test")
+
+
+def test_run_hook_success(registry, caplog):
+    """Test successful run of a valid hook and callback."""
+    caplog.set_level("WARNING")
+
+    def test_handler(callback, value) -> object:
+        return value
+
+    class TestProtocol(Protocol):
+        handler = test_handler
+
+        def __call__(self, content: str) -> str: ...
+
+    def test_callback(content: str) -> str:
+        return content
+
+    NEW_HOOK = _Hook(name="test_hook", protocol=TestProtocol)
+    registry.register_hook(NEW_HOOK, test_callback)
+
+    assert registry.run_hook(NEW_HOOK, "test") == "test"
+
+
+def test_success_run_content_transformer(registry, content_transformer_plugin):
+    """Test running a content transformer hook."""
+    registry.register_hook(PRE_RENDER_CONTENT, content_transformer_plugin.add_prefix)
+
+    result = registry.run_hook(PRE_RENDER_CONTENT, "content")
+    assert result == "prefixed_content"
+
+
+def test_error_run_content_transformer(registry, caplog):
+    """Test running a failed content transformer hook.
+
+    This should return the original content.
+    """
+    caplog.set_level(logging.WARNING)
+
+    def callback(content: str) -> str:
+        raise RuntimeError("This is a test error")
+
+    registry.register_hook(PRE_RENDER_CONTENT, callback)
+
+    result = registry.run_hook(PRE_RENDER_CONTENT, "content")
+    assert result == "content"
+    assert "Error running callback" in caplog.text
+    assert "Callback skipped" in caplog.text
+    assert "This is a test error" in caplog.text
+
+
+def test_success_run_content_provider(registry, content_provider_plugin):
+    """Test running a content provider hook."""
+    registry.register_hook(DJ_HEADER, content_provider_plugin.add_header)
+
+    result = registry.run_hook(DJ_HEADER)
+    assert result == "header"
+
+
+def test_error_run_content_provider(registry, caplog):
+    """Test running a failed content provider hook.
+
+    This should return an empty string.
+    """
+    caplog.set_level(logging.WARNING)
+
+    def callback() -> str:
+        raise RuntimeError("This is a test error")
+
+    registry.register_hook(DJ_HEADER, callback)
+
+    result = registry.run_hook(DJ_HEADER)
+    assert result == ""
+    assert "Error running callback" in caplog.text
+    assert "Callback skipped" in caplog.text
+    assert "This is a test error" in caplog.text
+
+
+@pytest.mark.django_db
+def test_success_run_object_provider(registry, object_provider_plugin, test_post1):
+    """Test running a object provider hook."""
+    registry.register_hook(POST_SAVE_POST, object_provider_plugin.do_nothing)
+
+    result = registry.run_hook(POST_SAVE_POST, test_post1)
+    assert result == test_post1
+
+
+@pytest.mark.django_db
+def test_error_run_object_provider(registry, test_post1, caplog):
+    """Test running a failed object provider hook.
+
+    This should return the original post.
+    """
+    caplog.set_level(logging.WARNING)
+
+    def callback(post: "Post") -> object:
+        raise RuntimeError("This is a test error")
+
+    registry.register_hook(POST_SAVE_POST, callback)
+
+    result = registry.run_hook(POST_SAVE_POST, test_post1)
+    assert result == test_post1
+    assert "Error running callback" in caplog.text
+    assert "Callback skipped" in caplog.text
+    assert "This is a test error" in caplog.text
 
 
 @pytest.mark.django_db
@@ -467,7 +493,7 @@ def test_plugin_storage_interface():
     class TestPlugin(DJPressPlugin):
         name = "test_plugin"
 
-    plugin = TestPlugin()
+    plugin = TestPlugin({})
 
     # Test get_data with no storage
     assert plugin.get_data() == {}

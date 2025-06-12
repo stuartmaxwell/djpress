@@ -2,29 +2,30 @@
 
 import logging
 
-from djpress.plugins.plugin_registry import PluginRegistry
+from djpress.plugins.hook_registry import _Hook
 
 logger = logging.getLogger(__name__)
 
 
 class DJPressPlugin:
-    """Base class for DJ Press plugins."""
+    """Base class for DJ Press plugins.
+
+    You must provide a `name` attribute and define `hooks` as a list of tuples containing the hook and the method name
+    to call.
+    """
 
     name: str
+    hooks: list[tuple[_Hook, str]] = []
 
-    def __init__(self, config: dict | None = None) -> None:
-        """Initialize the plugin."""
-        if not hasattr(self, "name") or not self.name:
-            msg = "Plugin must define a name"
-            raise ValueError(msg)
-        self.config = config or {}
+    def __init__(self, settings: dict) -> None:
+        """Initialize the plugin with a configuration dictionary.
 
-    def setup(self, registry: PluginRegistry) -> None:
-        """Set up the plugin.
+        If there are no settings, then an empty dict will be passed.
 
         Args:
-            registry (PluginRegistry): The plugin registry.
+            settings: A dictionary containing the settings for the plugin.
         """
+        self.settings = settings
 
     def get_data(self) -> dict:
         """Get this plugin's stored data.

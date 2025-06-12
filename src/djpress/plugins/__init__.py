@@ -1,7 +1,11 @@
 """Plugins module for djpress."""
 
+from djpress.plugins import hook_registry
 from djpress.plugins.base_plugin import DJPressPlugin
-from djpress.plugins.hook_registry import Hooks
-from djpress.plugins.plugin_registry import PluginRegistry, registry
+from djpress.plugins.plugin_registry import registry
 
-__all__ = ["DJPressPlugin", "Hooks", "PluginRegistry", "registry"]
+__all__ = [
+    "DJPressPlugin",
+    "hook_registry",
+    "registry",
+]
