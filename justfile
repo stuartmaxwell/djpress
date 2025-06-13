@@ -47,6 +47,10 @@ BUILDDIR      := "docs/_build"
 @check:
     {{uv}} example/manage.py check
 
+# Generic manage command
+@manage *ARGS:
+    {{uv}} example/manage.py {{ ARGS }}
+
 # Run pytest
 @test *ARGS:
     {{uv}} pytest {{ ARGS }}
