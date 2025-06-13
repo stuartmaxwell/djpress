@@ -24,6 +24,7 @@ Welcome to the documentation site for DJ Press: a blog application for Django si
 
 ## Advanced Topics
 
+- [Management Commands](management_commands.md) - Command-line tools for content management
 - [Sitemap](sitemap.md) - SEO and sitemap generation
 - [Groups and Permissions](groups.md) - User roles and access control
 
@@ -43,6 +44,7 @@ markdown_customisation
 media
 tags
 categories
+management_commands
 sitemap
 groups
 ```
