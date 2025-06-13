@@ -100,3 +100,6 @@ GitHub.sublime-settings
 
 # Ruff
 .ruff_cache/
+
+# LLM
+Claude.md
