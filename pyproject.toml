@@ -9,7 +9,7 @@ description = "A blog application for Django sites, inspired by classic WordPres
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [{ name = "Stuart Maxwell", email = "stuart@amanzi.nz" }]
-dependencies = ["django>=4.2.0,<5.3", "markdown>=3.7"]
+dependencies = ["django>=4.2.0,<=6.0", "markdown>=3.7"]
 license = { file = "LICENSE" }
 classifiers = [
   "Development Status :: 3 - Alpha",
@@ -21,6 +21,7 @@ classifiers = [
   "Framework :: Django :: 5.0",
   "Framework :: Django :: 5.1",
   "Framework :: Django :: 5.2",
+  "Framework :: Django :: 6.0",
   "Intended Audience :: Developers",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3",
