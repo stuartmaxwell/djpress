@@ -4,12 +4,12 @@ build-backend = "hatchling.build"
 
 [project]
 name = "djpress"
-version = "0.20.3"
+version = "0.20.4"
 description = "A blog application for Django sites, inspired by classic WordPress."
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [{ name = "Stuart Maxwell", email = "stuart@amanzi.nz" }]
-dependencies = ["django>=4.2.0,<5.3", "markdown>=3.7"]
+dependencies = ["django>=4.2.0,<=6.0", "markdown>=3.7"]
 license = { file = "LICENSE" }
 classifiers = [
   "Development Status :: 3 - Alpha",
@@ -21,6 +21,7 @@ classifiers = [
   "Framework :: Django :: 5.0",
   "Framework :: Django :: 5.1",
   "Framework :: Django :: 5.2",
+  "Framework :: Django :: 6.0",
   "Intended Audience :: Developers",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3",
@@ -105,7 +106,7 @@ omit = ["*/tests/*", "*/migrations/*"]
 exclude_lines = ["if TYPE_CHECKING:", "# pragma: no cover"]
 
 [tool.bumpver]
-current_version = "0.20.3"
+current_version = "0.20.4"
 version_pattern = "MAJOR.MINOR.PATCH[PYTAGNUM]"
 commit_message = "👍 bump version {old_version} -> {new_version}"
 commit = true
