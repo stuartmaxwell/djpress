@@ -88,6 +88,28 @@ def test_queryset_superuser(
 
 
 @pytest.mark.django_db
+def test_queryset_admin(
+    test_post1: Post,
+    test_post2: Post,
+    test_post3: Post,
+    user: User,
+    post_admin: PostAdmin,
+    request_factory: RequestFactory,
+) -> None:
+    """Test the get_queryset method for admins."""
+    # Create an admin user
+    admin_group = Group.objects.get(name="djpress_admin")
+    user.groups.clear()  # Remove the user from all other groups
+    user.groups.add(admin_group)
+
+    # Create a request object
+    request = request_factory.get("/")
+    request.user = user
+
+    qs = post_admin.get_queryset(request).count() == 3
+
+
+@pytest.mark.django_db
 def test_queryset_editor(
     test_post1: Post,
     test_post2: Post,
@@ -98,7 +120,7 @@ def test_queryset_editor(
 ) -> None:
     """Test the get_queryset method for editors."""
     # Create an editor user
-    editor_group = Group.objects.get(name="editor")
+    editor_group = Group.objects.get(name="djpress_editor")
     user.groups.clear()  # Remove the user from all other groups
     user.groups.add(editor_group)
 
@@ -123,7 +145,7 @@ def test_queryset_author(
     Authors should only see their own posts.
     """
     # Create an editor user
-    author_group = Group.objects.get(name="author")
+    author_group = Group.objects.get(name="djpress_author")
     user.groups.clear()  # Remove the user from all other groups
     user.groups.add(author_group)
 
@@ -158,7 +180,7 @@ def test_queryset_contributor(
     Contributors should only see their own posts.
     """
     # Create an editor user
-    contributor_group = Group.objects.get(name="contributor")
+    contributor_group = Group.objects.get(name="djpress_contributor")
     user.groups.clear()  # Remove the user from all other groups
     user.groups.add(contributor_group)
 
@@ -194,6 +216,34 @@ def test_has_change_permission_superuser(
 
 
 @pytest.mark.django_db
+def test_has_change_permission_admin(
+    user: User,
+    post_admin: PostAdmin,
+    request_factory: RequestFactory,
+    test_post1: Post,
+) -> None:
+    """Test the has_change_permission method for admins.
+
+    Admins can edit any post.
+    """
+    # Create an admin user that makes the request
+    admin_user = User.objects.create_user(username="admin_user")
+    admin_group = Group.objects.get(name="djpress_admin")
+    admin_user.groups.clear()  # Remove the user from all other groups
+    admin_user.groups.add(admin_group)
+    request = request_factory.get("/")
+    request.user = admin_user
+
+    assert post_admin.has_change_permission(request) is True  # General permission
+    assert post_admin.has_change_permission(request, test_post1) is True  # Can edit any post
+
+    test_post1.author = admin_user
+    test_post1.save()
+
+    assert post_admin.has_change_permission(request, test_post1) is True  # Can edit own post
+
+
+@pytest.mark.django_db
 def test_has_change_permission_editor(
     user: User,
     post_admin: PostAdmin,
@@ -206,7 +256,7 @@ def test_has_change_permission_editor(
     """
     # Create an editor user that makes the request
     editor_user = User.objects.create_user(username="editor_user")
-    editor_group = Group.objects.get(name="editor")
+    editor_group = Group.objects.get(name="djpress_editor")
     editor_user.groups.clear()  # Remove the user from all other groups
     editor_user.groups.add(editor_group)
     request = request_factory.get("/")
@@ -233,7 +283,7 @@ def test_has_change_permission_author(
     """
     # Create an author user that makes the request
     author_user = User.objects.create_user(username="author_user")
-    author_group = Group.objects.get(name="author")
+    author_group = Group.objects.get(name="djpress_author")
     author_user.groups.clear()  # Remove the user from all other groups
     author_user.groups.add(author_group)
     request = request_factory.get("/")
@@ -260,7 +310,7 @@ def test_has_change_permission_contributor(
     """
     # Create an contributor user that makes the request
     contributor_user = User.objects.create_user(username="contributor_user")
-    contributor_group = Group.objects.get(name="contributor")
+    contributor_group = Group.objects.get(name="djpress_contributor")
     contributor_user.groups.clear()  # Remove the user from all other groups
     contributor_user.groups.add(contributor_group)
     request = request_factory.get("/")
@@ -311,8 +361,19 @@ def test_get_readonly_fields_superuser(superuser: User, post_admin: PostAdmin, r
 
 
 @pytest.mark.django_db
+def test_get_readonly_fields_admin(user: User, post_admin: PostAdmin, request_factory: RequestFactory):
+    admin_group = Group.objects.get(name="djpress_admin")
+    user.groups.add(admin_group)
+    request = request_factory.get("/")
+    request.user = user
+
+    readonly_fields = post_admin.get_readonly_fields(request)
+    assert "status" not in readonly_fields  # Editor can edit status
+
+
+@pytest.mark.django_db
 def test_get_readonly_fields_editor(user: User, post_admin: PostAdmin, request_factory: RequestFactory):
-    editor_group = Group.objects.get(name="editor")
+    editor_group = Group.objects.get(name="djpress_editor")
     user.groups.add(editor_group)
     request = request_factory.get("/")
     request.user = user
@@ -323,7 +384,7 @@ def test_get_readonly_fields_editor(user: User, post_admin: PostAdmin, request_f
 
 @pytest.mark.django_db
 def test_get_readonly_fields_author(user: User, post_admin: PostAdmin, request_factory: RequestFactory):
-    author_group = Group.objects.get(name="author")
+    author_group = Group.objects.get(name="djpress_author")
     user.groups.add(author_group)
     request = request_factory.get("/")
     request.user = user
@@ -334,7 +395,7 @@ def test_get_readonly_fields_author(user: User, post_admin: PostAdmin, request_f
 
 @pytest.mark.django_db
 def test_get_readonly_fields_contributor(user: User, post_admin: PostAdmin, request_factory: RequestFactory):
-    contributor_group = Group.objects.get(name="contributor")
+    contributor_group = Group.objects.get(name="djpress_contributor")
     user.groups.add(contributor_group)
     request = request_factory.get("/")
     request.user = user
