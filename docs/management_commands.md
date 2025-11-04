@@ -2,14 +2,14 @@
 
 DJ Press provides Django management commands for exporting content and managing user permissions.
 
-## setup_djpress_groups
+## djpress_setup_groups
 
-The `setup_djpress_groups` command creates or updates DJ Press user groups and assigns appropriate permissions.
+The `djpress_setup_groups` command creates or updates DJ Press user groups and assigns appropriate permissions.
 
 ### Usage
 
 ```bash
-python manage.py setup_djpress_groups
+python manage.py djpress_setup_groups
 ```
 
 ### What It Does
