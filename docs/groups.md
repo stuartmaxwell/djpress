@@ -1,6 +1,6 @@
 # Groups and Permissions
 
-DJ Press offers three groups that can be used for managing content. These are in addition to the standard Django superuser role. And since content management is done through the Django Admin, all users need to be given `staff` status too.
+DJ Press offers four groups that can be used for managing content. These are in addition to the standard Django superuser role. And since content management is done through the Django Admin, all users need to be given `staff` status too.
 
 There are four key permissions that are used to control access in DJ Press:
 
@@ -15,24 +15,50 @@ There are four key permissions that are used to control access in DJ Press:
   - Can only delete own posts.
   - Can delete any posts.
 
-The three groups are:
+The four groups are:
 
-- Editor: have full permissions over all content.
-- Author: can publish, create, edit, and delete their own content. Unable to edit or delete other's posts.
-- Contributor: can create, edit, and delete their own content. Unable to publish their own posts, nor edit or delete other's posts.
+- **djpress_admin**: Full permissions to all djpress models (posts, pages, categories, tags, media, plugin storage).
+- **djpress_editor**: Full permissions over all content (posts, pages, categories, tags, media).
+- **djpress_author**: Can publish, create, edit, and delete their own content. Unable to edit or delete other's posts.
+- **djpress_contributor**: Can create, edit, and delete their own content. Unable to publish their own posts, nor edit or delete other's posts.
 
-| Permission | Editor | Author | Contributor |
-|------------|--------|--------|-------------|
-| Publish own posts | ✅ | ✅ | ❌ |
-| Publish other's posts | ✅ | ❌ | ❌ |
-| Create draft posts | ✅ | ✅ | ✅ |
-| Edit own posts | ✅ | ✅ | ✅ |
-| Edit other's posts | ✅ | ❌ | ❌ |
-| Delete own posts | ✅ | ✅ | ✅ |
-| Delete other's posts | ✅ | ❌ | ❌ |
+| Permission            | Admin | Editor | Author | Contributor |
+| --------------------- | ----- | ------ | ------ | ----------- |
+| Publish own posts     | ✅    | ✅     | ✅     | ✅          |
+| Publish other's posts | ✅    | ✅     | ❌     | ❌          |
+| Create draft posts    | ✅    | ✅     | ✅     | ✅          |
+| Edit own posts        | ✅    | ✅     | ✅     | ✅          |
+| Edit other's posts    | ✅    | ✅     | ❌     | ❌          |
+| Delete own posts      | ✅    | ✅     | ✅     | ✅          |
+| Delete other's posts  | ✅    | ✅     | ❌     | ❌          |
+| Manage categories     | ✅    | ✅     | ❌     | ❌          |
+| Manage tags           | ✅    | ✅     | ✅\*   | ✅\*        |
+| Manage media          | ✅    | ✅     | ✅     | ✅          |
+| Manage plugin storage | ✅    | ❌     | ❌     | ❌          |
 
-In addition to managing the post contents, Editors can also manage categories.
+\* Authors and Contributors can add tags but cannot edit or delete existing tags.
 
 And of course, any account with superuser status can manage all models in your Django project.
 
-Groups are assigned by an account with superuser status, through the standard Django Admin interface.
+## Group Setup
+
+Groups are automatically created when you run `python manage.py migrate`. You can also manually create or update them by running:
+
+```bash
+python manage.py djpress_setup_groups
+```
+
+## Assigning Users to Groups
+
+Groups are assigned by an account with superuser status, through the standard Django Admin interface, or via the Django shell:
+
+```bash
+python manage.py shell
+>>> from django.contrib.auth.models import User, Group
+>>> user = User.objects.get(username='your_username')
+>>> user.groups.add(Group.objects.get(name='djpress_editor'))
+```
+
+## Group Name Prefix
+
+All DJ Press groups are prefixed with `djpress_` to avoid conflicts with other groups you may have in your Django project.

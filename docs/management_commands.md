@@ -1,6 +1,44 @@
 # Management Commands
 
-DJ Press provides a Django management command to export your content to a flat-file Markdown format.
+DJ Press provides Django management commands for exporting content and managing user permissions.
+
+## djpress_setup_groups
+
+The `djpress_setup_groups` command creates or updates DJ Press user groups and assigns appropriate permissions.
+
+### Usage
+
+```bash
+python manage.py djpress_setup_groups
+```
+
+### What It Does
+
+This command creates four user groups with different permission levels:
+
+- **djpress_admin**: Full permissions to all djpress models
+- **djpress_editor**: Can publish posts and manage all content
+- **djpress_author**: Can publish their own posts and add tags/media
+- **djpress_contributor**: Can create/edit posts (but not publish) and add tags/media
+
+### When to Use
+
+Groups are automatically created when you run `python manage.py migrate`, so you typically don't need to run this command manually. However, it's useful for:
+
+- Troubleshooting permission issues
+- Re-creating groups after manual deletion
+- Updating permissions after upgrading DJ Press
+
+### Assigning Users to Groups
+
+After running the command, assign users to groups via the Django admin interface or management shell:
+
+```bash
+python manage.py shell
+>>> from django.contrib.auth.models import User, Group
+>>> user = User.objects.get(username='editor_user')
+>>> user.groups.add(Group.objects.get(name='djpress_editor'))
+```
 
 ## djpress_export
 

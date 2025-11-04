@@ -128,8 +128,12 @@ class PostAdmin(admin.ModelAdmin):
         if request.user.is_superuser:
             return qs
 
+        # Admins can see all posts
+        if request.user.groups.filter(name="djpress_admin").exists():
+            return qs
+
         # Editors can see all posts
-        if request.user.groups.filter(name="editor").exists():
+        if request.user.groups.filter(name="djpress_editor").exists():
             return qs
 
         # Authors and Contributors see only their own posts
@@ -157,8 +161,12 @@ class PostAdmin(admin.ModelAdmin):
         if obj is None:
             return True
 
+        # Admins can change any post
+        if request.user.groups.filter(name="djpress_admin").exists():
+            return True
+
         # Editors can change any post
-        if request.user.groups.filter(name="editor").exists():
+        if request.user.groups.filter(name="djpress_editor").exists():
             return True
 
         # Others can only change their own posts
@@ -176,6 +184,10 @@ class PostAdmin(admin.ModelAdmin):
         """
         # Superusers can edit all fields
         if request.user.is_superuser:
+            return self.readonly_fields
+
+        # Admins can edit all fields
+        if request.user.groups.filter(name="djpress_admin").exists():
             return self.readonly_fields
 
         # Restrict status field if user can't publish
