@@ -1,6 +1,5 @@
 {% load static %}
 {% load djpress_tags %}
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -14,18 +13,18 @@
   <body>
     <header>
       <h1>{% site_title_link %}</h1>
+      {% search_form %}
       {% site_pages %}
     </header>
-
     <main>
       {% block main %}
-
       {% endblock main %}
     </main>
-
     <footer>
-      <p>Powered by
-        <a href="https://www.djangoproject.com/" title="The web framework for perfectionists with deadlines">Django</a>
+      <p>
+        Powered by
+        <a href="https://www.djangoproject.com/"
+           title="The web framework for perfectionists with deadlines">Django</a>
         and
         <a href="#">DJPress</a>
       </p>
