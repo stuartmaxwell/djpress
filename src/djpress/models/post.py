@@ -767,6 +767,7 @@ class Post(models.Model):
         Returns:
             str: The post's URL.
         """
+        # Avoid circular import
         from djpress.url_utils import get_page_url, get_post_url
 
         if self.post_type == "page":
