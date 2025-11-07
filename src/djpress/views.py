@@ -22,11 +22,19 @@ from djpress.utils import get_template_name, validate_date_parts
 logger = logging.getLogger(__name__)
 
 
-def dispatcher(request: HttpRequest, path: str) -> HttpResponse:  # noqa: C901, PLR0911
+def dispatcher(request: HttpRequest, path: str) -> HttpResponse:  # noqa: C901, PLR0911, PLR0912
     """Dispatch the request to the appropriate view based on the path."""
     # 1. Check for special URLs first
     if djpress_settings.RSS_ENABLED and (path in (djpress_settings.RSS_PATH, f"{djpress_settings.RSS_PATH}/")):
         return PostFeed()(request)
+
+    if djpress_settings.SEARCH_ENABLED and djpress_settings.SEARCH_PREFIX:
+        search_match: bool = path in (
+            djpress_settings.SEARCH_PREFIX,
+            f"{djpress_settings.SEARCH_PREFIX}/",
+        )
+        if search_match:
+            return search(request=request)
 
     # 2. Check if it matches the single post or the archives regex
     post_match = re.fullmatch(get_path_regex("post"), path)
@@ -392,6 +400,53 @@ def single_page(request: HttpRequest, path: str) -> HttpResponse:
         raise Http404(msg) from exc
 
     template: str = get_template_name(view_name="single_page")
+
+    return render(
+        request=request,
+        template_name=template,
+        context=context,
+    )
+
+
+def search(request: HttpRequest) -> HttpResponse:
+    """View for searching posts.
+
+    Args:
+        request (HttpRequest): The request object.
+
+    Returns:
+        HttpResponse: The response.
+
+    Context:
+        search_query (str): The search query string.
+        posts (QuerySet[Post]): The list of posts that match the query.
+        search_errors (list[str]): Any validation errors.
+    """
+    # Search query validation constants
+    search_query_min_length = djpress_settings.SEARCH_QUERY_MIN_LENGTH
+    search_query_max_length = djpress_settings.SEARCH_QUERY_MAX_LENGTH
+
+    query: str = request.GET.get("q", "").strip()
+
+    # Validation
+    errors = []
+    posts = []
+
+    if query:
+        if len(query) < search_query_min_length:
+            errors.append(f"Search query must be at least {search_query_min_length} characters.")
+        elif len(query) > search_query_max_length:
+            errors.append(f"Search query is too long (maximum {search_query_max_length} characters).")
+        else:
+            posts = Post.objects.search(query)
+
+    context: dict = {
+        "search_query": query,
+        "posts": posts,
+        "search_errors": errors,
+    }
+
+    template: str = get_template_name(view_name="search")
 
     return render(
         request=request,
