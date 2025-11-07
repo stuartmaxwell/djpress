@@ -27,7 +27,7 @@ DJPRESS_SETTINGS = {
     "SEARCH_ENABLED": (True, bool),
     "SEARCH_PREFIX": ("search", str),
     "SEARCH_QUERY_MAX_LENGTH": (100, int),
-    "SEARCH_QUERY_MIN_LENGTH": (3, int),
+    "SEARCH_QUERY_MIN_LENGTH": (2, int),
     "SITE_DESCRIPTION": ("", str),
     "SITE_TITLE": ("My DJ Press Blog", str),
     "TAG_ENABLED": (True, bool),
