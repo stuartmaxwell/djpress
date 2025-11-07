@@ -43,7 +43,10 @@ Repository = "https://github.com/stuartmaxwell/djpress"
 Issues = "https://github.com/stuartmaxwell/djpress/issues"
 
 [dependency-groups]
-dev = ["bumpver>=2024.1130"]
+dev = [
+    "bumpver>=2024.1130",
+    "rich>=14.2.0",
+]
 
 [project.optional-dependencies]
 test = [
