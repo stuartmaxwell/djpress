@@ -2143,3 +2143,35 @@ def test_search_errors(settings):
     assert '<p class="error">Valid error</p>' in result
     assert '<p class="error">Another error</p>' in result
     assert "123" not in result
+
+
+@pytest.mark.django_db
+def test_pagination_links_with_query_string(settings, test_post1, test_post2, test_long_post1):
+    """Test that pagination links preserve query string parameters."""
+    from django.test import RequestFactory
+    from django.core.paginator import Paginator
+
+    settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"] = 2
+
+    # Create a request with query parameters (like search)
+    factory = RequestFactory()
+    request = factory.get("/search/?q=test&page=2")
+
+    # Create paginated posts
+    posts = Paginator(
+        Post.post_objects.get_published_posts(),
+        settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"],
+    )
+    page = posts.get_page(2)
+
+    # Create context with request and posts
+    context = Context({"request": request, "posts": page})
+
+    result = djpress_tags.pagination_links(context)
+
+    # Verify query string is preserved in pagination links
+    assert "q=test" in result
+    assert 'href="?q=test&page=1"' in result  # first page
+    assert 'href="?q=test&page=1"' in result  # previous page (from page 2)
+    assert 'href="?q=test&page=' in result  # next/last pages should also have q=test
+    assert "Page 2 of" in result
