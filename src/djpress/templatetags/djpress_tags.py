@@ -999,11 +999,22 @@ def pagination_links(
     if not page or not isinstance(page, Page):
         return ""
 
+    # Get the request to preserve query string parameters
+    request = context.get("request")
+
+    def build_pagination_url(page_number: int) -> str:
+        """Build URL with preserved query string parameters."""
+        if request and hasattr(request, "GET"):
+            params = request.GET.copy()
+            params["page"] = page_number
+            return f"?{params.urlencode()}"
+        return f"?page={page_number}"
+
     if page.has_previous():
         previous_output = (
             f'<span class="previous">'
-            f'<a href="?page=1">&laquo; first</a> '
-            f'<a href="?page={page.previous_page_number()}">previous</a>'
+            f'<a href="{build_pagination_url(1)}">&laquo; first</a> '
+            f'<a href="{build_pagination_url(page.previous_page_number())}">previous</a>'
             f"</span>"
         )
     else:
@@ -1012,8 +1023,8 @@ def pagination_links(
     if page.has_next():
         next_output = (
             f'<span class="next">'
-            f'<a href="?page={page.next_page_number()}">next</a> '
-            f'<a href="?page={page.paginator.num_pages}">last &raquo;</a>'
+            f'<a href="{build_pagination_url(page.next_page_number())}">next</a> '
+            f'<a href="{build_pagination_url(page.paginator.num_pages)}">last &raquo;</a>'
             f"</span>"
         )
     else:

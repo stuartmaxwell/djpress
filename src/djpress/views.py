@@ -430,19 +430,34 @@ def search(request: HttpRequest) -> HttpResponse:
 
     # Validation
     errors = []
-    posts = []
+
+    recent_published_posts_count = djpress_settings.RECENT_PUBLISHED_POSTS_COUNT
+    if not isinstance(recent_published_posts_count, int) or recent_published_posts_count < 0:  # pragma: no cover
+        msg = "RECENT_PUBLISHED_POSTS_COUNT must be a positive integer"
+        raise ValueError(msg)
 
     if query:
         if len(query) < search_query_min_length:
             errors.append(f"Search query must be at least {search_query_min_length} characters.")
+            posts = Paginator(Post.objects.none(), recent_published_posts_count)
         elif len(query) > search_query_max_length:
             errors.append(f"Search query is too long (maximum {search_query_max_length} characters).")
+            posts = Paginator(Post.objects.none(), recent_published_posts_count)
         else:
-            posts = Post.objects.search(query)
+            posts = Paginator(
+                Post.objects.search(query),
+                recent_published_posts_count,
+            )
+    else:
+        # No query - return empty results
+        posts = Paginator(Post.objects.none(), recent_published_posts_count)
+
+    page_number = request.GET.get("page")
+    page = posts.get_page(page_number)
 
     context: dict = {
         "search_query": query,
-        "posts": posts,
+        "posts": page,
         "search_errors": errors,
     }
 
