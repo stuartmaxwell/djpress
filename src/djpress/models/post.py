@@ -603,6 +603,11 @@ class Post(models.Model):
             ("can_publish_post", "Can publish post"),
         ]
 
+        indexes = [
+            models.Index(fields=["title"], name="djpress_post_title_idx"),
+            models.Index(fields=["content"], name="djpress_post_content_idx"),
+        ]
+
     def __str__(self) -> str:
         """Return the string representation of the post."""
         return self.title
