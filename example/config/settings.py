@@ -96,6 +96,7 @@ INTERNAL_IPS = ["127.0.0.1"]
 
 DJPRESS_SETTINGS = {
     "THEME": "testing",
+    "RECENT_PUBLISHED_POSTS_COUNT": 5,
     "PLUGINS": [
         "djpress_example_plugin",
     ],
