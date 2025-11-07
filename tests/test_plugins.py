@@ -16,6 +16,7 @@ from djpress.plugins.hook_registry import (
     POST_RENDER_CONTENT,
     POST_SAVE_POST,
     PRE_RENDER_CONTENT,
+    SEARCH_CONTENT,
     _Hook,
     _validate_hook_callback,
 )
@@ -511,3 +512,54 @@ def test_plugin_storage_interface():
     data["extra"] = "data"
     plugin.save_data(data)
     assert plugin.get_data() == {"new_key": "new_value", "extra": "data"}
+
+
+@pytest.mark.django_db
+def test_success_run_search_provider(registry, test_post1, test_post2):
+    """Test running a search provider hook."""
+
+    def search_callback(query: str):
+        return Post.objects.filter(title__icontains=query)
+
+    registry.register_hook(SEARCH_CONTENT, search_callback)
+
+    result = registry.run_hook(SEARCH_CONTENT, "test")
+    assert result.count() >= 1
+
+
+@pytest.mark.django_db
+def test_error_run_search_provider(registry, caplog):
+    """Test running a failed search provider hook.
+
+    This should return None.
+    """
+    caplog.set_level(logging.WARNING)
+
+    def callback(query: str):
+        raise RuntimeError("This is a test error")
+
+    registry.register_hook(SEARCH_CONTENT, callback)
+
+    result = registry.run_hook(SEARCH_CONTENT, "test")
+    assert result is None
+    assert "Error running callback" in caplog.text
+    assert "Callback skipped" in caplog.text
+    assert "This is a test error" in caplog.text
+
+
+@pytest.mark.django_db
+def test_search_provider_returns_non_queryset(registry, caplog):
+    """Test search provider that returns non-QuerySet.
+
+    This should return None.
+    """
+    caplog.set_level(logging.DEBUG)
+
+    def callback(query: str):
+        return ["not", "a", "queryset"]
+
+    registry.register_hook(SEARCH_CONTENT, callback)
+
+    result = registry.run_hook(SEARCH_CONTENT, "test")
+    assert result is None
+    assert "did not return a QuerySet" in caplog.text

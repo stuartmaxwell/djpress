@@ -451,3 +451,108 @@ def test_dispatcher_with_invalid_url(client):
     request.method = "GET"
     with pytest.raises(Http404):
         dispatcher(request, invalid_url)
+
+
+@pytest.mark.django_db
+def test_search_view_no_query(client, settings):
+    """Test search view with no query returns empty results."""
+    settings.DJPRESS_SETTINGS["SEARCH_ENABLED"] = True
+    settings.DJPRESS_SETTINGS["SEARCH_PREFIX"] = "search"
+    url = "/search/"
+    response = client.get(url)
+    assert response.status_code == 200
+    assert "search_query" in response.context
+    assert response.context["search_query"] == ""
+    assert "posts" in response.context
+    assert list(response.context["posts"]) == []
+    assert "search_errors" in response.context
+    assert response.context["search_errors"] == []
+
+
+@pytest.mark.django_db
+def test_search_view_with_valid_query(client, settings, test_post1, test_post2):
+    """Test search view with valid query returns matching posts."""
+    settings.DJPRESS_SETTINGS["SEARCH_ENABLED"] = True
+    settings.DJPRESS_SETTINGS["SEARCH_PREFIX"] = "search"
+    url = "/search/?q=test"
+    response = client.get(url)
+    assert response.status_code == 200
+    assert "search_query" in response.context
+    assert response.context["search_query"] == "test"
+    assert "posts" in response.context
+    assert len(response.context["posts"]) == 2
+    assert "search_errors" in response.context
+    assert response.context["search_errors"] == []
+
+
+@pytest.mark.django_db
+def test_search_view_query_too_short(client, settings):
+    """Test search view with query that's too short."""
+    settings.DJPRESS_SETTINGS["SEARCH_ENABLED"] = True
+    settings.DJPRESS_SETTINGS["SEARCH_PREFIX"] = "search"
+
+    # Query with 1 character when the default minimum is 2
+    url = "/search/?q=x"
+    response = client.get(url)
+    assert response.status_code == 200
+    assert "search_query" in response.context
+    assert response.context["search_query"] == "x"
+    assert "posts" in response.context
+    assert list(response.context["posts"]) == []
+    assert "search_errors" in response.context
+    assert len(response.context["search_errors"]) == 1
+    assert "at least" in response.context["search_errors"][0]
+    assert f"Search query must be at least 2 characters." in response.context["search_errors"][0]
+
+    settings.DJPRESS_SETTINGS["SEARCH_QUERY_MIN_LENGTH"] = 3
+
+    # Query with 2 characters when the minimum is 3
+    url = "/search/?q=xy"
+    response = client.get(url)
+    assert f"Search query must be at least 3 characters." in response.context["search_errors"]
+
+
+@pytest.mark.django_db
+def test_search_view_query_too_long(client, settings):
+    """Test search view with query that's too long."""
+    settings.DJPRESS_SETTINGS["SEARCH_ENABLED"] = True
+    settings.DJPRESS_SETTINGS["SEARCH_PREFIX"] = "search"
+    # Query with 101 characters when maximum is 100
+    long_query = "a" * 101
+    url = f"/search/?q={long_query}"
+    response = client.get(url)
+    assert response.status_code == 200
+    assert "search_query" in response.context
+    assert response.context["search_query"] == long_query
+    assert "posts" in response.context
+    assert list(response.context["posts"]) == []
+    assert "search_errors" in response.context
+    assert len(response.context["search_errors"]) == 1
+    assert "Search query is too long (maximum 100 characters)." in response.context["search_errors"][0]
+
+    settings.DJPRESS_SETTINGS["SEARCH_QUERY_MAX_LENGTH"] = 50
+    url = f"/search/?q={long_query}"
+    response = client.get(url)
+    assert "Search query is too long (maximum 50 characters)." in response.context["search_errors"][0]
+
+
+@pytest.mark.django_db
+def test_search_view_query_with_whitespace(client, settings, test_post1):
+    """Test search view strips whitespace from query."""
+    settings.DJPRESS_SETTINGS["SEARCH_ENABLED"] = True
+    settings.DJPRESS_SETTINGS["SEARCH_PREFIX"] = "search"
+    url = "/search/?q=  test  "
+    response = client.get(url)
+    assert response.status_code == 200
+    assert "search_query" in response.context
+    assert response.context["search_query"] == "test"
+
+
+@pytest.mark.django_db
+def test_search_disabled(client, settings):
+    """Test that search is not accessible when disabled."""
+    settings.DJPRESS_SETTINGS["SEARCH_ENABLED"] = False
+    settings.DJPRESS_SETTINGS["SEARCH_PREFIX"] = "search"
+    url = "/search/"
+    response = client.get(url)
+    assert response.status_code == 404
