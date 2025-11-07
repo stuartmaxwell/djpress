@@ -73,15 +73,12 @@ class PostsAndPagesManager(models.Manager):
         qs = self.get_queryset()
 
         if not query:
-            return qs
+            return qs.none()
 
         # Allow plugins to override the search method
         results: models.QuerySet = registry.run_hook(SEARCH_CONTENT, query)
 
-        logger.debug(f"Search results: {results}")
-
         if not isinstance(results, models.QuerySet):
-            logger.debug(f"Hook '{SEARCH_CONTENT.name}' did not return a QuerySet.")
             results = self._generic_search(query)
 
         return results
@@ -104,7 +101,7 @@ class PostsAndPagesManager(models.Manager):
         qs = self.get_queryset()
 
         if not query:
-            return qs
+            return qs.none()
 
         """
         The queries that are performed on the each field.
