@@ -3,9 +3,16 @@
 import logging
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
-from djpress.plugins.handlers import _run_content_provider, _run_content_transformer, _run_object_provider
+from djpress.plugins.handlers import (
+    _run_content_provider,
+    _run_content_transformer,
+    _run_object_provider,
+    _run_search_provider,
+)
 
 if TYPE_CHECKING:
+    from django.db import models
+
     from djpress.models import Post
 
 logger = logging.getLogger(__name__)
@@ -59,4 +66,22 @@ class PostObjectProvider(Protocol):
 
     def __call__(self, post: "Post") -> "Post":
         """Run logic after a post is saved."""
+        ...  # pragma: no cover
+
+
+@runtime_checkable
+class SearchProvider(Protocol):
+    """Protocol for a search provider.
+
+    Args:
+        query: The query string to search for.
+
+    Returns:
+        QuerySet: The search results.
+    """
+
+    handler = _run_search_provider
+
+    def __call__(self, query: str) -> "models.QuerySet[Post]":
+        """Search for posts matching the query."""
         ...  # pragma: no cover
