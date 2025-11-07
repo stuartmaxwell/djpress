@@ -314,3 +314,22 @@ def get_rss_url() -> str:
         return f"{url}/"
 
     return url
+
+
+def get_search_url() -> str:
+    """Return the URL for the search page.
+
+    If search is not enabled, return an empty string.
+
+    Returns:
+        str: The URL for the search page, or empty string if search is disabled.
+    """
+    if not djpress_settings.SEARCH_ENABLED:
+        return ""
+
+    url = f"/{djpress_settings.SEARCH_PREFIX}"
+
+    if django_settings.APPEND_SLASH:
+        return f"{url}/"
+
+    return url
