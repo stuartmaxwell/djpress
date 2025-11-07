@@ -2,6 +2,7 @@
 
 from typing import TYPE_CHECKING
 
+from djpress.models import Post
 from djpress.plugins import DJPressPlugin
 from djpress.plugins.hook_registry import (
     DJ_FOOTER,
@@ -9,10 +10,11 @@ from djpress.plugins.hook_registry import (
     POST_RENDER_CONTENT,
     POST_SAVE_POST,
     PRE_RENDER_CONTENT,
+    SEARCH_CONTENT,
 )
 
 if TYPE_CHECKING:
-    from djpress.models import Post
+    from django.db import models
 
 
 class Plugin(DJPressPlugin):
@@ -29,6 +31,7 @@ class Plugin(DJPressPlugin):
         (DJ_HEADER, "add_header_content"),
         (DJ_FOOTER, "add_footer_content"),
         (POST_SAVE_POST, "log_post_data"),
+        (SEARCH_CONTENT, "simple_search"),
     ]
 
     def add_greeting(self, content: str) -> str:
@@ -104,3 +107,16 @@ class Plugin(DJPressPlugin):
         print(f"Post saved: {post.title} (ID: {post.pk})")  # noqa: T201
 
         return post
+
+    def simple_search(self, query: str) -> "models.QuerySet[Post]":
+        """Search for posts matching the query.
+
+        Simple search that only searches the title field.
+
+        Args:
+            query: The search query.
+
+        Returns:
+            A queryset of matching posts.
+        """
+        return Post.objects.filter(title__icontains=query).order_by("-updated_at")
