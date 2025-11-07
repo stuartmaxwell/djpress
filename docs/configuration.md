@@ -31,6 +31,8 @@ Settings are grouped by functionality:
 | `AUTHOR_PREFIX`    | str  | `"author"`                           | Prefix for author URLs.                           |
 | `RSS_ENABLED`      | bool | `True`                               | Enable/disable RSS feed.                          |
 | `RSS_PATH`         | str  | `"rss"`                              | Path for RSS feed.                                |
+| `SEARCH_ENABLED`   | bool | `True`                               | Enable/disable search functionality.              |
+| `SEARCH_PREFIX`    | str  | `"search"`                           | Path for search page.                             |
 
 #### Content Display
 
@@ -42,6 +44,8 @@ Settings are grouped by functionality:
 | `POST_READ_MORE_TEXT`          | str  | `"Read more..."`     | Text for "Read more" links.                        |
 | `TRUNCATE_TAG`                 | str  | `"<!--more-->"`      | HTML comment that marks where to truncate content. |
 | `MICROFORMATS_ENABLED`         | bool | `True`               | Enable/disable microformats in HTML.               |
+| `SEARCH_QUERY_MIN_LENGTH`      | int  | `2`                  | Minimum character length for search queries.       |
+| `SEARCH_QUERY_MAX_LENGTH`      | int  | `100`                | Maximum character length for search queries.       |
 
 #### Media Settings
 
