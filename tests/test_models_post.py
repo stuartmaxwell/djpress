@@ -1,7 +1,7 @@
 import datetime
 import pytest
 from django.utils import timezone
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db.models import QuerySet
@@ -1592,3 +1592,42 @@ def test_post_date_timezones_testing(settings, user):
     print(f"{p1._date=}")
     print(f"{p1.url=}")
     print(str(p1.published_at.tzinfo))
+
+
+@pytest.mark.django_db
+def test_post_empty_search(test_post1, test_post2):
+    posts = Post.objects.search("")
+    assert posts.count() == 0
+
+
+@pytest.mark.django_db
+def test_post_empty_generic_search(test_post1, test_post2):
+    posts = Post.objects._generic_search("")
+    assert posts.count() == 0
+
+
+@pytest.mark.django_db
+def test_post_search_fallback_when_plugin_returns_non_queryset(test_post1, test_post2):
+    """Test that search falls back to _generic_search when plugin returns non-QuerySet."""
+    # Patch registry.run_hook to return None (simulating a plugin returning invalid data)
+    with patch("djpress.models.post.registry.run_hook", return_value=None):
+        posts = Post.objects.search("test")
+        # Should fall back to generic search and find the posts
+        assert posts.count() == 2
+        assert test_post1 in posts
+        assert test_post2 in posts
+
+
+@pytest.mark.django_db
+def test_post_search_plugin_returns_queryset(test_post1, test_post2):
+    """Test that search uses plugin result when it returns a QuerySet."""
+    # Create a custom QuerySet that only returns test_post1
+    custom_qs = Post.objects.filter(slug=test_post1.slug)
+
+    # Patch registry.run_hook to return our custom QuerySet
+    with patch("djpress.models.post.registry.run_hook", return_value=custom_qs):
+        posts = Post.objects.search("test")
+        # Should use the plugin's QuerySet, not fall back to generic search
+        assert posts.count() == 1
+        assert test_post1 in posts
+        assert test_post2 not in posts
