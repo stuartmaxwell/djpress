@@ -57,6 +57,7 @@ test = [
   "nox>=2024.4.15",
   "djpress-example-plugin",
   "pytest-cov>=6.0.0",
+  "rich>=14.2.0",
 ]
 docs = [
   "cogapp>=3.4.1",
