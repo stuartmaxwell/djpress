@@ -3,9 +3,11 @@
 import logging
 from typing import TYPE_CHECKING
 
+from django.db import models
+
 if TYPE_CHECKING:
     from djpress.models import Post
-    from djpress.plugins.protocols import ContentTransformer, PostObjectProvider, SimpleContentProvider
+    from djpress.plugins.protocols import ContentTransformer, PostObjectProvider, SearchProvider, SimpleContentProvider
 
 logger = logging.getLogger(__name__)
 
@@ -79,3 +81,30 @@ def _run_object_provider(
         logger.warning(msg)
 
     return original_post
+
+
+def _run_search_provider(
+    callback: "SearchProvider",
+    value: str,
+) -> "models.QuerySet[Post] | None":
+    """Runs a `SearchProvider` callback.
+
+    Args:
+        callback: The `SearchProvider` callback.
+        value: The search query.
+
+    Returns:
+        The search results.
+    """
+    try:
+        results = callback(value)
+    except Exception as exc:  # noqa: BLE001
+        msg = f"Error running callback '{callback}'. Callback skipped: {exc}"
+        logger.warning(msg)
+        return None
+
+    if not isinstance(results, models.QuerySet):
+        logger.debug(f"Callback '{callback}' did not return a QuerySet.")
+        return None
+
+    return results

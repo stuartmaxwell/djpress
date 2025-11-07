@@ -196,8 +196,6 @@ class PluginRegistry:
         try:
             return import_string(f"{plugin_path}.plugin.Plugin")
         except ImportError as exc:
-            from django.core.exceptions import ImproperlyConfigured
-
             msg = (
                 f"Could not load plugin: '{plugin_path}'. "
                 f"Tried both custom path and standard plugin.py location. "

@@ -4,7 +4,7 @@ import inspect
 from collections.abc import Callable  # Modern import for Callable
 from typing import Any
 
-from djpress.plugins.protocols import ContentTransformer, PostObjectProvider, SimpleContentProvider
+from djpress.plugins.protocols import ContentTransformer, PostObjectProvider, SearchProvider, SimpleContentProvider
 
 
 class _Hook:
@@ -100,3 +100,4 @@ POST_RENDER_CONTENT = _Hook("post_render_content", ContentTransformer)
 DJ_HEADER = _Hook("dj_header", SimpleContentProvider)
 DJ_FOOTER = _Hook("dj_footer", SimpleContentProvider)
 POST_SAVE_POST = _Hook("post_save_post", PostObjectProvider)
+SEARCH_CONTENT = _Hook("search_content", SearchProvider)

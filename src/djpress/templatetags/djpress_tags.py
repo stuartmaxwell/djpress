@@ -1165,3 +1165,175 @@ def dj_footer() -> str:
     """
     content = registry.run_hook(DJ_FOOTER)
     return mark_safe(content or "")
+
+
+@register.simple_tag(takes_context=True)
+def search_title(
+    context: Context,
+    outer: str = "",
+    outer_class: str = "",
+    pre_text: str = "",
+    post_text: str = "",
+) -> str:
+    """Return the title of a search query.
+
+    Expects there to be an `search_query` in the context set to a string. If there's no search_query in the context or
+    search_query is not a string, then return an empty string.
+
+
+    Args:
+        context: The context.
+        outer: The outer HTML tag for the category.
+        outer_class: The CSS class(es) for the outer tag.
+        pre_text: The text to prepend to the category title.
+        post_text: The text to append to the category title.
+
+    Returns:
+        str: The title of the search query formatted with the outer tag and class if provided.
+    """
+    search_query: str | None = context.get("search_query")
+
+    if not search_query or not isinstance(search_query, str):
+        return ""
+
+    allowed_outer_tags = ["h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "span"]
+    outer_class = f' class="{outer_class}"' if outer_class else ""
+
+    output = search_query
+
+    if pre_text:
+        output = f"{pre_text}{output}"
+
+    if post_text:
+        output = f"{output}{post_text}"
+
+    if outer in allowed_outer_tags:
+        return mark_safe(f"<{outer}{outer_class}>{output}</{outer}>")
+
+    return output
+
+
+@register.simple_tag
+def search_url() -> str:
+    """Return the search URL.
+
+    Returns:
+        str: The search URL path, or empty string if search is disabled.
+
+    Example:
+        <form action="{% search_url %}" method="get">
+            <input type="search" name="q" placeholder="Search...">
+            <button type="submit">Search</button>
+        </form>
+    """
+    return url_utils.get_search_url()
+
+
+@register.simple_tag(takes_context=True)
+def search_form(  # noqa: PLR0913
+    context: Context,
+    *,
+    placeholder: str = "Search...",
+    button_text: str = "Search",
+    form_class: str = "",
+    input_class: str = "",
+    button_class: str = "",
+    show_button: bool = True,
+) -> str:
+    """Return a search form as HTML.
+
+    For a custom search form, use the {% search_url %} tag instead.
+
+    Args:
+        context: The template context - this is added automatically by Django.
+        placeholder: Placeholder text for the search input.
+        button_text: Text for the submit button.
+        form_class: CSS class(es) for the form element.
+        input_class: CSS class(es) for the input element.
+        button_class: CSS class(es) for the button element.
+        show_button: Whether to show the submit button.
+
+    Returns:
+        str: The search form HTML, or empty string if search is disabled.
+
+    Example:
+        {% search_form %}
+        {% search_form placeholder="Search posts..." button_text="Go" form_class="my-form" %}
+    """
+    url = url_utils.get_search_url()
+
+    if not url:
+        return ""
+
+    current_query = context.get("search_query", "")
+
+    # Build the HTML
+    form_class_attr = f' class="{form_class}"' if form_class else ""
+    input_class_attr = f' class="{input_class}"' if input_class else ""
+    button_class_attr = f' class="{button_class}"' if button_class else ""
+
+    html = f'<form action="{url}" method="get"{form_class_attr}>'
+    html += '<input type="search" name="q" '
+    html += f'value="{current_query}" placeholder="{placeholder}" aria-label="Search"{input_class_attr}>'
+
+    if show_button:
+        html += f'<button type="submit"{button_class_attr}>{button_text}</button>'
+
+    html += "</form>"
+
+    return mark_safe(html)
+
+
+@register.simple_tag(takes_context=True)
+def search_errors(
+    context: Context,
+    outer: str = "div",
+    outer_class: str = "search-errors",
+    error_tag: str = "p",
+    error_class: str = "error",
+) -> str:
+    """Return search validation errors as HTML.
+
+    Expects there to be a `search_errors` list in the context. If there are no errors,
+    returns an empty string.
+
+    Args:
+        context: The template context.
+        outer: The outer HTML tag to wrap all errors (div, section, etc).
+        outer_class: The CSS class(es) for the outer tag.
+        error_tag: The HTML tag for each individual error message.
+        error_class: The CSS class(es) for each error tag.
+
+    Returns:
+        str: The error messages HTML, or empty string if no errors.
+
+    Example:
+        {% search_errors %}
+        {% search_errors outer="section" outer_class="alert alert-danger" %}
+    """
+    errors: list | None = context.get("search_errors")
+
+    if not errors or not isinstance(errors, list):
+        return ""
+
+    allowed_outer_tags = ["div", "section", "aside", "article"]
+    allowed_error_tags = ["p", "span", "div", "li"]
+
+    if outer not in allowed_outer_tags:
+        outer = "div"
+
+    if error_tag not in allowed_error_tags:
+        error_tag = "p"
+
+    outer_class_attr = f' class="{outer_class}"' if outer_class else ""
+    error_class_attr = f' class="{error_class}"' if error_class else ""
+
+    html = f"<{outer}{outer_class_attr}>"
+
+    for error in errors:
+        if isinstance(error, str):
+            html += f"<{error_tag}{error_class_attr}>{error}</{error_tag}>"
+
+    html += f"</{outer}>"
+
+    return mark_safe(html)

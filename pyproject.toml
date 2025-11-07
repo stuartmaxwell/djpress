@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "djpress"
-version = "0.21.0"
+version = "0.22.0"
 description = "A blog application for Django sites, inspired by classic WordPress."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -43,7 +43,10 @@ Repository = "https://github.com/stuartmaxwell/djpress"
 Issues = "https://github.com/stuartmaxwell/djpress/issues"
 
 [dependency-groups]
-dev = ["bumpver>=2024.1130"]
+dev = [
+    "bumpver>=2024.1130",
+    "rich>=14.2.0",
+]
 
 [project.optional-dependencies]
 test = [
@@ -54,6 +57,7 @@ test = [
   "nox>=2024.4.15",
   "djpress-example-plugin",
   "pytest-cov>=6.0.0",
+  "rich>=14.2.0",
 ]
 docs = [
   "cogapp>=3.4.1",
@@ -79,6 +83,7 @@ ignore = [
   "TD002",  # Missing author in TODO
   "S308",   # suspicious-mark-safe-usage
   "RUF012", # Checks for mutable default values in class attributes. https://github.com/astral-sh/ruff/issues/5243
+  "COM812", # The following rule may cause conflicts when used with the formatter: `COM812`
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -106,7 +111,7 @@ omit = ["*/tests/*", "*/migrations/*"]
 exclude_lines = ["if TYPE_CHECKING:", "# pragma: no cover"]
 
 [tool.bumpver]
-current_version = "0.21.0"
+current_version = "0.22.0"
 version_pattern = "MAJOR.MINOR.PATCH[PYTAGNUM]"
 commit_message = "👍 bump version {old_version} -> {new_version}"
 commit = true

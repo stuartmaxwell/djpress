@@ -1991,3 +1991,155 @@ def test_dj_footer_no_plugins():
     result = djpress_tags.dj_footer()
     assert result == ""
     assert isinstance(result, str)
+
+
+def test_search_url(settings):
+    """Test search_url template tag."""
+    settings.DJPRESS_SETTINGS["SEARCH_ENABLED"] = True
+    settings.DJPRESS_SETTINGS["SEARCH_PREFIX"] = "search"
+    settings.APPEND_SLASH = True
+    assert djpress_tags.search_url() == "/search/"
+
+    settings.DJPRESS_SETTINGS["SEARCH_PREFIX"] = "find"
+    assert djpress_tags.search_url() == "/find/"
+
+    settings.APPEND_SLASH = False
+    assert djpress_tags.search_url() == "/find"
+
+    settings.DJPRESS_SETTINGS["SEARCH_ENABLED"] = False
+    assert djpress_tags.search_url() == ""
+
+
+@pytest.mark.django_db
+def test_search_form(settings):
+    """Test search_form template tag."""
+    settings.DJPRESS_SETTINGS["SEARCH_ENABLED"] = True
+    settings.DJPRESS_SETTINGS["SEARCH_PREFIX"] = "search"
+    settings.APPEND_SLASH = True
+
+    context = Context({})
+    result = djpress_tags.search_form(context)
+    assert '<form action="/search/" method="get">' in result
+    assert '<input type="search" name="q"' in result
+    assert 'placeholder="Search..."' in result
+    assert '<button type="submit">Search</button>' in result
+
+    # Test with custom parameters
+    result = djpress_tags.search_form(
+        context,
+        placeholder="Find posts...",
+        button_text="Go",
+        form_class="my-form",
+        input_class="search-input",
+        button_class="btn",
+    )
+    assert 'class="my-form"' in result
+    assert 'class="search-input"' in result
+    assert 'class="btn"' in result
+    assert 'placeholder="Find posts..."' in result
+    assert ">Go</button>" in result
+
+    # Test with existing query in context
+    context = Context({"search_query": "test query"})
+    result = djpress_tags.search_form(context)
+    assert 'value="test query"' in result
+
+    # Test with show_button=False
+    result = djpress_tags.search_form(context, show_button=False)
+    assert "<button" not in result
+
+    # Test when search is disabled
+    settings.DJPRESS_SETTINGS["SEARCH_ENABLED"] = False
+    result = djpress_tags.search_form(context)
+    assert result == ""
+
+
+@pytest.mark.django_db
+def test_search_title(settings):
+    """Test search_title template tag."""
+    # Test with search_query in context
+    context = Context({"search_query": "django"})
+    result = djpress_tags.search_title(context)
+    assert result == "django"
+
+    # Test with outer tag
+    result = djpress_tags.search_title(context, outer="h1")
+    assert result == "<h1>django</h1>"
+
+    # Test with outer class
+    result = djpress_tags.search_title(context, outer="h2", outer_class="search-heading")
+    assert result == '<h2 class="search-heading">django</h2>'
+
+    # Test with pre_text and post_text
+    result = djpress_tags.search_title(context, outer="h1", pre_text="Results for: ", post_text="!")
+    assert result == "<h1>Results for: django!</h1>"
+
+    # Test with no search_query in context
+    context = Context({})
+    result = djpress_tags.search_title(context)
+    assert result == ""
+
+    # Test with invalid outer tag
+    context = Context({"search_query": "test"})
+    result = djpress_tags.search_title(context, outer="script")
+    assert result == "test"
+
+    # Test with non-string search_query
+    context = Context({"search_query": 123})
+    result = djpress_tags.search_title(context)
+    assert result == ""
+
+
+@pytest.mark.django_db
+def test_search_errors(settings):
+    """Test search_errors template tag."""
+    # Test with errors in context
+    context = Context({"search_errors": ["Error 1", "Error 2"]})
+    result = djpress_tags.search_errors(context)
+    assert '<div class="search-errors">' in result
+    assert '<p class="error">Error 1</p>' in result
+    assert '<p class="error">Error 2</p>' in result
+    assert "</div>" in result
+
+    # Test with custom parameters
+    result = djpress_tags.search_errors(
+        context,
+        outer="section",
+        outer_class="alerts",
+        error_tag="span",
+        error_class="alert-msg",
+    )
+    assert '<section class="alerts">' in result
+    assert '<span class="alert-msg">Error 1</span>' in result
+    assert "</section>" in result
+
+    # Test with no errors in context
+    context = Context({})
+    result = djpress_tags.search_errors(context)
+    assert result == ""
+
+    # Test with empty errors list
+    context = Context({"search_errors": []})
+    result = djpress_tags.search_errors(context)
+    assert result == ""
+
+    # Test with non-list search_errors
+    context = Context({"search_errors": "not a list"})
+    result = djpress_tags.search_errors(context)
+    assert result == ""
+
+    # Test with invalid outer tag (should default to div)
+    context = Context({"search_errors": ["Error"]})
+    result = djpress_tags.search_errors(context, outer="script")
+    assert '<div class="search-errors">' in result
+
+    # Test with invalid error tag (should default to p)
+    result = djpress_tags.search_errors(context, error_tag="script")
+    assert '<p class="error">Error</p>' in result
+
+    # Test with non-string items in errors list (should skip them)
+    context = Context({"search_errors": ["Valid error", 123, None, "Another error"]})
+    result = djpress_tags.search_errors(context)
+    assert '<p class="error">Valid error</p>' in result
+    assert '<p class="error">Another error</p>' in result
+    assert "123" not in result

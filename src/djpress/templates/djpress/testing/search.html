@@ -1,22 +1,14 @@
 {% extends "djpress/testing/base.html" %}
 {% load djpress_tags %}
 {% block main %}
+  <h1>Search Results Template of the Testing Theme</h1>
   {% search_title "h1" pre_text="Search Results for '" post_text="'" %}
-  {% category_title "h1" pre_text="View Posts in the " post_text=" Category" %}
-  {% tag_title "h1" pre_text="View Posts Tagged with " %}
-  {% author_name "h1" pre_text="View Posts by " %}
-  {% if post %}
-    {% post_wrap %}
-      {% post_title outer_tag="h1" %}
-      {% post_content outer_tag="section" %}
-      <footer>
-        <p>By {% post_author %}. {% post_date %}</p>
-        <p>Categories: {% post_categories outer_tag="span" link_class="badge" %}</p>
-        <p>Tags: {% post_tags outer_tag="span" link_class="badge" %}</p>
-      </footer>
-    {% end_post_wrap %}
+  {% search_errors %}
+  {% if search_errors %}
+        {# Errors are displayed above, don't show results #}
+  {% elif not search_query %}
+    <p>Enter a search term to find posts.</p>
   {% else %}
-    <h1>Latest Posts</h1>
     {% for post in posts %}
       {% post_wrap %}
         {% post_title outer_tag="h1" %}
@@ -30,8 +22,8 @@
         </footer>
       {% end_post_wrap %}
     {% empty %}
-      <p>No posts available.</p>
+      <p>No search results found for "{{ search_query }}".</p>
     {% endfor %}
+    {% pagination_links %}
   {% endif %}
-  {% pagination_links %}
 {% endblock main %}

@@ -25,8 +25,9 @@ The template tags in DJ Press are organised into several functional categories:
 
 - [Data Access Tags](#data-access-tags)
 - [Display Tags](#display-tags)
-- [Post Content Tags](#post-content-tags)
 - [Navigation Tags](#navigation-tags)
+- [Post Content Tags](#post-content-tags)
+- [Search Tags](#search-tags)
 - [Utility Tags](#utility-tags)
 
 ## Data Access Tags
@@ -916,6 +917,155 @@ If category functionality is enabled, this will output a link to the category:
 
 ```html
 <a href="/category/general/" title="View all posts in the General category">General</a>
+```
+
+## Search Tags
+
+These tags provide search functionality for your blog.
+
+### search_url
+
+Return the URL for the search page.
+
+**Returns:** string with the search URL, or empty string if search is disabled.
+
+#### search_url Example
+
+```django
+<form action="{% search_url %}" method="get">
+  <input type="search" name="q" placeholder="Search...">
+  <button type="submit">Search</button>
+</form>
+```
+
+This will output:
+
+```html
+<form action="/search/" method="get">
+  <input type="search" name="q" placeholder="Search...">
+  <button type="submit">Search</button>
+</form>
+```
+
+### search_form
+
+Render a complete search form with customizable styling.
+
+**Returns:** HTML form string, or empty string if search is disabled.
+
+#### search_form Parameters
+
+- `placeholder` (optional): Placeholder text for the search input. Default: "Search..."
+- `button_text` (optional): Text for the submit button. Default: "Search"
+- `form_class` (optional): CSS class(es) for the form element.
+- `input_class` (optional): CSS class(es) for the input element.
+- `button_class` (optional): CSS class(es) for the button element.
+- `show_button` (optional): Whether to show the submit button. Default: True
+
+#### search_form Examples
+
+Basic search form:
+
+```django
+{% search_form %}
+```
+
+This will output:
+
+```html
+<form action="/search/" method="get">
+  <input type="search" name="q" value="" placeholder="Search..." aria-label="Search">
+  <button type="submit">Search</button>
+</form>
+```
+
+Customized search form:
+
+```django
+{% search_form placeholder="Find posts..." button_text="Go" form_class="search-form" input_class="form-control" button_class="btn btn-primary" %}
+```
+
+This will output:
+
+```html
+<form action="/search/" method="get" class="search-form">
+  <input type="search" name="q" value="" placeholder="Find posts..." aria-label="Search" class="form-control">
+  <button type="submit" class="btn btn-primary">Go</button>
+</form>
+```
+
+Search form without button (for icon-based designs):
+
+```django
+{% search_form show_button=False %}
+```
+
+### search_title
+
+Return the title of a search query from the current context.
+
+**Returns:** string or HTML-formatted string with the search query.
+
+#### search_title Parameters
+
+- `outer` (optional): The outer HTML tag for the search title. Allowed values: "h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "span".
+- `outer_class` (optional): The CSS class(es) for the outer tag.
+- `pre_text` (optional): The text to prepend to the search query.
+- `post_text` (optional): The text to append to the search query.
+
+#### search_title Examples
+
+```django
+{% search_title outer="h1" outer_class="search-heading" pre_text="Search Results for '" post_text="'" %}
+```
+
+This will output:
+
+```html
+<h1 class="search-heading">Search Results for 'django'</h1>
+```
+
+### search_errors
+
+Display search validation errors from the current context.
+
+**Returns:** HTML string with error messages, or empty string if no errors.
+
+#### search_errors Parameters
+
+- `outer` (optional): The outer HTML tag to wrap all errors. Allowed values: "div", "section", "aside", "article". Default: "div"
+- `outer_class` (optional): The CSS class(es) for the outer tag. Default: "search-errors"
+- `error_tag` (optional): The HTML tag for each error message. Allowed values: "p", "span", "div", "li". Default: "p"
+- `error_class` (optional): The CSS class(es) for each error tag. Default: "error"
+
+#### search_errors Examples
+
+Basic error display:
+
+```django
+{% search_errors %}
+```
+
+This will output:
+
+```html
+<div class="search-errors">
+  <p class="error">Search query must be at least 3 characters.</p>
+</div>
+```
+
+Customized error display:
+
+```django
+{% search_errors outer="section" outer_class="alert alert-danger" error_tag="div" error_class="error-message" %}
+```
+
+This will output:
+
+```html
+<section class="alert alert-danger">
+  <div class="error-message">Search query must be at least 3 characters.</div>
+</section>
 ```
 
 ## Utility Tags

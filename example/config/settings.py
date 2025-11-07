@@ -100,3 +100,36 @@ DJPRESS_SETTINGS = {
         "djpress_example_plugin",
     ],
 }
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "filters": {
+        "require_debug_true": {
+            "()": "django.utils.log.RequireDebugTrue",
+        },
+    },
+    "formatters": {
+        "rich": {"datefmt": "[%X]"},
+    },
+    "handlers": {
+        "console": {
+            "level": "DEBUG",
+            "class": "rich.logging.RichHandler",
+            "formatter": "rich",
+            "filters": ["require_debug_true"],
+            "rich_tracebacks": True,
+            "tracebacks_show_locals": True,
+        },
+    },
+    "loggers": {
+        "django": {
+            "handlers": [],
+            "level": "INFO",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "DEBUG",
+    },
+}

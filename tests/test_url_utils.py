@@ -14,6 +14,7 @@ from djpress.url_utils import (
     get_page_url,
     get_post_url,
     get_rss_url,
+    get_search_url,
 )
 
 
@@ -503,3 +504,27 @@ def test_get_rss_url(settings):
     expected_url = "/test-rss"
     url = get_rss_url()
     assert url == expected_url
+
+
+def test_get_search_url(settings):
+    """Test get_search_url with various settings."""
+    settings.DJPRESS_SETTINGS["SEARCH_ENABLED"] = True
+    settings.DJPRESS_SETTINGS["SEARCH_PREFIX"] = "search"
+    settings.APPEND_SLASH = True
+    expected_url = "/search/"
+    url = get_search_url()
+    assert url == expected_url
+
+    settings.DJPRESS_SETTINGS["SEARCH_PREFIX"] = "find"
+    expected_url = "/find/"
+    url = get_search_url()
+    assert url == expected_url
+
+    settings.APPEND_SLASH = False
+    expected_url = "/find"
+    url = get_search_url()
+    assert url == expected_url
+
+    settings.DJPRESS_SETTINGS["SEARCH_ENABLED"] = False
+    url = get_search_url()
+    assert url == ""

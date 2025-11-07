@@ -410,7 +410,7 @@ wheels = [
 
 [[package]]
 name = "djpress"
-version = "0.21.0"
+version = "0.22.0"
 source = { editable = "." }
 dependencies = [
     { name = "django" },
@@ -437,11 +437,13 @@ test = [
     { name = "pytest-cov" },
     { name = "pytest-coverage" },
     { name = "pytest-django" },
+    { name = "rich" },
 ]
 
 [package.dev-dependencies]
 dev = [
     { name = "bumpver" },
+    { name = "rich" },
 ]
 
 [package.metadata]
@@ -458,6 +460,7 @@ requires-dist = [
     { name = "pytest-cov", marker = "extra == 'test'", specifier = ">=6.0.0" },
     { name = "pytest-coverage", marker = "extra == 'test'", specifier = ">=0.0" },
     { name = "pytest-django", marker = "extra == 'test'", specifier = ">=4.9.0" },
+    { name = "rich", marker = "extra == 'test'", specifier = ">=14.2.0" },
     { name = "sphinx", marker = "extra == 'docs'", specifier = ">=8.1.3" },
     { name = "sphinx-autobuild", marker = "extra == 'docs'", specifier = ">=2024.10.3" },
     { name = "sphinx-copybutton", marker = "extra == 'docs'", specifier = ">=0.5.2" },
@@ -466,7 +469,10 @@ requires-dist = [
 provides-extras = ["test", "docs"]
 
 [package.metadata.requires-dev]
-dev = [{ name = "bumpver", specifier = ">=2024.1130" }]
+dev = [
+    { name = "bumpver", specifier = ">=2024.1130" },
+    { name = "rich", specifier = ">=14.2.0" },
+]
 
 [[package]]
 name = "djpress-example-plugin"
@@ -941,6 +947,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/c9/74/b3ff8e6c8446842c3f5c837e9c3dfcfe2018ea6ecef224c710c85ef728f4/requests-2.32.5.tar.gz", hash = "sha256:dbba0bac56e100853db0ea71b82b4dfd5fe2bf6d3754a8893c3af500cec7d7cf", size = 134517, upload-time = "2025-08-18T20:46:02.573Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/1e/db/4254e3eabe8020b458f1a747140d32277ec7a271daf1d235b70dc0b4e6e3/requests-2.32.5-py3-none-any.whl", hash = "sha256:2462f94637a34fd532264295e186976db0f5d453d1cdd31473c85a6a161affb6", size = 64738, upload-time = "2025-08-18T20:46:00.542Z" },
+]
+
+[[package]]
+name = "rich"
+version = "14.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "markdown-it-py" },
+    { name = "pygments" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/fb/d2/8920e102050a0de7bfabeb4c4614a49248cf8d5d7a8d01885fbb24dc767a/rich-14.2.0.tar.gz", hash = "sha256:73ff50c7c0c1c77c8243079283f4edb376f0f6442433aecb8ce7e6d0b92d1fe4", size = 219990, upload-time = "2025-10-09T14:16:53.064Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/25/7a/b0178788f8dc6cafce37a212c99565fa1fe7872c70c6c9c1e1a372d9d88f/rich-14.2.0-py3-none-any.whl", hash = "sha256:76bc51fe2e57d2b1be1f96c524b890b816e334ab4c1e45888799bfaab0021edd", size = 243393, upload-time = "2025-10-09T14:16:51.245Z" },
 ]
 
 [[package]]

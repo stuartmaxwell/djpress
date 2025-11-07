@@ -14,13 +14,14 @@ Welcome to the documentation site for DJ Press: a blog application for Django si
 - [Template Tags](templatetags.md) - Template tags for displaying blog content
 - [Themes](themes.md) - Creating and customising blog themes
 - [Plugins](plugins.md) - Extending DJ Press with plugins
+- [Search](search.md) - Search functionality and customisation
 - [Markdown Customisation](markdown_customisation.md) - Customising Markdown rendering
 
 ## Content Management
 
-- [Media Management](media.md) - Managing images and other media files
-- [Tags](tags.md) - Using tags to organise content
 - [Categories](categories.md) - Using categories to organise content
+- [Tags](tags.md) - Using tags to organise content
+- [Media Management](media.md) - Managing images and other media files
 
 ## Advanced Topics
 
@@ -40,10 +41,11 @@ url_structure
 templatetags
 themes
 plugins
+search
 markdown_customisation
-media
-tags
 categories
+tags
+media
 management_commands
 sitemap
 groups

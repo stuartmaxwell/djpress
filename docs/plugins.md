@@ -30,7 +30,7 @@ In `plugin.py`, create a class called `Plugin` that inherits from `DJPressPlugin
 
 ```python
 from djpress.plugins import DJPressPlugin
-from djpress.plugin.hook_registry import PRE_RENDER_CONTENT, POST_RENDER_CONTENT, POST_SAVE_POST
+from djpress.plugin.hook_registry import PRE_RENDER_CONTENT, POST_RENDER_CONTENT, POST_SAVE_POST, SEARCH_CONTENT
 
 class Plugin(DJPressPlugin):
     name = "djpress_my_plugin"  # Required - use same name as package
@@ -38,6 +38,7 @@ class Plugin(DJPressPlugin):
         (PRE_RENDER_CONTENT, "modify_content"),
         (POST_RENDER_CONTENT, "modify_html"),
         (POST_SAVE_POST, "notify_on_publish"),
+        (SEARCH_CONTENT, "custom_search"),
     ]
 
 
@@ -118,6 +119,38 @@ class Plugin(DJPressPlugin):
         """Private helper method to send notifications."""
         # Implementation would depend on notification method
         pass
+
+    def custom_search(self, query: str):
+        """Provide custom search functionality.
+
+        This callback implements the SearchProvider signature.
+
+        Args:
+            query: The search query string
+
+        Returns:
+            QuerySet of Post objects matching the search
+        """
+        try:
+            from djpress.models import Post
+
+            # Example: Custom search using Django's full-text search
+            # This is just an example - implement your own logic
+            if not query:
+                return Post.objects.none()
+
+            # You could use PostgreSQL full-text search, Elasticsearch, etc.
+            # For this example, we'll do a simple case-insensitive search
+            return Post.objects.filter(
+                title__icontains=query
+            ) | Post.objects.filter(
+                content__icontains=query
+            )
+        except Exception as e:
+            import logging
+            logging.error(f"Error in custom_search: {e}")
+            # Return None to fall back to default search
+            return None
 ```
 
 ## Saving Plugin Data
@@ -147,13 +180,14 @@ The data must be JSON-serialisable (dictionaries, lists, strings, numbers, boole
 
 DJ Press provides these hooks for plugins:
 
-| Hook Name             | Description                                           | Arguments                 | Expected Return           |
-|-----------------------|-------------------------------------------------------|---------------------------|---------------------------|
-| `PRE_RENDER_CONTENT`  | Called before markdown content is rendered to HTML    | `content: str` (markdown) | Modified markdown content |
-| `POST_RENDER_CONTENT` | Called after markdown content is rendered to HTML     | `content: str` (HTML)     | Modified HTML content     |
-| `POST_SAVE_POST`      | Called after saving a published post                  | `post: Post` (object)     | None (return ignored)     |
-| `DJ_HEADER`           | Used to insert HTML into the template's `<head>` tag. | None                      | HTML content (`str`)      |
-| `DJ_FOOTER`           | Called after saving a published post                  | `post: Post` (object)     | None (return ignored)     |
+| Hook Name             | Description                                           | Arguments                 | Expected Return                    |
+|-----------------------|-------------------------------------------------------|---------------------------|------------------------------------|
+| `PRE_RENDER_CONTENT`  | Called before markdown content is rendered to HTML    | `content: str` (markdown) | Modified markdown content          |
+| `POST_RENDER_CONTENT` | Called after markdown content is rendered to HTML     | `content: str` (HTML)     | Modified HTML content              |
+| `POST_SAVE_POST`      | Called after saving a published post                  | `post: Post` (object)     | None (return ignored)              |
+| `SEARCH_CONTENT`      | Override default search with custom implementation    | `query: str`              | QuerySet of Post objects, or None  |
+| `DJ_HEADER`           | Used to insert HTML into the template's `<head>` tag. | None                      | HTML content (`str`)               |
+| `DJ_FOOTER`           | Called after saving a published post                  | `post: Post` (object)     | None (return ignored)              |
 
 Hooks are imported from the `hook_registry` module, and then assigned to a list called `hooks` in the `Plugin` class.
 The hook is added to the list as a tuple with the first element being the hook, and the second element being the string

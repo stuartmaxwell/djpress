@@ -9,7 +9,7 @@ from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import Max
+from django.db.models import Case, IntegerField, Max, Q, Value, When
 from django.db.transaction import on_commit
 from django.utils import timezone
 from django.utils.text import slugify
@@ -19,11 +19,7 @@ from djpress.exceptions import PageNotFoundError, PostNotFoundError
 from djpress.models.category import Category
 from djpress.models.tag import Tag
 from djpress.plugins import registry
-from djpress.plugins.hook_registry import (
-    POST_RENDER_CONTENT,
-    POST_SAVE_POST,
-    PRE_RENDER_CONTENT,
-)
+from djpress.plugins.hook_registry import POST_RENDER_CONTENT, POST_SAVE_POST, PRE_RENDER_CONTENT, SEARCH_CONTENT
 from djpress.utils import get_markdown_renderer
 
 logger = logging.getLogger(__name__)
@@ -62,6 +58,87 @@ class PostsAndPagesManager(models.Manager):
                 published_at__lte=timezone.now(),
             )
         )
+
+    def search(self, query: str = "") -> models.QuerySet:
+        """Search interface.
+
+        Provides a swappable search method. The default search is the `_generic_search` method.
+
+        Args:
+            query (str): The search query.
+
+        Returns:
+            models.QuerySet: The filtered queryset.
+        """
+        qs = self.get_queryset()
+
+        if not query:
+            return qs.none()
+
+        # Allow plugins to override the search method
+        results: models.QuerySet = registry.run_hook(SEARCH_CONTENT, query)
+
+        if not isinstance(results, models.QuerySet):
+            results = self._generic_search(query)
+
+        return results
+
+    def _generic_search(self, query: str) -> models.QuerySet:
+        """Search for posts/pages by title or content.
+
+        This is intentionally simple for now and only supports searching for specific terms.
+
+        This search method uses a combination of title and content matching to find relevant posts/pages.
+
+        It uses a basic "weighting" to prioritise content that matches the query in the title over the content.
+
+        Args:
+            query (str): The search query.
+
+        Returns:
+            models.QuerySet: The filtered queryset.
+        """
+        qs = self.get_queryset()
+
+        if not query:
+            return qs.none()
+
+        """
+        The queries that are performed on the each field.
+        We keep this simple to work across all database types.
+        """
+        title_match = Q(title__icontains=query)
+        content_match = Q(content__icontains=query)
+
+        """
+        Assigning weights to title and content matches let's us prioritise titles that match over content.
+        Additional weights can be added in the future if we want to include other aspects of the post to search on.
+        """
+        title_weight = 2
+        content_weight = 1
+
+        """
+        This annotates each post and page with a score based on where the match occurs.
+        Each post and page will have a score of 0, 1, or 2.
+        And then any posts/pages with a score of 0 are filtered out.
+        """
+        qs = qs.annotate(
+            score=Case(
+                When(title_match, then=Value(title_weight)),
+                When(content_match, then=Value(content_weight)),
+                default=Value(0),
+                output_field=IntegerField(),
+            ),
+        ).filter(score__gt=0)
+
+        """
+        Sorting:
+
+        1. Score: Higher score means more relevant results.
+        2. Post Type: Prioritise pages over posts.
+        3. Updated at date: More recent posts are prioritised.
+        """
+        return qs.order_by("-score", "post_type", "-updated_at")
 
 
 class PagesManager(models.Manager):
@@ -526,6 +603,11 @@ class Post(models.Model):
             ("can_publish_post", "Can publish post"),
         ]
 
+        indexes = [
+            models.Index(fields=["title"], name="djpress_post_title_idx"),
+            models.Index(fields=["content"], name="djpress_post_content_idx"),
+        ]
+
     def __str__(self) -> str:
         """Return the string representation of the post."""
         return self.title
@@ -690,6 +772,7 @@ class Post(models.Model):
         Returns:
             str: The post's URL.
         """
+        # Avoid circular import
         from djpress.url_utils import get_page_url, get_post_url
 
         if self.post_type == "page":

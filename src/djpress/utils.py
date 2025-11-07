@@ -126,6 +126,9 @@ def get_templates(view_name: str) -> list[str]:
     if view_name == "single_page":
         template = f"djpress/{theme}/page.html"
 
+    if view_name == "search":
+        template = f"djpress/{theme}/search.html"
+
     default_template = f"djpress/{theme}/index.html"
 
     return [template, default_template] if template else [default_template]
