@@ -68,7 +68,6 @@ Settings are grouped by functionality:
 | `CACHE_CATEGORIES`            | bool | `True`  | Enable/disable caching for categories.                |
 | `CACHE_TAGS`                  | bool | `False` | Enable/disable caching for tags.                      |
 | `CACHE_RECENT_PUBLISHED_POSTS`| bool | `False` | Enable/disable caching for recent posts.              |
-| `MAX_TAGS_PER_QUERY`          | int  | `5`     | Maximum number of tags to query for auto-suggestions. |
 
 #### Plugin System
 
