@@ -6,25 +6,25 @@ This guide will walk you through installing DJ Press in your Django project.
 
 DJ Press will always be compatible with any supported version of Django and Python. Right now this is:
 
-- Django 4.2 LTS, 5.1, 5.2 LTS
-- Python 3.9 and above
+- Django 4.2 or newer
+- Python 3.10 and above
 
 ## Quick Start
 
 > **Important:** DJ Press is pre-1.0 software. Until version 1.x is released, please pin your requirements to a
-> specific minor version to avoid breaking changes, e.g. `djpress~=0.19.0`
+> specific minor version to avoid breaking changes, e.g. `djpress~=0.22.0`
 
 1. Install the package:
 
 ```bash
 # Using pip
-pip install "djpress~=0.19.0"
+pip install "djpress~=0.22.0"
 
 # Using poetry
-poetry add "djpress~=0.19.0"
+poetry add "djpress~=0.22.0"
 
 # using uv
-uv add "djpress~=0.19.0"
+uv add "djpress~=0.22.0"
 ```
 
 1. Add DJ Press to your `INSTALLED_APPS` in Django settings:
