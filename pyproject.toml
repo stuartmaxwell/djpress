@@ -84,6 +84,7 @@ ignore = [
   "S308",   # suspicious-mark-safe-usage
   "RUF012", # Checks for mutable default values in class attributes. https://github.com/astral-sh/ruff/issues/5243
   "COM812", # The following rule may cause conflicts when used with the formatter: `COM812`
+  "PLR0913", # Too many arguments in function definition
 ]
 
 [tool.ruff.lint.per-file-ignores]
