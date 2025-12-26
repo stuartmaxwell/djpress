@@ -56,7 +56,8 @@ def validate_date_parts(year: str | None, month: str | None, day: str | None) ->
 
     Parts are passed as strings and converted to integers. Then a datetimeobject is attempted to be created.
 
-    A year must always be provided, and a month must be provided if a day is provided.
+    A year must be provided if a month is provided.
+    A month must be provided if a day is provided.
 
     Args:
         year (str | None): The year.
@@ -72,7 +73,7 @@ def validate_date_parts(year: str | None, month: str | None, day: str | None) ->
     error_msg = "Invalid date"
 
     # Check that the correct parts have been provided
-    if not year:
+    if month and not year:
         raise ValueError(error_msg)
     if day and not month:
         raise ValueError(error_msg)

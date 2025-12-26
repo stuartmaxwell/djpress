@@ -76,6 +76,8 @@ def test_validate_date_parts():
     with pytest.raises(ValueError):
         validate_date_parts(None, "01", None)
     with pytest.raises(ValueError):
+        validate_date_parts(None, None, "01")
+    with pytest.raises(ValueError):
         validate_date_parts("Foobar", None, None)
     with pytest.raises(ValueError):
         validate_date_parts("-2025", None, None)
