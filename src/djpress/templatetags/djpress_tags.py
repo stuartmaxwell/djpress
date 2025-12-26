@@ -195,7 +195,7 @@ def get_post_category_slugs(context: Context) -> list:
 
 
 @register.simple_tag
-def blog_categories(
+def site_categories(
     outer_tag: str = "ul",
     outer_class: str = "",
     link_class: str = "",

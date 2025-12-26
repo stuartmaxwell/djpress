@@ -1035,20 +1035,20 @@ def test_post_categories_span_class1_class2(settings, test_post1):
 
 
 @pytest.mark.django_db
-def test_blog_categories(category1, category2):
+def test_site_categories(category1, category2):
     categories = Category.objects.all()
 
     assert category1 in categories
     assert category2 in categories
 
-    assert djpress_tags.blog_categories() == categories_html(
+    assert djpress_tags.site_categories() == categories_html(
         categories=categories, outer_tag="ul", outer_class="", link_class="", separator=", ", pre_text="", post_text=""
     )
 
 
 @pytest.mark.django_db
-def test_blog_categories_no_categories():
-    assert djpress_tags.blog_categories() == ""
+def test_site_categories_no_categories():
+    assert djpress_tags.site_categories() == ""
 
 
 @pytest.mark.django_db
