@@ -235,7 +235,7 @@ def site_categories(
 
 
 @register.simple_tag
-def blog_tags(
+def site_tags(
     outer_tag: str = "ul",
     outer_class: str = "",
     link_class: str = "",

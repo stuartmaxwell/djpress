@@ -1052,20 +1052,20 @@ def test_site_categories_no_categories():
 
 
 @pytest.mark.django_db
-def test_blog_tags(tag1, tag2):
+def test_site_tags(tag1, tag2):
     tags = Tag.objects.all()
 
     assert tag1 in tags
     assert tag2 in tags
 
-    assert djpress_tags.blog_tags() == tags_html(
+    assert djpress_tags.site_tags() == tags_html(
         tags=tags, outer_tag="ul", outer_class="", link_class="", separator=", ", pre_text="", post_text=""
     )
 
 
 @pytest.mark.django_db
-def test_blog_tags_no_tags():
-    assert djpress_tags.blog_tags() == ""
+def test_site_tags_no_tags():
+    assert djpress_tags.site_tags() == ""
 
 
 @pytest.mark.django_db
