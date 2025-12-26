@@ -747,13 +747,19 @@ class Post(models.Model):
 
     @property
     def truncated_content_markdown(self) -> str:
-        """Return the truncated content as HTML converted from Markdown."""
+        """Return the truncated content as HTML converted from Markdown.
+
+        If the post isn't truncated, return the full content.
+        """
         truncate_tag = djpress_settings.TRUNCATE_TAG
+        # This next line should never be True since we assign a default value to TRUNCATE_TAG
         if not isinstance(truncate_tag, str) or not truncate_tag:  # pragma: no cover
             msg = "TRUNCATE_TAG must be a non-empty string."
             raise ValueError(msg)
-        read_more_index = self.content.find(truncate_tag)
-        truncated_content = self.content[:read_more_index] if read_more_index != -1 else self.content
+
+        post_content = str(self.content)
+        read_more_index = post_content.find(truncate_tag)
+        truncated_content = post_content[:read_more_index] if read_more_index != -1 else post_content
         return render_markdown(truncated_content)
 
     @property
