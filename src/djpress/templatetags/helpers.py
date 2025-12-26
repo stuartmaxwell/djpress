@@ -14,6 +14,9 @@ def categories_html(
     outer_tag: str,
     outer_class: str,
     link_class: str,
+    separator: str,
+    pre_text: str,
+    post_text: str,
 ) -> str:
     """Return the HTML for the categories.
 
@@ -24,6 +27,9 @@ def categories_html(
         outer_tag: The outer HTML tag for the categories.
         outer_class: The CSS class(es) for the outer tag.
         link_class: The CSS class(es) for the link.
+        separator: The separator between categories.
+        pre_text: The text to display before the categories.
+        post_text: The text to display after the categories.
 
     Returns:
         str: The HTML for the categories.
@@ -39,18 +45,18 @@ def categories_html(
         output += "</ul>"
 
     if outer_tag == "div":
-        output += f"<div{outer_class_html}>"
+        output += f"<div{outer_class_html}>{pre_text}"
         for category in categories:
-            output += f"{category_link(category, link_class)}, "
-        output = output[:-2]  # Remove the trailing comma and space
-        output += "</div>"
+            output += f"{category_link(category, link_class)}{separator}"
+        output = output[: -len(separator)]  # Remove the trailing separator
+        output += f"{post_text}</div>"
 
     if outer_tag == "span":
-        output += f"<span{outer_class_html}>"
+        output += f"<span{outer_class_html}>{pre_text}"
         for category in categories:
-            output += f"{category_link(category, link_class)}, "
-        output = output[:-2]  # Remove the trailing comma and space
-        output += "</span>"
+            output += f"{category_link(category, link_class)}{separator}"
+        output = output[: -len(separator)]  # Remove the trailing separator
+        output += f"{post_text}</span>"
 
     return output
 
@@ -60,6 +66,9 @@ def tags_html(
     outer_tag: str,
     outer_class: str,
     link_class: str,
+    separator: str,
+    pre_text: str,
+    post_text: str,
 ) -> str:
     """Return the HTML for the tags.
 
@@ -70,6 +79,9 @@ def tags_html(
         outer_tag: The outer HTML tag for the tags.
         outer_class: The CSS class(es) for the outer tag.
         link_class: The CSS class(es) for the link.
+        separator: The separator between tags.
+        pre_text: The text to display before the tags.
+        post_text: The text to display after the tags.
 
     Returns:
         str: The HTML for the tags.
@@ -83,20 +95,12 @@ def tags_html(
         for tag in tags:
             output += f"<li>{tag_link(tag, link_class)}</li>"
         output += "</ul>"
-
-    if outer_tag == "div":
-        output += f"<div{outer_class_html}>"
+    else:
+        output += f"<{outer_tag}{outer_class_html}>{pre_text}"
         for tag in tags:
-            output += f"{tag_link(tag, link_class)}, "
-        output = output[:-2]  # Remove the trailing comma and space
-        output += "</div>"
-
-    if outer_tag == "span":
-        output += f"<span{outer_class_html}>"
-        for tag in tags:
-            output += f"{tag_link(tag, link_class)}, "
-        output = output[:-2]  # Remove the trailing comma and space
-        output += "</span>"
+            output += f"{tag_link(tag, link_class)}{separator}"
+        output = output[: -len(separator)]  # Remove the trailing separator
+        output += f"{post_text}</{outer_tag}>"
 
     return output
 
@@ -186,6 +190,8 @@ def post_read_more_link(
 ) -> str:
     """Return the read more link for a post.
 
+    If the post isn't truncated, return an empty string.
+
     Args:
         post: The post.
         link_class: The CSS class(es) for the link.
@@ -195,9 +201,15 @@ def post_read_more_link(
         str: The read more link.
     """
     post_read_more_text = djpress_settings.POST_READ_MORE_TEXT
+
+    # The following line should never be true since we assign a default value.
     if not isinstance(post_read_more_text, str):  # pragma: no cover
         msg = f"Expected a string for POST_READ_MORE_TEXT, got {type(post_read_more_text).__name__}"
         raise TypeError(msg)
+
+    if post.is_truncated is False:
+        return ""
+
     read_more_text = read_more_text if read_more_text else post_read_more_text
     link_class_html = f' class="{link_class}"' if link_class else ""
 
@@ -209,6 +221,7 @@ def get_site_pages_list(
     li_class: str = "",
     a_class: str = "",
     ul_child_class: str = "",
+    levels: int = 0,
 ) -> str:
     """Return the HTML for the site pages list.
 
@@ -219,6 +232,7 @@ def get_site_pages_list(
         li_class: The CSS class(es) for the list item.
         a_class: The CSS class(es) for the link.
         ul_child_class: The CSS class(es) for the child ul
+        levels: The maximum depth of nested pages to include or 0 for unlimited.
 
     Returns:
         str: The HTML for the site pages list.
@@ -234,9 +248,16 @@ def get_site_pages_list(
 
         output += f"<li{class_li}>{get_page_link(page, link_class=a_class)}"
 
-        if children:
+        if children and (levels == 0 or levels > 1):
+            new_levels = levels - 1 if levels > 0 else 0
             output += f"<ul{class_ul}>"
-            output += get_site_pages_list(children, li_class=li_class, a_class=a_class, ul_child_class=ul_child_class)
+            output += get_site_pages_list(
+                children,
+                li_class=li_class,
+                a_class=a_class,
+                ul_child_class=ul_child_class,
+                levels=new_levels,
+            )
             output += "</ul>"
 
         output += "</li>"
