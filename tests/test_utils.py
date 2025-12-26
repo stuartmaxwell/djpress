@@ -1,7 +1,13 @@
 from unittest.mock import patch
 import pytest
 
-from djpress.utils import get_author_display_name, get_markdown_renderer, get_template_name, get_templates
+from djpress.utils import (
+    get_author_display_name,
+    get_markdown_renderer,
+    get_template_name,
+    get_templates,
+    validate_date_parts,
+)
 from django.contrib.auth.models import User
 from django.template.loader import TemplateDoesNotExist
 
@@ -50,6 +56,33 @@ def test_get_author_display_name(test_user):
 
     if not first_name and not last_name:
         assert display_name == user_name
+
+
+def test_validate_date_parts():
+    """This function validates the date parts.
+
+    They are passed as strings, then a date object is tried to be created from them.
+
+    If the date object is valid, then the parts are returned as a dict.
+    """
+    # Valid tests
+    assert validate_date_parts("2025", None, None) == {"year": 2025}
+    assert validate_date_parts("2025", "01", None) == {"year": 2025, "month": 1}
+    assert validate_date_parts("2025", "1", None) == {"year": 2025, "month": 1}
+    assert validate_date_parts("2025", "01", "01") == {"year": 2025, "month": 1, "day": 1}
+    assert validate_date_parts("2025", "1", "1") == {"year": 2025, "month": 1, "day": 1}
+
+    # Invalid tests
+    with pytest.raises(ValueError):
+        validate_date_parts(None, "01", None)
+    with pytest.raises(ValueError):
+        validate_date_parts("Foobar", None, None)
+    with pytest.raises(ValueError):
+        validate_date_parts("-2025", None, None)
+    with pytest.raises(ValueError):
+        validate_date_parts("2025", "13", "1")
+    with pytest.raises(ValueError):
+        validate_date_parts("2025", "1", "32")
 
 
 def test_render_markdown_does_not_exist(settings):

@@ -1,9 +1,11 @@
+from djpress.conf import settings as djpress_settings
 from django.utils import timezone
 import pytest
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.template import Context, Template
 from django.urls import reverse
+from django.db import models
 
 from djpress.models import Category, Post, Tag
 from djpress.templatetags import djpress_tags
@@ -61,18 +63,32 @@ def test_have_posts_multiple_posts(test_post1, test_long_post1):
     assert djpress_tags.have_posts(context) == [test_post1, test_long_post1]
 
 
-def test_site_title(settings):
-    """Test the site_title template tag.
+def test_get_site_title(settings):
+    """Test the get_site_title template tag.
 
     This can be changed on the fly.
     """
     assert settings.DJPRESS_SETTINGS["SITE_TITLE"] == "My Test DJ Press Blog"
-    assert djpress_tags.site_title() == settings.DJPRESS_SETTINGS["SITE_TITLE"]
+    assert djpress_tags.get_site_title() == settings.DJPRESS_SETTINGS["SITE_TITLE"]
 
     # Change the title
     settings.DJPRESS_SETTINGS["SITE_TITLE"] = "My New Blog Title"
     assert settings.DJPRESS_SETTINGS["SITE_TITLE"] == "My New Blog Title"
-    assert djpress_tags.site_title() == settings.DJPRESS_SETTINGS["SITE_TITLE"]
+    assert djpress_tags.get_site_title() == settings.DJPRESS_SETTINGS["SITE_TITLE"]
+
+
+def test_get_site_description(settings):
+    """Test the get_site_description template tag.
+
+    This can be changed on the fly.
+    """
+    assert settings.DJPRESS_SETTINGS["SITE_DESCRIPTION"] == "This is a test blog."
+    assert djpress_tags.get_site_description() == settings.DJPRESS_SETTINGS["SITE_DESCRIPTION"]
+
+    # Change the description
+    settings.DJPRESS_SETTINGS["SITE_DESCRIPTION"] = "My New Blog description"
+    assert settings.DJPRESS_SETTINGS["SITE_DESCRIPTION"] == "My New Blog description"
+    assert djpress_tags.get_site_description() == settings.DJPRESS_SETTINGS["SITE_DESCRIPTION"]
 
 
 @pytest.mark.django_db
@@ -105,6 +121,118 @@ def test_get_tags(tag1, tag2, tag3):
     assert list(djpresstags) == list(tags)
 
 
+def test_site_title(settings):
+    """site_title returns some configurable HTML."""
+    assert settings.DJPRESS_SETTINGS["SITE_TITLE"] == "My Test DJ Press Blog"
+    # Test case - no options
+    expected_output = "My Test DJ Press Blog"
+    assert djpress_tags.site_title() == expected_output
+
+    # Test case - with all options
+    expected_output = f'<h1 class="title"><a href="/" class="test-link-class">My Test DJ Press Blog</a></h1>'
+    assert (
+        djpress_tags.site_title(
+            outer_tag="h1",
+            outer_class="title",
+            link=True,
+            link_class="test-link-class",
+        )
+        == expected_output
+    )
+
+    # Test case - just link=True
+    expected_output = f'<a href="/" class="test-link-class">My Test DJ Press Blog</a>'
+    assert (
+        djpress_tags.site_title(
+            link=True,
+            link_class="test-link-class",
+        )
+        == expected_output
+    )
+
+    # Test case - options but no link
+    expected_output = f'<h1 class="title">My Test DJ Press Blog</h1>'
+    assert (
+        djpress_tags.site_title(
+            outer_tag="h1",
+            outer_class="title",
+        )
+        == expected_output
+    )
+
+    # Test case - invalid outer_tag
+    expected_output = ""
+    assert (
+        djpress_tags.site_title(
+            outer_tag="ul",
+            outer_class="title",
+        )
+        == expected_output
+    )
+
+    # Test case - no site_title and no options
+    settings.DJPRESS_SETTINGS["SITE_TITLE"] = ""
+    expected_output = ""
+    assert djpress_tags.site_title() == expected_output
+
+    # Test case - no site_title and all options
+    settings.DJPRESS_SETTINGS["SITE_TITLE"] = ""
+    expected_output = ""
+    assert (
+        djpress_tags.site_title(
+            outer_tag="h1",
+            outer_class="title",
+            link=True,
+            link_class="test-link-class",
+        )
+        == expected_output
+    )
+
+
+def test_site_description(settings):
+    """site_description returns some configurable HTML."""
+    assert settings.DJPRESS_SETTINGS["SITE_DESCRIPTION"] == "This is a test blog."
+    # Test case - no options
+    expected_output = "This is a test blog."
+    assert djpress_tags.site_description() == expected_output
+
+    # Test case - with all options
+    expected_output = f'<h2 class="subtitle">This is a test blog.</h2>'
+    assert (
+        djpress_tags.site_description(
+            outer_tag="h2",
+            outer_class="subtitle",
+        )
+        == expected_output
+    )
+
+    # Test case - invalid outer_tag
+    expected_output = ""
+    assert (
+        djpress_tags.site_description(
+            outer_tag="ul",
+            outer_class="subtitle",
+        )
+        == expected_output
+    )
+
+    # Test case - no site_description and no options
+    settings.DJPRESS_SETTINGS["SITE_DESCRIPTION"] = ""
+    expected_output = ""
+    assert djpress_tags.site_description() == expected_output
+
+    # Test case - no site_description and all options
+    settings.DJPRESS_SETTINGS["SITE_DESCRIPTION"] = ""
+    expected_output = ""
+    assert (
+        djpress_tags.site_description(
+            outer_tag="h2",
+            outer_class="subtitle",
+        )
+        == expected_output
+    )
+
+
 @pytest.mark.django_db
 def test_get_post_title_single_post(test_post1):
     context = Context({"post": test_post1})
@@ -134,6 +262,54 @@ def test_get_post_url_no_context():
     context = Context({"foo": "bar"})
 
     assert djpress_tags.get_post_url(context) == ""
+
+
+@pytest.mark.django_db
+def test_get_post_category_slugs(settings, test_post1, category2):
+    """Test the `get_post_category_slugs` tempalte tag.
+
+    test_post1 has a single category called `Test Category1` (`test-category1`).
+    `category2` has a slug of `test-category2`.
+    """
+    assert test_post1.categories.count() == 1
+    assert test_post1.categories.first().slug == "test-category1"
+    assert category2.slug == "test-category2"
+
+    # Test case: Post in the context, one category
+    context = Context({"post": test_post1})
+    assert djpress_tags.get_post_category_slugs(context) == ["test-category1"]
+
+    # Test case: No post in the context, empty list
+    context = Context({"foo": "bar"})
+    assert djpress_tags.get_post_category_slugs(context) == []
+
+    # Test case: Post with multiple categories
+    test_post1.categories.add(category2)
+    context = Context({"post": test_post1})
+    assert djpress_tags.get_post_category_slugs(context) == ["test-category1", "test-category2"]
+
+
+@pytest.mark.django_db
+def test_get_post_categories(test_post1, category1, category2):
+    """Test the `get_post_categories` tempalte tag.
+
+    test_post1 has a single category called `Test Category1`.
+    """
+    assert test_post1.categories.count() == 1
+    assert test_post1.categories.first() == category1
+
+    # Test case: Post in the context, one category
+    context = Context({"post": test_post1})
+    assert list(djpress_tags.get_post_categories(context)) == [category1]
+
+    # Test case: No post in the context, empty list
+    context = Context({"foo": "bar"})
+    assert list(djpress_tags.get_post_categories(context)) == []
+
+    # Test case: Post with multiple categories
+    test_post1.categories.add(category2)
+    context = Context({"post": test_post1})
+    assert list(djpress_tags.get_post_categories(context)) == [category1, category2]
 
 
 @pytest.mark.django_db
@@ -213,8 +389,7 @@ def test_post_title_with_valid_tag(settings, test_post1):
 def test_post_title_with_invalid_tag(test_post1):
     context = Context({"post": test_post1})
 
-    expected_output = test_post1.title
-    assert djpress_tags.post_title(context, outer_tag="ul") == expected_output
+    assert djpress_tags.post_title(context, outer_tag="ul") == ""
 
 
 @pytest.mark.django_db
@@ -265,20 +440,28 @@ def test_post_author(settings, test_post1):
     author = test_post1.author
 
     expected_output = (
+        f'<span class="p-author">'
         f'<a href="/{settings.DJPRESS_SETTINGS["AUTHOR_PREFIX"]}/testuser/" title="View all posts by '
-        f'{get_author_display_name(author)}"><span class="p-author">'
-        f"{get_author_display_name(author)}</span></a>"
+        f'{get_author_display_name(author)}">'
+        f"{get_author_display_name(author)}</a>"
+        f"</span>"
     )
     assert djpress_tags.post_author(context) == expected_output
 
     # Disable microformats
     settings.DJPRESS_SETTINGS["MICROFORMATS_ENABLED"] = False
     expected_output = (
+        f"<span>"
         f'<a href="/{settings.DJPRESS_SETTINGS["AUTHOR_PREFIX"]}/testuser/" title="View all posts by '
-        f'{get_author_display_name(author)}"><span>'
-        f"{get_author_display_name(author)}</span></a>"
+        f'{get_author_display_name(author)}">'
+        f"{get_author_display_name(author)}</a>"
+        f"</span>"
     )
     assert djpress_tags.post_author(context) == expected_output
+
+    # Test case: invalid outer tag
+    expected_output = ""
+    assert djpress_tags.post_author(context, outer_tag="invalid") == expected_output
 
 
 @pytest.mark.django_db
@@ -308,11 +491,13 @@ def test_post_author_with_author_path_with_one_link_class(settings, test_post1):
     author = test_post1.author
 
     expected_output = (
+        f'<span class="p-author">'
         f'<a href="/{settings.DJPRESS_SETTINGS["AUTHOR_PREFIX"]}/testuser/" title="View all posts by '
         f'{get_author_display_name(author)}" class="class1">'
-        f'<span class="p-author">{get_author_display_name(author)}</span></a>'
+        f"{get_author_display_name(author)}</a>"
+        "</span>"
     )
-    assert djpress_tags.post_author(context, "class1") == expected_output
+    assert djpress_tags.post_author(context, link_class="class1") == expected_output
 
 
 @pytest.mark.django_db
@@ -326,11 +511,13 @@ def test_post_author_with_author_path_with_two_link_class(settings, test_post1):
     author = test_post1.author
 
     expected_output = (
+        '<span class="p-author">'
         f'<a href="/{settings.DJPRESS_SETTINGS["AUTHOR_PREFIX"]}/testuser/" title="View all posts by '
         f'{get_author_display_name(author)}" class="class1 class2">'
-        f'<span class="p-author">{get_author_display_name(author)}</span></a>'
+        f"{get_author_display_name(author)}</a>"
+        "</span>"
     )
-    assert djpress_tags.post_author(context, "class1 class2") == expected_output
+    assert djpress_tags.post_author(context, link_class="class1 class2") == expected_output
 
 
 @pytest.mark.django_db
@@ -591,14 +778,29 @@ def test_post_content_with_post_with_outer(settings, test_post1):
 
 
 @pytest.mark.django_db
-def test_post_content_with_posts(test_long_post1):
+def test_post_content_with_posts_long_post(test_long_post1):
     """If there's a posts in the context, return the truncated post content."""
     # Context should have both a posts and a post to simulate the for post in posts loop
     context = Context({"posts": [test_long_post1], "post": test_long_post1})
 
+    assert test_long_post1.is_truncated is True
+
     expected_output = f"{test_long_post1.truncated_content_markdown}{post_read_more_link(test_long_post1)}"
 
     assert djpress_tags.post_content(context) == expected_output
+
+
+@pytest.mark.django_db
+def test_post_content_with_posts_short_post(test_post1):
+    """If there's a posts in the context, return the truncated post content."""
+    # Context should have both a posts and a post to simulate the for post in posts loop
+    context = Context({"posts": [test_post1], "post": test_post1})
+
+    assert test_post1.is_truncated is False
+
+    assert post_read_more_link(test_post1) == ""
+
+    assert djpress_tags.post_content(context) == test_post1.truncated_content_markdown
 
 
 @pytest.mark.django_db
@@ -611,13 +813,26 @@ def test_author_name(user):
     assert djpress_tags.author_name(context) == expected_output
 
     # Test case 2 - with options
-    expected_output = f'<h1 class="title">View posts in the {get_author_display_name(user)} author</h1>'
+    expected_output = f'<h1 class="title">View posts by {get_author_display_name(user)} author</h1>'
     assert (
         djpress_tags.author_name(
             context,
-            outer="h1",
+            outer_tag="h1",
             outer_class="title",
-            pre_text="View posts in the ",
+            pre_text="View posts by ",
+            post_text=" author",
+        )
+        == expected_output
+    )
+
+    # Test case: invalid outer_tag
+    expected_output = ""
+    assert (
+        djpress_tags.author_name(
+            context,
+            outer_tag="invalid",
+            outer_class="title",
+            pre_text="View posts by ",
             post_text=" author",
         )
         == expected_output
@@ -646,7 +861,20 @@ def test_category_title(category1):
     assert (
         djpress_tags.category_title(
             context,
-            outer="h1",
+            outer_tag="h1",
+            outer_class="title",
+            pre_text="View posts in the ",
+            post_text=" category",
+        )
+        == expected_output
+    )
+
+    # Test case: invalid outer_tag
+    expected_output = ""
+    assert (
+        djpress_tags.category_title(
+            context,
+            outer_tag="invalid",
             outer_class="title",
             pre_text="View posts in the ",
             post_text=" category",
@@ -814,7 +1042,7 @@ def test_blog_categories(category1, category2):
     assert category2 in categories
 
     assert djpress_tags.blog_categories() == categories_html(
-        categories=categories, outer_tag="ul", outer_class="", link_class=""
+        categories=categories, outer_tag="ul", outer_class="", link_class="", separator=", ", pre_text="", post_text=""
     )
 
 
@@ -830,7 +1058,9 @@ def test_blog_tags(tag1, tag2):
     assert tag1 in tags
     assert tag2 in tags
 
-    assert djpress_tags.blog_tags() == tags_html(tags=tags, outer_tag="ul", outer_class="", link_class="")
+    assert djpress_tags.blog_tags() == tags_html(
+        tags=tags, outer_tag="ul", outer_class="", link_class="", separator=", ", pre_text="", post_text=""
+    )
 
 
 @pytest.mark.django_db
@@ -856,9 +1086,7 @@ def test_tags_with_counts(test_post1, test_post2, tag1, tag2, tag3):
 
 
 @pytest.mark.django_db
-def test_tag_title(rf, tag1):
-    # Create a request with tags in context
-    request = rf.get("/")
+def test_tag_title(tag1):
     context = Context({"tags": [tag1.slug]})
 
     # Test with default parameters
@@ -866,17 +1094,45 @@ def test_tag_title(rf, tag1):
     assert result == tag1.title
 
     # Test with outer tag and class
-    result = djpress_tags.tag_title(context, outer="h1", outer_class="test-class")
+    result = djpress_tags.tag_title(context, outer_tag="h1", outer_class="test-class")
     assert f'<h1 class="test-class">{tag1.title}</h1>' == result
 
     # Test with pre and post text
     result = djpress_tags.tag_title(context, pre_text="Posts tagged with: ", post_text="!")
     assert f"Posts tagged with: {tag1.title}!" == result
 
+    # Test case: invalid outer tag
+    result = djpress_tags.tag_title(context, outer_tag="invalid")
+    assert result == ""
+
+
+@pytest.mark.django_db
+def test_tag_title_multiple_tags(tag1, tag2):
+    context = Context({"tags": [tag1.slug, tag2.slug]})
+
+    # Test with default parameters
+    result = djpress_tags.tag_title(context)
+    assert result == f"{tag1.title}, {tag2.title}"
+
+    # Test with custom separator
+    result = djpress_tags.tag_title(context, separator=" | ")
+    assert result == f"{tag1.title} | {tag2.title}"
+
+    # Test with outer tag and class
+    result = djpress_tags.tag_title(context, outer_tag="h1", outer_class="test-class")
+    assert f'<h1 class="test-class">{tag1.title} | {tag2.title}</h1>' == result
+
+    # Test with pre and post text
+    result = djpress_tags.tag_title(context, pre_text="Posts tagged with: ", post_text="!")
+    assert f"Posts tagged with: {tag1.title} | {tag2.title}!" == result
+
 
 @pytest.mark.django_db
 def test_site_pages_list_no_pages():
     assert djpress_tags.site_pages_list() == ""
+
+    # Test case with include_home
+    assert djpress_tags.site_pages_list(include_home=True) == '<ul><li><a href="/">Home</a></li></ul>'
 
 
 @pytest.mark.django_db
@@ -888,8 +1144,18 @@ def test_site_pages_list_no_children(test_page1, test_page2, test_page3):
         f"<li>{get_page_link(page=test_page3)}</li>"
         "</ul>"
     )
-
     assert djpress_tags.site_pages_list() == expected_output
+
+    # Test case with include_home
+    expected_output = (
+        "<ul>"
+        f'<li><a href="/">Home</a></li>'
+        f"<li>{get_page_link(page=test_page1)}</li>"
+        f"<li>{get_page_link(page=test_page2)}</li>"
+        f"<li>{get_page_link(page=test_page3)}</li>"
+        "</ul>"
+    )
+    assert djpress_tags.site_pages_list(include_home=True) == expected_output
 
 
 @pytest.mark.django_db
@@ -901,10 +1167,32 @@ def test_site_pages_list_no_children_with_classes(test_page1, test_page2, test_p
         f'<li class="li-class">{get_page_link(page=test_page3, link_class="a-class")}</li>'
         "</ul>"
     )
-
     assert (
         djpress_tags.site_pages_list(
-            ul_outer_class="ul-outer-class", li_class="li-class", a_class="a-class", ul_child_class="ul-child-class"
+            ul_outer_class="ul-outer-class",
+            li_class="li-class",
+            a_class="a-class",
+            ul_child_class="ul-child-class",
+        )
+        == expected_output
+    )
+
+    # Test case with include_home
+    expected_output = (
+        '<ul class="ul-outer-class">'
+        f'<li class="li-class"><a href="/" class="a-class">Home</a></li>'
+        f'<li class="li-class">{get_page_link(page=test_page1, link_class="a-class")}</li>'
+        f'<li class="li-class">{get_page_link(page=test_page2, link_class="a-class")}</li>'
+        f'<li class="li-class">{get_page_link(page=test_page3, link_class="a-class")}</li>'
+        "</ul>"
+    )
+    assert (
+        djpress_tags.site_pages_list(
+            ul_outer_class="ul-outer-class",
+            li_class="li-class",
+            a_class="a-class",
+            ul_child_class="ul-child-class",
+            include_home=True,
         )
         == expected_output
     )
@@ -925,8 +1213,21 @@ def test_site_pages_list_one_child(test_page1, test_page2, test_page3):
         f"<li>{get_page_link(page=test_page3)}</li>"
         "</ul>"
     )
-
     assert djpress_tags.site_pages_list() == expected_output
+
+    # Test case with include_home
+    expected_output = (
+        "<ul>"
+        f'<li><a href="/">Home</a></li>'
+        f"<li>{get_page_link(page=test_page1)}"
+        "<ul>"
+        f"<li>{get_page_link(page=test_page2)}</li>"
+        "</ul>"
+        "</li>"
+        f"<li>{get_page_link(page=test_page3)}</li>"
+        "</ul>"
+    )
+    assert djpress_tags.site_pages_list(include_home=True) == expected_output
 
 
 @pytest.mark.django_db
@@ -944,10 +1245,35 @@ def test_site_pages_list_one_child_with_classes(test_page1, test_page2, test_pag
         f'<li class="li-class">{get_page_link(page=test_page3, link_class="a-class")}</li>'
         "</ul>"
     )
-
     assert (
         djpress_tags.site_pages_list(
-            ul_outer_class="ul-outer-class", li_class="li-class", a_class="a-class", ul_child_class="ul-child-class"
+            ul_outer_class="ul-outer-class",
+            li_class="li-class",
+            a_class="a-class",
+            ul_child_class="ul-child-class",
+        )
+        == expected_output
+    )
+
+    # Test case with include_home
+    expected_output = (
+        '<ul class="ul-outer-class">'
+        f'<li class="li-class"><a href="/" class="a-class">Home</a></li>'
+        f'<li class="li-class">{get_page_link(page=test_page1, link_class="a-class")}'
+        '<ul class="ul-child-class">'
+        f'<li class="li-class">{get_page_link(page=test_page2, link_class="a-class")}</li>'
+        "</ul>"
+        "</li>"
+        f'<li class="li-class">{get_page_link(page=test_page3, link_class="a-class")}</li>'
+        "</ul>"
+    )
+    assert (
+        djpress_tags.site_pages_list(
+            ul_outer_class="ul-outer-class",
+            li_class="li-class",
+            a_class="a-class",
+            ul_child_class="ul-child-class",
+            include_home=True,
         )
         == expected_output
     )
@@ -974,8 +1300,25 @@ def test_site_pages_list_two_children(test_page1, test_page2, test_page3, test_p
         "</li>"
         "</ul>"
     )
-
     assert djpress_tags.site_pages_list() == expected_output
+
+    # Test case with include_home
+    expected_output = (
+        "<ul>"
+        f'<li><a href="/">Home</a></li>'
+        f"<li>{get_page_link(page=test_page1)}"
+        "<ul>"
+        f"<li>{get_page_link(page=test_page3)}</li>"
+        "</ul>"
+        "</li>"
+        f"<li>{get_page_link(page=test_page2)}"
+        "<ul>"
+        f"<li>{get_page_link(page=test_page4)}</li>"
+        "</ul>"
+        "</li>"
+        "</ul>"
+    )
+    assert djpress_tags.site_pages_list(include_home=True) == expected_output
 
 
 @pytest.mark.django_db
@@ -999,10 +1342,39 @@ def test_site_pages_list_two_children_with_classes(test_page1, test_page2, test_
         "</li>"
         "</ul>"
     )
-
     assert (
         djpress_tags.site_pages_list(
-            ul_outer_class="ul-outer-class", li_class="li-class", a_class="a-class", ul_child_class="ul-child-class"
+            ul_outer_class="ul-outer-class",
+            li_class="li-class",
+            a_class="a-class",
+            ul_child_class="ul-child-class",
+        )
+        == expected_output
+    )
+
+    # Test case with include_home
+    expected_output = (
+        '<ul class="ul-outer-class">'
+        f'<li class="li-class"><a href="/" class="a-class">Home</a></li>'
+        f'<li class="li-class">{get_page_link(page=test_page1, link_class="a-class")}'
+        '<ul class="ul-child-class">'
+        f'<li class="li-class">{get_page_link(page=test_page3, link_class="a-class")}</li>'
+        "</ul>"
+        "</li>"
+        f'<li class="li-class">{get_page_link(page=test_page2, link_class="a-class")}'
+        '<ul class="ul-child-class">'
+        f'<li class="li-class">{get_page_link(page=test_page4, link_class="a-class")}</li>'
+        "</ul>"
+        "</li>"
+        "</ul>"
+    )
+    assert (
+        djpress_tags.site_pages_list(
+            ul_outer_class="ul-outer-class",
+            li_class="li-class",
+            a_class="a-class",
+            ul_child_class="ul-child-class",
+            include_home=True,
         )
         == expected_output
     )
@@ -1029,8 +1401,25 @@ def test_site_pages_list_child_grandchild(test_page1, test_page2, test_page3, te
         f"<li>{get_page_link(page=test_page4)}</li>"
         "</ul>"
     )
-
     assert djpress_tags.site_pages_list() == expected_output
+
+    # Test case with include_home
+    expected_output = (
+        "<ul>"
+        f'<li><a href="/">Home</a></li>'
+        f"<li>{get_page_link(page=test_page1)}"
+        "<ul>"
+        f"<li>{get_page_link(page=test_page2)}"
+        "<ul>"
+        f"<li>{get_page_link(page=test_page3)}</li>"
+        "</ul>"
+        "</li>"
+        "</ul>"
+        "</li>"
+        f"<li>{get_page_link(page=test_page4)}</li>"
+        "</ul>"
+    )
+    assert djpress_tags.site_pages_list(include_home=True) == expected_output
 
 
 @pytest.mark.django_db
@@ -1054,10 +1443,39 @@ def test_site_pages_list_child_grandchild_with_classes(test_page1, test_page2, t
         f'<li class="li-class">{get_page_link(page=test_page4, link_class="a-class")}</li>'
         "</ul>"
     )
-
     assert (
         djpress_tags.site_pages_list(
-            ul_outer_class="ul-outer-class", li_class="li-class", a_class="a-class", ul_child_class="ul-child-class"
+            ul_outer_class="ul-outer-class",
+            li_class="li-class",
+            a_class="a-class",
+            ul_child_class="ul-child-class",
+        )
+        == expected_output
+    )
+
+    # Test case with include_home
+    expected_output = (
+        '<ul class="ul-outer-class">'
+        f'<li class="li-class"><a href="/" class="a-class">Home</a></li>'
+        f'<li class="li-class">{get_page_link(page=test_page1, link_class="a-class")}'
+        '<ul class="ul-child-class">'
+        f'<li class="li-class">{get_page_link(page=test_page2, link_class="a-class")}'
+        '<ul class="ul-child-class">'
+        f'<li class="li-class">{get_page_link(page=test_page3, link_class="a-class")}</li>'
+        "</ul>"
+        "</li>"
+        "</ul>"
+        "</li>"
+        f'<li class="li-class">{get_page_link(page=test_page4, link_class="a-class")}</li>'
+        "</ul>"
+    )
+    assert (
+        djpress_tags.site_pages_list(
+            ul_outer_class="ul-outer-class",
+            li_class="li-class",
+            a_class="a-class",
+            ul_child_class="ul-child-class",
+            include_home=True,
         )
         == expected_output
     )
@@ -1089,8 +1507,28 @@ def test_site_pages_list_child_greatgrandchild(test_page1, test_page2, test_page
         "</li>"
         "</ul>"
     )
-
     assert djpress_tags.site_pages_list() == expected_output
+
+    # Test case with include_home
+    expected_output = (
+        "<ul>"
+        f'<li><a href="/">Home</a></li>'
+        f"<li>{get_page_link(page=test_page1)}"
+        "<ul>"
+        f"<li>{get_page_link(page=test_page2)}"
+        "<ul>"
+        f"<li>{get_page_link(page=test_page3)}"
+        "<ul>"
+        f"<li>{get_page_link(page=test_page4)}</li>"
+        "</ul>"
+        "</li>"
+        "</ul>"
+        "</li>"
+        "</ul>"
+        "</li>"
+        "</ul>"
+    )
+    assert djpress_tags.site_pages_list(include_home=True) == expected_output
 
 
 @pytest.mark.django_db
@@ -1119,10 +1557,42 @@ def test_site_pages_list_child_greatgrandchild_with_classes(test_page1, test_pag
         "</li>"
         "</ul>"
     )
-
     assert (
         djpress_tags.site_pages_list(
-            ul_outer_class="ul-outer-class", li_class="li-class", a_class="a-class", ul_child_class="ul-child-class"
+            ul_outer_class="ul-outer-class",
+            li_class="li-class",
+            a_class="a-class",
+            ul_child_class="ul-child-class",
+        )
+        == expected_output
+    )
+
+    # Test case with include_home
+    expected_output = (
+        '<ul class="ul-outer-class">'
+        f'<li class="li-class"><a href="/" class="a-class">Home</a></li>'
+        f'<li class="li-class">{get_page_link(page=test_page1, link_class="a-class")}'
+        '<ul class="ul-child-class">'
+        f'<li class="li-class">{get_page_link(page=test_page2, link_class="a-class")}'
+        '<ul class="ul-child-class">'
+        f'<li class="li-class">{get_page_link(page=test_page3, link_class="a-class")}'
+        '<ul class="ul-child-class">'
+        f'<li class="li-class">{get_page_link(page=test_page4, link_class="a-class")}</li>'
+        "</ul>"
+        "</li>"
+        "</ul>"
+        "</li>"
+        "</ul>"
+        "</li>"
+        "</ul>"
+    )
+    assert (
+        djpress_tags.site_pages_list(
+            ul_outer_class="ul-outer-class",
+            li_class="li-class",
+            a_class="a-class",
+            ul_child_class="ul-child-class",
+            include_home=True,
         )
         == expected_output
     )
@@ -1200,23 +1670,73 @@ def test_site_pages_list_child_greatgreatgrandchild(test_page1, test_page2, test
 def test_site_pages_no_pages():
     assert djpress_tags.site_pages() == ""
 
+    # Test case: invalid outer_tag
+    assert djpress_tags.site_pages(outer_tag="invalid") == ""
+
 
 @pytest.mark.django_db
-def test_site_pages(test_page1, test_page2):
-    pages = Post.page_objects.all()
+def test_site_pages_one_page(test_page1):
+    # Test case: no options:
+    expected_output = (
+        f'<div><a href="{test_page1.url}" title="View the {test_page1.title} page">{test_page1.title}</a></div>'
+    )
+    assert djpress_tags.site_pages() == expected_output
 
-    assert test_page1 in pages
-    assert test_page2 in pages
+    # Test case: span options:
+    expected_output = (
+        f'<span><a href="{test_page1.url}" title="View the {test_page1.title} page">{test_page1.title}</a></span>'
+    )
+    assert djpress_tags.site_pages(outer_tag="span") == expected_output
 
-    expected_output_ul = f"<ul><li>{get_page_link(page=test_page1)}</li><li>{get_page_link(page=test_page2)}</li></ul>"
+    # Test case: all options:
+    expected_output = f'<span class="outer-class"><a href="{test_page1.url}" title="View the {test_page1.title} page" class="link-class">{test_page1.title}</a></span>'
+    assert (
+        djpress_tags.site_pages(outer_tag="span", outer_class="outer-class", link_class="link-class") == expected_output
+    )
 
-    expected_output_div = f"<div>{get_page_link(page=test_page1)}, {get_page_link(page=test_page2)}</div>"
+    # Test case: outer_class option:
+    expected_output = f'<div class="outer-class"><a href="{test_page1.url}" title="View the {test_page1.title} page">{test_page1.title}</a></div>'
+    assert djpress_tags.site_pages(outer_class="outer-class") == expected_output
 
-    expected_output_span = f"<span>{get_page_link(page=test_page1)}, {get_page_link(page=test_page2)}</span>"
+    # Test case: link_class option:
+    expected_output = f'<div><a href="{test_page1.url}" title="View the {test_page1.title} page" class="link-class">{test_page1.title}</a></div>'
+    assert djpress_tags.site_pages(link_class="link-class") == expected_output
 
-    assert djpress_tags.site_pages() == expected_output_ul
-    assert djpress_tags.site_pages(outer="div") == expected_output_div
-    assert djpress_tags.site_pages(outer="span") == expected_output_span
+    # Test case: separator option - no difference.:
+    expected_output = f'<div><a href="{test_page1.url}" title="View the {test_page1.title} page" class="link-class">{test_page1.title}</a></div>'
+    assert djpress_tags.site_pages(link_class="link-class", separator=" | ") == expected_output
+
+    # Test case: invalid outer_tag
+    assert djpress_tags.site_pages(outer_tag="invalid") == ""
+
+
+@pytest.mark.django_db
+def test_site_pages_multiple_pages(test_page1, test_page2):
+    # Test case: no options:
+    expected_output = f"<div>"
+    expected_output += f'<a href="{test_page1.url}" title="View the {test_page1.title} page">{test_page1.title}</a>'
+    expected_output += ", "
+    expected_output += f'<a href="{test_page2.url}" title="View the {test_page2.title} page">{test_page2.title}</a>'
+    expected_output += f"</div>"
+    assert djpress_tags.site_pages() == expected_output
+
+    # Test case: all options:
+    expected_output = f'<span class="outer-class">'
+    expected_output += (
+        f'<a href="{test_page1.url}" title="View the {test_page1.title} page" class="link-class">{test_page1.title}</a>'
+    )
+    expected_output += " | "
+    expected_output += (
+        f'<a href="{test_page2.url}" title="View the {test_page2.title} page" class="link-class">{test_page2.title}</a>'
+    )
+    expected_output += f"</span>"
+    assert (
+        djpress_tags.site_pages(outer_tag="span", outer_class="outer-class", link_class="link-class", separator=" | ")
+        == expected_output
+    )
+
+    # Test case: invalid outer_tag
+    assert djpress_tags.site_pages(outer_tag="invalid") == ""
 
 
 @pytest.mark.django_db
@@ -1557,35 +2077,28 @@ def test_page_link(test_page1):
 
     # Test 2 - page with a page_slug and no options
     page_slug = test_page1.slug
-    outer_class = ""
-    link_class = ""
-
-    output = get_page_link(page=test_page1, link_class=link_class)
-    expected_output = f"<div{outer_class}>{output}</div>"
+    expected_output = get_page_link(page=test_page1)
     assert djpress_tags.page_link(page_slug=page_slug) == expected_output
 
-    # Test 3 - page with a page_slug and div and no options
+    # Test case: page with a page_slug and div and no options
     page_slug = test_page1.slug
-    outer_class = ""
-    link_class = ""
+    outer_tag = "div"
+    output = get_page_link(page=test_page1)
+    expected_output = f"<div>{output}</div>"
+    assert djpress_tags.page_link(page_slug=page_slug, outer_tag=outer_tag) == expected_output
+
+    # Test case: page with a page_slug and div and all options
+    page_slug = test_page1.slug
+    outer_tag = "div"
+    outer_class = "outer-class"
+    link_class = "link-class"
 
     output = get_page_link(page=test_page1, link_class=link_class)
-    expected_output = f"<div{outer_class}>{output}</div>"
-    assert djpress_tags.page_link(page_slug=page_slug) == expected_output
-
-    # Test 4 - page with a page_slug and div and all options
-    page_slug = test_page1.slug
-    outer = "div"
-    outer_class = "outerclass"
-    link_class = "linkclass"
-
-    outer_class = f' class="{outer_class}"' if outer_class else ""
-    output = get_page_link(page=test_page1, link_class=link_class)
-    expected_output = f"<div{outer_class}>{output}</div>"
+    expected_output = f'<div class="{outer_class}">{output}</div>'
     assert (
         djpress_tags.page_link(
             page_slug=page_slug,
-            outer=outer,
+            outer_tag=outer_tag,
             outer_class=outer_class,
             link_class=link_class,
         )
@@ -1594,55 +2107,32 @@ def test_page_link(test_page1):
 
     # Test 5 - page with a page_slug and span and all options
     page_slug = test_page1.slug
-    outer = "span"
+    outer_tag = "span"
     outer_class = "outerclass"
     link_class = "linkclass"
 
-    outer_class = f' class="{outer_class}"' if outer_class else ""
     output = get_page_link(page=test_page1, link_class=link_class)
-    expected_output = f"<span{outer_class}>{output}</span>"
+    expected_output = f'<span class="{outer_class}">{output}</span>'
     assert (
         djpress_tags.page_link(
             page_slug=page_slug,
-            outer=outer,
+            outer_tag=outer_tag,
             outer_class=outer_class,
             link_class=link_class,
         )
         == expected_output
     )
 
-    # Test 6 - page with a page_slug and li and no options
+    # Test case: - invalid outer tag
     page_slug = test_page1.slug
-    outer = "li"
-    outer_class = ""
-    link_class = ""
+    outer_tag = "invalid"
 
-    outer_class = f' class="{outer_class}"' if outer_class else ""
-    output = get_page_link(page=test_page1, link_class=link_class)
-    expected_output = f"<li{outer_class}>{output}</li>"
+    output = get_page_link(page=test_page1)
+    expected_output = ""
     assert (
         djpress_tags.page_link(
             page_slug=page_slug,
-            outer=outer,
-            outer_class=outer_class,
-            link_class=link_class,
-        )
-        == expected_output
-    )
-
-    # Test 6 - page with a page_slug and a wrong outer and no options
-    page_slug = test_page1.slug
-    outer = "foobar"
-    outer_class = ""
-    link_class = ""
-
-    outer_class = f' class="{outer_class}"' if outer_class else ""
-    output = get_page_link(page=test_page1, link_class=link_class)
-    expected_output = f"{output}"
-    assert (
-        djpress_tags.page_link(
-            page_slug=page_slug,
-            outer=outer,
+            outer_tag=outer_tag,
             outer_class=outer_class,
             link_class=link_class,
         )
@@ -1837,17 +2327,32 @@ def test_post_wrapper_single_post_with_tag_and_class(settings):
 
 
 @pytest.mark.django_db
-def test_post_tags_no_tags(test_post1):
-    """Test post_tags when a post has no tags."""
-    test_post1.tags.clear()
-    context = Context({"post": test_post1})
+def test_post_tags(test_post1, tag1):
+    """Test post_tag."""
+    # Make sure that test_post1 has a tag
+    assert test_post1.tags.count() == 0
+    test_post1.tags.add(tag1)
+    assert test_post1.tags.count() == 1
+
+    # Test case: no post in context
+    context = Context({"foo": "bar"})
     assert djpress_tags.post_tags(context) == ""
 
+    # Set the post in the context
+    context = Context({"post": test_post1})
+    tags = test_post1.tags.all()
 
-@pytest.mark.django_db
-def test_post_tags_no_posts():
-    """Test post_tags when there are no posts."""
-    context = Context({"post": None})
+    # Test case: invalid outer_tag
+    assert djpress_tags.post_tags(context, outer_tag="invalid") == ""
+
+    # Test case: no options - default is an unordered list
+    assert djpress_tags.post_tags(context) == tags_html(
+        tags, outer_tag="ul", outer_class="", link_class="", separator="", pre_text="", post_text=""
+    )
+
+    # Test case: post has no tags
+    test_post1.tags.clear()
+    assert test_post1.tags.count() == 0
     assert djpress_tags.post_tags(context) == ""
 
 
@@ -1895,20 +2400,6 @@ def test_tags_with_counts_empty():
     """Test tags_with_counts when there are no tags with published posts."""
     result = djpress_tags.tags_with_counts()
     assert result == ""
-
-
-@pytest.mark.django_db
-def test_site_title_link(settings):
-    """Test the site_title_link template tag."""
-    # Default case
-    result = djpress_tags.site_title_link()
-    expected = f'<a href="{reverse("djpress:index")}">{settings.DJPRESS_SETTINGS["SITE_TITLE"]}</a>'
-    assert result == expected
-
-    # With link class
-    result = djpress_tags.site_title_link(link_class="site-title")
-    expected = f'<a href="{reverse("djpress:index")}" class="site-title">{settings.DJPRESS_SETTINGS["SITE_TITLE"]}</a>'
-    assert result == expected
 
 
 @pytest.mark.django_db
@@ -1979,35 +2470,35 @@ def test_get_pagination_range_no_page_in_context():
 # Tests for new hook-based template tags
 
 
-def test_dj_header_no_plugins():
-    """Test dj_header template tag when no plugins are loaded."""
-    result = djpress_tags.dj_header()
+def test_djpress_header_no_plugins():
+    """Test djpress_header template tag when no plugins are loaded."""
+    result = djpress_tags.djpress_header()
     assert result == ""
     assert isinstance(result, str)
 
 
-def test_dj_footer_no_plugins():
-    """Test dj_footer template tag when no plugins are loaded."""
-    result = djpress_tags.dj_footer()
+def test_djpress_footer_no_plugins():
+    """Test djpress_footer template tag when no plugins are loaded."""
+    result = djpress_tags.djpress_footer()
     assert result == ""
     assert isinstance(result, str)
 
 
-def test_search_url(settings):
+def test_get_search_url(settings):
     """Test search_url template tag."""
     settings.DJPRESS_SETTINGS["SEARCH_ENABLED"] = True
     settings.DJPRESS_SETTINGS["SEARCH_PREFIX"] = "search"
     settings.APPEND_SLASH = True
-    assert djpress_tags.search_url() == "/search/"
+    assert djpress_tags.get_search_url() == "/search/"
 
     settings.DJPRESS_SETTINGS["SEARCH_PREFIX"] = "find"
-    assert djpress_tags.search_url() == "/find/"
+    assert djpress_tags.get_search_url() == "/find/"
 
     settings.APPEND_SLASH = False
-    assert djpress_tags.search_url() == "/find"
+    assert djpress_tags.get_search_url() == "/find"
 
     settings.DJPRESS_SETTINGS["SEARCH_ENABLED"] = False
-    assert djpress_tags.search_url() == ""
+    assert djpress_tags.get_search_url() == ""
 
 
 @pytest.mark.django_db
@@ -2063,15 +2554,15 @@ def test_search_title(settings):
     assert result == "django"
 
     # Test with outer tag
-    result = djpress_tags.search_title(context, outer="h1")
+    result = djpress_tags.search_title(context, outer_tag="h1")
     assert result == "<h1>django</h1>"
 
     # Test with outer class
-    result = djpress_tags.search_title(context, outer="h2", outer_class="search-heading")
+    result = djpress_tags.search_title(context, outer_tag="h2", outer_class="search-heading")
     assert result == '<h2 class="search-heading">django</h2>'
 
     # Test with pre_text and post_text
-    result = djpress_tags.search_title(context, outer="h1", pre_text="Results for: ", post_text="!")
+    result = djpress_tags.search_title(context, outer_tag="h1", pre_text="Results for: ", post_text="!")
     assert result == "<h1>Results for: django!</h1>"
 
     # Test with no search_query in context
@@ -2081,8 +2572,8 @@ def test_search_title(settings):
 
     # Test with invalid outer tag
     context = Context({"search_query": "test"})
-    result = djpress_tags.search_title(context, outer="script")
-    assert result == "test"
+    result = djpress_tags.search_title(context, outer_tag="script")
+    assert result == ""
 
     # Test with non-string search_query
     context = Context({"search_query": 123})
@@ -2104,7 +2595,7 @@ def test_search_errors(settings):
     # Test with custom parameters
     result = djpress_tags.search_errors(
         context,
-        outer="section",
+        outer_tag="section",
         outer_class="alerts",
         error_tag="span",
         error_class="alert-msg",
@@ -2130,12 +2621,12 @@ def test_search_errors(settings):
 
     # Test with invalid outer tag (should default to div)
     context = Context({"search_errors": ["Error"]})
-    result = djpress_tags.search_errors(context, outer="script")
-    assert '<div class="search-errors">' in result
+    result = djpress_tags.search_errors(context, outer_tag="script")
+    assert result == ""
 
     # Test with invalid error tag (should default to p)
     result = djpress_tags.search_errors(context, error_tag="script")
-    assert '<p class="error">Error</p>' in result
+    assert result == ""
 
     # Test with non-string items in errors list (should skip them)
     context = Context({"search_errors": ["Valid error", 123, None, "Another error"]})
@@ -2175,3 +2666,21 @@ def test_pagination_links_with_query_string(settings, test_post1, test_post2, te
     assert 'href="?q=test&page=1"' in result  # previous page (from page 2)
     assert 'href="?q=test&page=' in result  # next/last pages should also have q=test
     assert "Page 2 of" in result
+
+
+def test_get_theme_setting(settings):
+    # settings.DJPRESS_SETTINGS["THEME"] = "default"
+
+    # # The default theme
+    # assert settings.DJPRESS_SETTINGS["THEME"] == "default"
+
+    # Test with no theme setting
+    assert djpress_tags.get_theme_setting("nonexistent_setting") is None
+
+    # Test with no theme settings and default value
+    assert djpress_tags.get_theme_setting("nonexistent_setting", "default_value") == "default_value"
+
+    settings.DJPRESS_SETTINGS["THEME_SETTINGS"] = {"default": {"test_setting": "test_value"}}
+
+    # Test with a theme setting
+    assert djpress_tags.get_theme_setting("test_setting") == "test_value"
