@@ -1,6 +1,5 @@
 {% load static %}
 {% load djpress_tags %}
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -10,90 +9,70 @@
     <link rel="stylesheet" href="{% static "simple/css/simple.min.css" %}">
     <link rel="stylesheet" href="{% static "simple/css/style.css" %}">
     {% rss_link %}
-    {% dj_header %}
+    {% djpress_header %}
   </head>
   <body>
     <header>
-      <h1>{% site_title_link %}</h1>
+      <h1>{% site_title link=True %}</h1>
       <nav>
         {% site_pages %}
       </nav>
     </header>
-
     <nav>
       <h3>Recent Posts:</h3>
       <ul>
         {% get_recent_posts as posts %}
         {% for post in posts %}
-          <li><a href="{{ post.url }}">
-            {% if post.title %}
-              {{ post.title }}
-            {% else %}
-              {{ post.content|truncatewords:5 }}
-            {% endif %}
-          </a></li>
+          <li>
+            <a href="{{ post.url }}">
+              {% if post.title %}
+                {{ post.title }}
+              {% else %}
+                {{ post.content|truncatewords:5 }}
+              {% endif %}
+            </a>
+          </li>
         {% endfor %}
       </ul>
-
       <h3>Categories:</h3>
       {% blog_categories %}
-
       <h3>Tags:</h3>
       {% tags_with_counts %}
     </nav>
-
     <main>
-
       {% if post %}
-
         {% post_wrap %}
-
           {% post_title outer_tag="h1" %}
-
           {% post_content %}
-
           <ul>
             <li>By {% post_author %}. {% post_date %}</li>
             <li>Categories: {% post_categories outer_tag="span" link_class="badge" %}</li>
             <li>Tags: {% post_tags outer_tag="span"  link_class="badge" %}</li>
           </ul>
-
         {% end_post_wrap %}
-
       {% else %}
-
         <h1>Latest Posts</h1>
-
         {% for post in posts %}
-
           {% post_wrap %}
-
             {% post_title outer_tag="h2" %}
-
             {% post_content %}
-
             <ul>
-              <li>By {% post_author %}. <a href="{% get_post_url %}">{% get_post_date %}</a></li>
+              <li>
+                By {% post_author %}. <a href="{% get_post_url %}">{% get_post_date %}</a>
+              </li>
               <li>Categories: {% post_categories outer_tag="span" link_class="badge" %}</li>
               <li>Tags: {% post_tags outer_tag="span"  link_class="badge" %}</li>
             </ul>
-
           {% end_post_wrap %}
-
         {% empty %}
-
           <p>No posts available.</p>
-
         {% endfor %}
-
       {% endif %}
-
       {% pagination_links %}
     </main>
-
     <footer>
-      <p>{% site_title_link %}</p>
-      {% dj_footer %}
+      <p>{% site_title link=True %}</p>
+      {% djpress_footer %}
     </footer>
   </body>
 </html>
