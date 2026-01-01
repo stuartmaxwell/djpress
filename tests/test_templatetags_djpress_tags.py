@@ -39,30 +39,6 @@ def test_get_pages(test_page1, test_page2, test_page3):
     assert list(djpress_tags.get_pages()) == [test_page3]
 
 
-@pytest.mark.django_db
-def test_have_posts_single_post(test_post1):
-    """Return a list of posts in the context."""
-    context = Context({"post": test_post1})
-
-    assert djpress_tags.have_posts(context) == [test_post1]
-
-
-@pytest.mark.django_db
-def test_have_posts_no_posts():
-    """Return an empty list if there are no posts in the context."""
-    context = Context({"foo": "bar"})
-
-    assert djpress_tags.have_posts(context) == []
-
-
-@pytest.mark.django_db
-def test_have_posts_multiple_posts(test_post1, test_long_post1):
-    """Return a list of posts in the context."""
-    context = Context({"posts": [test_post1, test_long_post1]})
-
-    assert djpress_tags.have_posts(context) == [test_post1, test_long_post1]
-
-
 def test_get_site_title(settings):
     """Test the get_site_title template tag.
 
@@ -518,79 +494,6 @@ def test_post_author_with_author_path_with_two_link_class(settings, test_post1):
         "</span>"
     )
     assert djpress_tags.post_author(context, link_class="class1 class2") == expected_output
-
-
-@pytest.mark.django_db
-def test_post_category_link_without_category_path(settings, category1):
-    """Test the post_category_link template tag without the category path enabled.
-
-    If the CATEGORY_ENABLED setting is False, the template tag should just return
-    the category name, with no link."""
-    # Confirm settings are set according to settings_testing.py
-    assert settings.DJPRESS_SETTINGS["CATEGORY_ENABLED"] is True
-
-    settings.DJPRESS_SETTINGS["CATEGORY_ENABLED"] = False
-    assert settings.DJPRESS_SETTINGS["CATEGORY_ENABLED"] is False
-
-    assert djpress_tags.post_category_link(category1) == category1.title
-
-
-@pytest.mark.django_db
-def test_post_category_link_without_category_path_with_one_link(settings, category1):
-    """Test the post_category_link template tag without the category path enabled.
-
-    If the CATEGORY_ENABLED setting is False, the template tag should just return
-    the category name, with no link."""
-    # Confirm settings are set according to settings_testing.py
-    assert settings.DJPRESS_SETTINGS["CATEGORY_ENABLED"] is True
-
-    settings.DJPRESS_SETTINGS["CATEGORY_ENABLED"] = False
-    assert settings.DJPRESS_SETTINGS["CATEGORY_ENABLED"] is False
-
-    assert djpress_tags.post_category_link(category1, "class1") == category1.title
-
-
-@pytest.mark.django_db
-def test_post_category_link_with_category_path(settings, category1):
-    # Confirm settings are set according to settings_testing.py
-    assert settings.DJPRESS_SETTINGS["CATEGORY_ENABLED"] is True
-    assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
-
-    expected_output = f'<a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="p-category">{category1.title}</a>'
-    assert djpress_tags.post_category_link(category1) == expected_output
-
-    # disable microformats
-    settings.DJPRESS_SETTINGS["MICROFORMATS_ENABLED"] = False
-
-    expected_output = f'<a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category">{category1.title}</a>'
-    assert djpress_tags.post_category_link(category1) == expected_output
-
-
-@pytest.mark.django_db
-def test_post_category_link_with_category_path_with_one_link_class(settings, category1):
-    # Confirm settings are set according to settings_testing.py
-    assert settings.DJPRESS_SETTINGS["CATEGORY_ENABLED"] is True
-    assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
-
-    expected_output = f'<a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="p-category class1">{category1.title}</a>'
-    assert djpress_tags.post_category_link(category1, "class1") == expected_output
-
-    # disable microformats
-    settings.DJPRESS_SETTINGS["MICROFORMATS_ENABLED"] = False
-
-    expected_output = f'<a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="class1">{category1.title}</a>'
-    assert djpress_tags.post_category_link(category1, "class1") == expected_output
-
-
-@pytest.mark.django_db
-def test_post_category_link_with_category_path_with_two_link_classes(settings, category1):
-    # Confirm settings are set according to settings_testing.py
-    assert settings.DJPRESS_SETTINGS["CATEGORY_ENABLED"] is True
-    assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
-
-    expected_output = f'<a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/test-category1/" title="View all posts in the Test Category1 category" class="p-category class1 class2">{category1.title}</a>'
-
-    assert djpress_tags.post_category_link(category1, "class1 class2") == expected_output
 
 
 def test_get_post_date_no_post():

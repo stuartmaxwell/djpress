@@ -31,13 +31,13 @@ Categories can be displayed in your templates using the template tags:
 {% get_categories as categories %}
 
 {# Display categories as an HTML list #}
-{% blog_categories %}
+{% site_categories %}
 
 {# Display categories with custom HTML #}
-{% blog_categories outer_tag="div" outer_class="categories" link_class="category-link" %}
+{% site_categories outer_tag="div" outer_class="categories" link_class="category-link" %}
 ```
 
-See [Template Tags](templatetags.md#blog_categories) for more details on category display options.
+See [Template Tags](templatetags.md#site_categories) for more details on category display options.
 
 ## Category URLs and Views
 
