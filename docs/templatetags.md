@@ -15,11 +15,12 @@ To use any of the following tags, you must load the `djpress_tags` in your templ
 
 The template tags in DJ Press are organised into several functional categories:
 
-1. **Data Access Tags** - Tags that start with `get_` retrieve data from the database without any HTML formatting
-2. **Display Tags** - Format and display data with appropriate HTML (e.g., `site_title_link`, `site_categories`)
-3. **Post Content Tags** - Handle rendering post content, titles, dates, etc. (e.g., `post_title`, `post_content`)
-4. **Navigation Tags** - Generate navigation elements like menus (e.g., `site_pages_list`, `site_categories`)
-5. **Utility Tags** - Additional helper tags for common operations
+1. **Data Access Tags** - Tags that start with `get_` retrieve data from the site config or the database without any
+   HTML formatting
+2. **Display Tags** - Format and display data with appropriate HTML.
+3. **Post Content Tags** - Handle rendering post content, titles, dates, etc.
+4. **Search Tags** - for building or rendering search form elements.
+5. **Utility Tags** - Additional helper tags for common operations.
 
 ## Table of Contents
 
