@@ -186,8 +186,8 @@ DJ Press provides these hooks for plugins:
 | `POST_RENDER_CONTENT` | Called after markdown content is rendered to HTML     | `content: str` (HTML)     | Modified HTML content              |
 | `POST_SAVE_POST`      | Called after saving a published post                  | `post: Post` (object)     | None (return ignored)              |
 | `SEARCH_CONTENT`      | Override default search with custom implementation    | `query: str`              | QuerySet of Post objects, or None  |
-| `DJ_HEADER`           | Used to insert HTML into the template's `<head>` tag. | None                      | HTML content (`str`)               |
-| `DJ_FOOTER`           | Called after saving a published post                  | `post: Post` (object)     | None (return ignored)              |
+| `DJPRESS_HEADER`           | Used to insert HTML into the template's `<head>` tag. | None                      | HTML content (`str`)               |
+| `DJPRESS_FOOTER`           | Called after saving a published post                  | `post: Post` (object)     | None (return ignored)              |
 
 Hooks are imported from the `hook_registry` module, and then assigned to a list called `hooks` in the `Plugin` class.
 The hook is added to the list as a tuple with the first element being the hook, and the second element being the string

@@ -11,8 +11,8 @@ from django.core.exceptions import ImproperlyConfigured
 from djpress.models import Post
 from djpress.plugins import DJPressPlugin
 from djpress.plugins.hook_registry import (
-    DJ_FOOTER,
-    DJ_HEADER,
+    DJPRESS_FOOTER,
+    DJPRESS_HEADER,
     POST_RENDER_CONTENT,
     POST_SAVE_POST,
     PRE_RENDER_CONTENT,
@@ -29,8 +29,8 @@ class HeaderFooterPlugin(DJPressPlugin):
 
     name = "Header/Footer Plugin"
     hooks = [
-        (DJ_HEADER, "render_header"),
-        (DJ_FOOTER, "render_footer"),
+        (DJPRESS_HEADER, "render_header"),
+        (DJPRESS_FOOTER, "render_footer"),
     ]
 
     def render_header(self) -> str:
@@ -139,10 +139,10 @@ def test_validate_hook_callback():
     assert is_valid is False
     assert "Expected 1 parameters, got 2" in msg
 
-    is_valid, msg = _validate_hook_callback(DJ_HEADER, invalid_no_args)
+    is_valid, msg = _validate_hook_callback(DJPRESS_HEADER, invalid_no_args)
     assert is_valid is True
 
-    is_valid, msg = _validate_hook_callback(DJ_HEADER, valid_content_transformer)
+    is_valid, msg = _validate_hook_callback(DJPRESS_HEADER, valid_content_transformer)
     assert is_valid is False
     assert "Expected 0 parameters, got 1" in msg
 
@@ -433,9 +433,9 @@ def test_error_run_content_transformer(registry, caplog):
 
 def test_success_run_content_provider(registry, content_provider_plugin):
     """Test running a content provider hook."""
-    registry.register_hook(DJ_HEADER, content_provider_plugin.add_header)
+    registry.register_hook(DJPRESS_HEADER, content_provider_plugin.add_header)
 
-    result = registry.run_hook(DJ_HEADER)
+    result = registry.run_hook(DJPRESS_HEADER)
     assert result == "header"
 
 
@@ -449,9 +449,9 @@ def test_error_run_content_provider(registry, caplog):
     def callback() -> str:
         raise RuntimeError("This is a test error")
 
-    registry.register_hook(DJ_HEADER, callback)
+    registry.register_hook(DJPRESS_HEADER, callback)
 
-    result = registry.run_hook(DJ_HEADER)
+    result = registry.run_hook(DJPRESS_HEADER)
     assert result == ""
     assert "Error running callback" in caplog.text
     assert "Callback skipped" in caplog.text

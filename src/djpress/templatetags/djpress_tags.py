@@ -13,7 +13,7 @@ from djpress.conf import settings as djpress_settings
 from djpress.exceptions import PageNotFoundError
 from djpress.models import Category, Post, Tag
 from djpress.plugins import registry
-from djpress.plugins.hook_registry import DJ_FOOTER, DJ_HEADER
+from djpress.plugins.hook_registry import DJPRESS_FOOTER, DJPRESS_HEADER
 from djpress.templatetags import helpers
 from djpress.utils import get_author_display_name
 
@@ -1564,30 +1564,30 @@ def post_wrapper_tag(
 
 @register.simple_tag()
 def djpress_header() -> str:
-    """Return HTML content from plugins registered to the dj_header hook.
+    """Return HTML content from plugins registered to the djpress_header hook.
 
     This allows plugins to inject HTML content into the <head> section of templates.
-    Plugins can register callbacks for the DJ_HEADER hook to add meta tags, styles,
+    Plugins can register callbacks for the DJPRESS_HEADER hook to add meta tags, styles,
     scripts, or other head content.
 
     Returns:
-        str: HTML content from all registered dj_header hook callbacks, marked as safe.
+        str: HTML content from all registered djpress_header hook callbacks, marked as safe.
     """
-    content = registry.run_hook(DJ_HEADER)
+    content = registry.run_hook(DJPRESS_HEADER)
     return mark_safe(content or "")
 
 
 @register.simple_tag()
 def djpress_footer() -> str:
-    """Return HTML content from plugins registered to the dj_footer hook.
+    """Return HTML content from plugins registered to the djpress_footer hook.
 
     This allows plugins to inject HTML content near the end of HTML documents,
     typically before the closing </body> tag or within <footer> elements.
-    Plugins can register callbacks for the DJ_FOOTER hook to add analytics,
+    Plugins can register callbacks for the DJPRESS_FOOTER hook to add analytics,
     scripts, or other footer content.
 
     Returns:
-        str: HTML content from all registered dj_footer hook callbacks, marked as safe.
+        str: HTML content from all registered djpress_footer hook callbacks, marked as safe.
     """
-    content = registry.run_hook(DJ_FOOTER)
+    content = registry.run_hook(DJPRESS_FOOTER)
     return mark_safe(content or "")
