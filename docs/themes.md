@@ -85,7 +85,7 @@ Creating a custom theme involves these steps:
    </head>
    <body>
        <header>
-           <h1>{% site_title_link %}</h1>
+         {% site_title "h1" %}
            <nav>{% site_pages %}</nav>
        </header>
 

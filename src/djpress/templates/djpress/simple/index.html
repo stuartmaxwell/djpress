@@ -13,7 +13,7 @@
   </head>
   <body>
     <header>
-      <h1>{% site_title link=True %}</h1>
+      {% site_title "h1" link=True %}
       <nav>
         {% site_pages %}
       </nav>
@@ -71,7 +71,7 @@
       {% pagination_links %}
     </main>
     <footer>
-      <p>{% site_title link=True %}</p>
+      {% site_title "p" link=True %}
       {% djpress_footer %}
     </footer>
   </body>
