@@ -382,17 +382,23 @@ def test_tags_html(settings, tag1, tag2, tag3):
 
 
 @pytest.mark.django_db
-def testcategory_link(category1):
-    assert settings.CATEGORY_PREFIX == "test-url-category"
+def test_category_link(settings, category1):
+    assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
     # Test case 1 - no link class
     link_class = ""
-    expected_output = f'<a href="/{settings.CATEGORY_PREFIX}/{category1.slug}/" title="View all posts in the {category1.title} category" class="p-category">{category1.title}</a>'
+    expected_output = f'<a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/{category1.slug}/" title="View all posts in the {category1.title} category" class="p-category">{category1.title}</a>'
     assert category_link(category1, link_class) == expected_output
 
     # Test case 2 - with link class
     link_class = "category-class"
-    expected_output = f'<a href="/{settings.CATEGORY_PREFIX}/{category1.slug}/" title="View all posts in the {category1.title} category" class="p-category {link_class}">{category1.title}</a>'
+    expected_output = f'<a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/{category1.slug}/" title="View all posts in the {category1.title} category" class="p-category {link_class}">{category1.title}</a>'
+    assert category_link(category1, link_class) == expected_output
+
+    # Test case 3 - microformats disabled
+    settings.DJPRESS_SETTINGS["MICROFORMATS_ENABLED"] = False
+    link_class = ""
+    expected_output = f'<a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/{category1.slug}/" title="View all posts in the {category1.title} category">{category1.title}</a>'
     assert category_link(category1, link_class) == expected_output
 
 
