@@ -85,7 +85,7 @@ Creating a custom theme involves these steps:
    </head>
    <body>
        <header>
-           <h1>{% site_title_link %}</h1>
+         {% site_title "h1" %}
            <nav>{% site_pages %}</nav>
        </header>
 
@@ -126,10 +126,10 @@ Creating a custom theme involves these steps:
 
        <aside>
            <h3>Categories</h3>
-           {% blog_categories %}
+           {% site_categories %}
 
            <h3>Tags</h3>
-           {% blog_tags %}
+           {% site_tags %}
 
            <h3>Archives</h3>
            <!-- Custom archive links could go here -->

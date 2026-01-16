@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING
 from djpress.models import Post
 from djpress.plugins import DJPressPlugin
 from djpress.plugins.hook_registry import (
-    DJ_FOOTER,
-    DJ_HEADER,
+    DJPRESS_FOOTER,
+    DJPRESS_HEADER,
     POST_RENDER_CONTENT,
     POST_SAVE_POST,
     PRE_RENDER_CONTENT,
@@ -28,8 +28,8 @@ class Plugin(DJPressPlugin):
     hooks = [
         (PRE_RENDER_CONTENT, "add_greeting"),
         (POST_RENDER_CONTENT, "add_goodbye"),
-        (DJ_HEADER, "add_header_content"),
-        (DJ_FOOTER, "add_footer_content"),
+        (DJPRESS_HEADER, "add_header_content"),
+        (DJPRESS_FOOTER, "add_footer_content"),
         (POST_SAVE_POST, "log_post_data"),
         (SEARCH_CONTENT, "simple_search"),
     ]

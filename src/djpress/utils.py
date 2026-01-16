@@ -51,8 +51,13 @@ def get_author_display_name(user: User) -> str:
     return user.username
 
 
-def validate_date_parts(year: str | None, month: str | None, day: str | None) -> dict:
+def validate_date_parts(year: str | None, month: str | None, day: str | None) -> dict[str, int]:
     """Validate the date parts.
+
+    Parts are passed as strings and converted to integers. Then a datetimeobject is attempted to be created.
+
+    A year must be provided if a month is provided.
+    A month must be provided if a day is provided.
 
     Args:
         year (str | None): The year.
@@ -60,13 +65,21 @@ def validate_date_parts(year: str | None, month: str | None, day: str | None) ->
         day (str | None): The day.
 
     Returns:
-        dict: The validated date parts.
+        dict[str, int]: The validated date parts - the dates are converted to integers.
 
     Raises:
         ValueError: If the date is invalid.
     """
-    result = {}
+    error_msg = "Invalid date"
 
+    # Check that the correct parts have been provided
+    if month and not year:
+        raise ValueError(error_msg)
+    if day and not month:
+        raise ValueError(error_msg)
+
+    # Test that the provided parts can form a valid date
+    result = {}
     try:
         if year:
             result["year"] = int(year)
@@ -86,8 +99,7 @@ def validate_date_parts(year: str | None, month: str | None, day: str | None) ->
             timezone.make_aware(timezone.datetime(result["year"], 1, 1))
 
     except ValueError as exc:
-        msg = "Invalid date"
-        raise ValueError(msg) from exc
+        raise ValueError(error_msg) from exc
 
     return result
 

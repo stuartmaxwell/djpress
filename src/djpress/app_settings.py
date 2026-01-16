@@ -33,5 +33,6 @@ DJPRESS_SETTINGS = {
     "TAG_ENABLED": (True, bool),
     "TAG_PREFIX": ("tag", str),
     "THEME": ("default", str),
+    "THEME_SETTINGS": ({}, dict),
     "TRUNCATE_TAG": ("<!--more-->", str),
 }

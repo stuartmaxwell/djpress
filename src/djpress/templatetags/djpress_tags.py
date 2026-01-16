@@ -13,7 +13,7 @@ from djpress.conf import settings as djpress_settings
 from djpress.exceptions import PageNotFoundError
 from djpress.models import Category, Post, Tag
 from djpress.plugins import registry
-from djpress.plugins.hook_registry import DJ_FOOTER, DJ_HEADER
+from djpress.plugins.hook_registry import DJPRESS_FOOTER, DJPRESS_HEADER
 from djpress.templatetags import helpers
 from djpress.utils import get_author_display_name
 
@@ -21,6 +21,61 @@ register = template.Library()
 
 
 # Tags starting with `get_` are used to get data from the database.
+
+
+@register.simple_tag
+def get_site_title() -> str:
+    """Return the site title.
+
+    Returns:
+        str: The site title.
+    """
+    return str(djpress_settings.SITE_TITLE)
+
+
+@register.simple_tag
+def get_site_description() -> str:
+    """Return the site description.
+
+    Returns:
+        str: The site description.
+    """
+    return str(djpress_settings.SITE_DESCRIPTION)
+
+
+@register.simple_tag
+def get_theme_setting(name: str, default: str | float | None = None) -> str | float | None:
+    """Return the value of a theme setting.
+
+    Args:
+        name: The name of the setting.
+        default: The default value to return if the setting is not found.
+
+    Returns:
+        str: The value of the setting, or the default value if not found.
+    """
+    # Get the current theme
+    current_theme = djpress_settings.THEME
+
+    # Get the theme settings
+    theme_settings = djpress_settings.THEME_SETTINGS.get(current_theme, {})
+
+    # If there are no theme settings, return the default value
+    if not theme_settings:
+        return default
+
+    # Return the value of the setting, or the default value if not found
+    return theme_settings.get(name, default)
+
+
+@register.simple_tag
+def get_posts() -> models.QuerySet[Post]:
+    """Return all published posts as a queryset.
+
+    Returns:
+        models.QuerySet[Post]: All posts.
+    """
+    return Post.post_objects.get_published_posts()
 
 
 @register.simple_tag(takes_context=True)
@@ -36,16 +91,6 @@ def get_recent_posts(context: Context) -> models.QuerySet[Post]:
         return posts.object_list
 
     return Post.post_objects.get_recent_published_posts()
-
-
-@register.simple_tag
-def get_posts() -> models.QuerySet[Post]:
-    """Return all published posts as a queryset.
-
-    Returns:
-        models.QuerySet[Post]: All posts.
-    """
-    return Post.post_objects.get_published_posts()
 
 
 @register.simple_tag
@@ -78,42 +123,317 @@ def get_tags() -> models.QuerySet[Tag]:
     return Tag.objects.get_tags().order_by("title")
 
 
-@register.simple_tag
-def site_title() -> str:
-    """Return the site title.
+@register.simple_tag(takes_context=True)
+def get_post_title(context: Context, *, include_empty: bool = False) -> str:
+    """Return the title of a post.
 
-    Returns:
-        str: The site title.
-    """
-    site_title = djpress_settings.SITE_TITLE
-    if not isinstance(site_title, str):  # pragma: no cover
-        msg = f"Expected SITE_TITLE to be a string, got {type(site_title).__name__}"
-        raise TypeError(msg)
-    return site_title
+    This is just the title of the post from the current context with no further HTML.
 
-
-@register.simple_tag
-def site_title_link(link_class: str = "") -> str:
-    """Return the site title.
+    If `include_empty` is set to `True`, then the title will be returned from the `post_title` property of the Post.
 
     Args:
+        context: The context.
+        include_empty: Whether to include the title if it is empty.
+
+    Returns:
+        str: The title of the post.
+    """
+    post: Post | None = context.get("post")
+    if not post:
+        return ""
+
+    if include_empty:
+        return post.post_title
+
+    return post.title
+
+
+@register.simple_tag(takes_context=True)
+def get_post_url(context: Context) -> str:
+    """Return the URL of a post.
+
+    This is just the URL of the post from the current context with no further HTML.
+
+    Args:
+        context: The context.
+
+    Returns:
+        str: The URL of the post.
+    """
+    post: Post | None = context.get("post")
+    if not post:
+        return ""
+
+    return post.url
+
+
+@register.simple_tag(takes_context=True)
+def get_post_author(context: Context) -> str:
+    """Return the author display name.
+
+    Tries to display the first name and last name if available, otherwise falls back to
+    the username.
+
+    Args:
+        context: The context.
+
+    Returns:
+        str: The author display name.
+    """
+    post: Post | None = context.get("post")
+    if not post:
+        return ""
+
+    author = post.author
+
+    return get_author_display_name(author)
+
+
+@register.simple_tag(takes_context=True)
+def get_post_date(context: Context) -> str:
+    """Return the date of a post.
+
+    Args:
+        context: The context.
+
+    Returns:
+        str: The date of the post.
+    """
+    post: Post | None = context.get("post")
+    if not post:
+        return ""
+
+    output_date = post.local_datetime
+    return output_date.strftime("%b %-d, %Y")
+
+
+@register.simple_tag(takes_context=True)
+def get_post_categories(context: Context) -> models.QuerySet[Category]:
+    """Return a queryset of categories for the post.
+
+    Returns:
+        queryset: A queryset of categories.
+    """
+    post: Post | None = context.get("post")
+    if not post:
+        return Category.objects.none()
+
+    return post.categories.all()
+
+
+@register.simple_tag(takes_context=True)
+def get_post_category_slugs(context: Context) -> list:
+    """Return a list of category slugs for the post.
+
+    Returns:
+        list: The categories of the post or an empty list
+    """
+    post: Post | None = context.get("post")
+    if post is None:
+        return []
+
+    categories = post.categories.all()
+
+    return [category.slug for category in categories]
+
+
+@register.simple_tag
+def get_rss_url() -> str:
+    """Return the URL to the RSS feed.
+
+    Returns:
+        str: The URL to the RSS feed.
+    """
+    return url_utils.get_rss_url()
+
+
+@register.simple_tag
+def get_search_url() -> str:
+    """Return the search URL.
+
+    Returns:
+        str: The search URL path, or empty string if search is disabled.
+
+    Example:
+        <form action="{% search_url %}" method="get">
+            <input type="search" name="q" placeholder="Search...">
+            <button type="submit">Search</button>
+        </form>
+    """
+    return url_utils.get_search_url()
+
+
+@register.simple_tag(takes_context=True)
+def get_pagination_range(context: Context) -> range:
+    """Return the range of pagination pages.
+
+    Args:
+        context: The context.
+
+    Returns:
+        range: The pagination pages.
+    """
+    page: Page | None = context.get("posts")
+    if not page or not isinstance(page, Page):
+        return range(0)
+
+    return page.paginator.page_range
+
+
+@register.simple_tag(takes_context=True)
+def get_pagination_current_page(context: Context) -> int:
+    """Return the current page number.
+
+    Args:
+        context: The context.
+
+    Returns:
+        int: The current page number.
+    """
+    page: Page | None = context.get("posts")
+    if not page or not isinstance(page, Page):
+        return 0
+
+    return page.number
+
+
+"""
+# Display Tags - Site-wide
+
+These tags retrieve data about the site and format it with HTML, ready to be displayed in your templates.
+"""
+
+
+@register.simple_tag
+def site_title(
+    outer_tag: str = "",
+    *,
+    outer_class: str = "",
+    link: bool = False,
+    link_class: str = "",
+) -> str:
+    """Return the site title as safely marked HTML.
+
+    This must be called with named arguments, except the outer_tag. For example, the following two statements are
+    identical:
+
+    - `{% site_title "h1" %}`
+    - `{% site_title outer_tag="h1" %}`
+
+    Args:
+        outer_tag: The HTML tag to wrap the title in.
+        outer_class: The CSS class(es) for the outer tag.
+        link: Whether to wrap the title in a link.
         link_class: The CSS class(es) for the link.
 
     Returns:
-        str: The site title.
+        str: Safely-marked HTML with the site title.
     """
+    site_title = str(djpress_settings.SITE_TITLE)
+    if site_title == "":
+        return ""
+
     link_class_html = f' class="{link_class}"' if link_class else ""
 
-    output = f'<a href="{reverse("djpress:index")}"{link_class_html}>{djpress_settings.SITE_TITLE}</a>'
+    link_html = f'<a href="{reverse("djpress:index")}"{link_class_html}>{site_title}</a>' if link else site_title
+
+    if outer_tag == "":
+        return link_html
+
+    # If outer_tag is not one of the allowed tags, return an empty string.
+    # TODO: move these tags to a constant?
+    if outer_tag not in ["p", "div", "span", "article", "h1", "h2", "h3", "h4", "h5", "h6"]:
+        return ""
+
+    outer_class_html = f' class="{outer_class}"' if outer_class else ""
+
+    output = f"<{outer_tag}{outer_class_html}>{link_html}</{outer_tag}>"
 
     return mark_safe(output)
 
 
 @register.simple_tag
-def blog_categories(
+def site_description(
+    outer_tag: str = "",
+    *,
+    outer_class: str = "",
+) -> str:
+    """Return the site description as safely marked HTML.
+
+    This must be called with named arguments.
+
+    Args:
+        outer_tag: The HTML tag to wrap the description in.
+        outer_class: The CSS class(es) for the outer tag.
+
+    Returns:
+        str: The site description as safely marked HTML.
+    """
+    site_description = str(djpress_settings.SITE_DESCRIPTION)
+    if site_description == "":
+        return ""
+
+    if outer_tag == "":
+        return site_description
+
+    # If outer_tag is not one of the allowed tags, return an empty string.
+    # TODO: move these tags to a constant?
+    if outer_tag not in ["p", "div", "span", "article", "h1", "h2", "h3", "h4", "h5", "h6"]:
+        return ""
+
+    outer_class_html = f' class="{outer_class}"' if outer_class else ""
+
+    output = f"<{outer_tag}{outer_class_html}>{site_description}</{outer_tag}>"
+
+    return mark_safe(output)
+
+
+@register.simple_tag(takes_context=True)
+def page_title(
+    context: Context,
+    pre_text: str = "",
+    post_text: str = "",
+) -> str:
+    """Return the page title.
+
+    Args:
+        context: The context.
+        pre_text: The text to prepend to the page title.
+        post_text: The text to append to the page title.
+
+    Returns:
+        str: The page title.
+    """
+    category: Category | None = context.get("category")
+    author: User | None = context.get("author")
+    post: Post | None = context.get("post")
+
+    if category:
+        title = category.title
+
+    elif author:
+        title = get_author_display_name(author)
+
+    elif post:
+        title = post.title
+    else:
+        title = ""
+
+    if title:
+        title = f"{pre_text}{title}{post_text}"
+
+    return title
+
+
+@register.simple_tag
+def site_categories(
     outer_tag: str = "ul",
+    *,
     outer_class: str = "",
     link_class: str = "",
+    separator: str = ", ",
+    pre_text: str = "",
+    post_text: str = "",
 ) -> str:
     """Return the categories of the blog.
 
@@ -121,6 +441,9 @@ def blog_categories(
         outer_tag: The outer HTML tag for the categories.
         outer_class: The CSS class(es) for the outer tag.
         link_class: The CSS class(es) for the link.
+        separator: The separator between categories.
+        pre_text: The text to prepend to the categories.
+        post_text: The text to append to the categories.
 
     Returns:
         str: The categories of the blog.
@@ -129,22 +452,28 @@ def blog_categories(
     if not categories:
         return ""
 
-    # Explicitly pass outer_tag parameter for clarity
     return mark_safe(
         helpers.categories_html(
             categories=categories,
             outer_tag=outer_tag,
             outer_class=outer_class,
             link_class=link_class,
+            separator=separator,
+            pre_text=pre_text,
+            post_text=post_text,
         ),
     )
 
 
 @register.simple_tag
-def blog_tags(
+def site_tags(
     outer_tag: str = "ul",
+    *,
     outer_class: str = "",
     link_class: str = "",
+    separator: str = ", ",
+    pre_text: str = "",
+    post_text: str = "",
 ) -> str:
     """Return the tags of the blog.
 
@@ -152,6 +481,9 @@ def blog_tags(
         outer_tag: The outer HTML tag for the tags.
         outer_class: The CSS class(es) for the outer tag.
         link_class: The CSS class(es) for the link.
+        separator: The separator between tags.
+        pre_text: The text to prepend to the tags.
+        post_text: The text to append to the tags.
 
     Returns:
         str: The tags of the blog.
@@ -160,13 +492,23 @@ def blog_tags(
     if not tags:
         return ""
 
-    # Explicitly pass outer_tag parameter for clarity
-    return mark_safe(helpers.tags_html(tags=tags, outer_tag=outer_tag, outer_class=outer_class, link_class=link_class))
+    return mark_safe(
+        helpers.tags_html(
+            tags=tags,
+            outer_tag=outer_tag,
+            outer_class=outer_class,
+            link_class=link_class,
+            separator=separator,
+            pre_text=pre_text,
+            post_text=post_text,
+        )
+    )
 
 
 @register.simple_tag
 def tags_with_counts(
     outer_tag: str = "ul",
+    *,
     outer_class: str = "",
     link_class: str = "",
 ) -> str:
@@ -222,7 +564,57 @@ def tags_with_counts(
 
 
 @register.simple_tag
-def site_pages_list(ul_outer_class: str = "", li_class: str = "", a_class: str = "", ul_child_class: str = "") -> str:
+def site_pages(
+    outer_tag: str = "div",
+    *,
+    outer_class: str = "",
+    link_class: str = "",
+    separator: str = ", ",
+) -> str:
+    """Return the pages of the site.
+
+    This is used to generate a comma-separated list of linked pages with a separator between them, and wrapped in either
+    a `div` or `span` tag. To get an HTML list of pages, use the `site_pages_list` tag.
+
+    Args:
+        outer_tag: The outer HTML tag for the pages.
+        outer_class: The CSS class(es) for the outer tag.
+        link_class: The CSS class(es) for the link.
+        separator: The separator between the pages.
+
+    Returns:
+        str: The pages of the site as safely marked HTML.
+    """
+    pages = Post.page_objects.get_published_pages()
+
+    if not pages:
+        return ""
+
+    allowed_tags = ["div", "span"]
+    if outer_tag not in allowed_tags:
+        return ""
+
+    outer_class_html = f' class="{outer_class}"' if outer_class else ""
+
+    output = f"<{outer_tag}{outer_class_html}>"
+    for page in pages:
+        output += f"{helpers.get_page_link(page=page, link_class=link_class)}{separator}"
+    output = output[: -len(separator)]  # Remove the trailing separator
+    output += f"</{outer_tag}>"
+
+    return mark_safe(output)
+
+
+@register.simple_tag
+def site_pages_list(
+    *,
+    ul_outer_class: str = "",
+    li_class: str = "",
+    a_class: str = "",
+    ul_child_class: str = "",
+    include_home: bool = False,
+    levels: int = 0,
+) -> str:
     """Returns an HTML list of the site's pages.
 
     The pages are sorted by menu order and then by title. Pages that have children have a nested list of children.
@@ -257,6 +649,8 @@ def site_pages_list(ul_outer_class: str = "", li_class: str = "", a_class: str =
         li_class (str): The CSS class(es) for the
         a_class (str): The CSS class(es) for the anchor tags.
         ul_child_class (str): The CSS class(es) for the nested unordered lists.
+        include_home (bool): Whether to include the home page in the list.
+        levels (int): The maximum depth of nested pages to include or 0 for unlimited.
 
     Returns:
         str: The HTML list of the blog pages.
@@ -265,179 +659,40 @@ def site_pages_list(ul_outer_class: str = "", li_class: str = "", a_class: str =
 
     output = ""
 
-    if not pages:
+    if not pages and not include_home:
         return output
 
     if ul_outer_class:
         ul_outer_class = f' class="{ul_outer_class}"'
 
     output += f"<ul{ul_outer_class}>"
-    output += helpers.get_site_pages_list(pages, li_class=li_class, a_class=a_class, ul_child_class=ul_child_class)
+
+    if include_home:
+        class_li = f' class="{li_class}"' if li_class else ""
+        class_a = f' class="{a_class}"' if a_class else ""
+        output += f'<li{class_li}><a href="{reverse("djpress:index")}"{class_a}>Home</a></li>'
+
+    output += helpers.get_site_pages_list(
+        pages, li_class=li_class, a_class=a_class, ul_child_class=ul_child_class, levels=levels
+    )
     output += "</ul>"
 
     return mark_safe(output)
 
 
-@register.simple_tag
-def site_pages(
-    outer: str = "ul",
-    outer_class: str = "",
-    link_class: str = "",
-) -> str:
-    """Return the pages of the site.
+"""
+# Post Content Tags
 
-    Args:
-        outer: The outer HTML tag for the pages.
-        outer_class: The CSS class(es) for the outer tag.
-        link_class: The CSS class(es) for the link.
-
-    Returns:
-        str: The pages of the site.
-    """
-    pages = Post.page_objects.get_published_pages()
-
-    if not pages:
-        return ""
-
-    output = ""
-
-    outer_class_html = f' class="{outer_class}"' if outer_class else ""
-
-    if outer == "ul":
-        output += f"<ul{outer_class_html}>"
-        for page in pages:
-            output += f"<li>{helpers.get_page_link(page=page, link_class=link_class)}</li>"
-        output += "</ul>"
-
-    if outer == "div":
-        output += f"<div{outer_class_html}>"
-        for page in pages:
-            output += f"{helpers.get_page_link(page=page, link_class=link_class)}, "
-        output = output[:-2]  # Remove the trailing comma and space
-        output += "</div>"
-
-    if outer == "span":
-        output += f"<span{outer_class_html}>"
-        for page in pages:
-            output += f"{helpers.get_page_link(page=page, link_class=link_class)}, "
-        output = output[:-2]  # Remove the trailing comma and space
-        output += "</span>"
-
-    return mark_safe(output)
-
-
-@register.simple_tag(takes_context=True)
-def page_title(
-    context: Context,
-    pre_text: str = "",
-    post_text: str = "",
-) -> str:
-    """Return the page title.
-
-    Args:
-        context: The context.
-        pre_text: The text to prepend to the page title.
-        post_text: The text to append to the page title.
-
-    Returns:
-        str: The page title.
-    """
-    category: Category | None = context.get("category")
-    author: User | None = context.get("author")
-    post: Post | None = context.get("post")
-
-    if category:
-        title = category.title
-
-    elif author:
-        title = get_author_display_name(author)
-
-    elif post:
-        title = post.title
-    else:
-        title = ""
-
-    if title:
-        title = f"{pre_text}{title}{post_text}"
-
-    return title
-
-
-@register.simple_tag(takes_context=True)
-def have_posts(context: Context) -> list[Post | None] | Page:
-    """Return the posts in the context.
-
-    If there's a `post` in the context, then we return a list with that post.
-
-    If there's a `posts` in the context, then we return the posts. The `posts` should
-    be a Page object.
-
-    Args:
-        context: The context.
-
-    Returns:
-        list[Post]: The posts in the context.
-    """
-    post: Post | None = context.get("post")
-    posts: Page | None = context.get("posts")
-
-    if post:
-        return [post]
-    if posts:
-        return posts
-
-    return []
-
-
-@register.simple_tag(takes_context=True)
-def get_post_title(context: Context, *, include_empty: bool = False) -> str:
-    """Return the title of a post.
-
-    This is just the title of the post from the current context with no further HTML.
-
-    If `include_empty` is set to `True`, then the title will be returned from the `post_title` property of the Post.
-
-    Args:
-        context: The context.
-        include_empty: Whether to include the title if it is empty.
-
-    Returns:
-        str: The title of the post.
-    """
-    post: Post | None = context.get("post")
-    if not post:
-        return ""
-
-    if include_empty:
-        return post.post_title
-
-    return post.title
-
-
-@register.simple_tag(takes_context=True)
-def get_post_url(context: Context) -> str:
-    """Return the URL of a post.
-
-    This is just the URL of the post from the current context with no further HTML.
-
-    Args:
-        context: The context.
-
-    Returns:
-        str: The URL of the post.
-    """
-    post: Post | None = context.get("post")
-    if not post:
-        return ""
-
-    return post.url
+These tags help you display the content of posts. They only work if there is a `post` object in the context.
+"""
 
 
 @register.simple_tag(takes_context=True)
 def post_title(
     context: Context,
-    *,
     outer_tag: str = "",
+    *,
+    outer_class: str = "",
     link_class: str = "",
     force_link: bool = False,
     include_empty: bool = False,
@@ -448,8 +703,9 @@ def post_title(
     post, then return just the title of the post with no link. But this behavior can be overridden by setting
     `force_link` to `True`.
 
-    The outer tag can be any of the following: "h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "span". If the outer tag
-    is not one of these, then the title will be returned with no outer tag.
+    The outer tag can be any of the following: "h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "span". If the outer_tag
+    option is ommitted, then the title will be returned with no outer tag. If an invalid outer_tag is provided, an empty
+    string will be returned.
 
     If the outer tag is one of the allowed tags, and if Microformats are enabled, then the outer tag will have the class
     "p-name".
@@ -463,6 +719,7 @@ def post_title(
     Args:
         context: The context.
         outer_tag: The outer HTML tag for the title.
+        outer_class: The CSS class(es) for the outer tag.
         link_class: The CSS class(es) for the link.
         force_link: Whether to force the link to be displayed.
         include_empty: Whether to include the title if it is empty.
@@ -486,127 +743,101 @@ def post_title(
 
     # If there's a posts in the context, or if the link is forced, then we need to display the link.
     if posts or force_link:
-        # Build the classes for the link
-        link_classes = ""
+        # If Microformats are enabled, include the u-url class.
+        mf_link = "u-url" if djpress_settings.MICROFORMATS_ENABLED else ""
 
-        # Add p-category if microformats are enabled
-        if djpress_settings.MICROFORMATS_ENABLED:
-            link_classes += "u-url "
-
-        # Add the user-defined link class
-        link_classes += link_class
-
-        # Trim any trailing spaces
-        link_classes = link_classes.strip()
-
+        link_classes = f"{mf_link} {link_class}".strip()
         link_class_html = f' class="{link_classes}"' if link_classes else ""
 
         output = f'<a href="{post.url}" title="{output}"{link_class_html}>{output}</a>'
 
+    # If there's no outer tag, return the output as is
+    if outer_tag == "":
+        return mark_safe(output)
+
     # If the outer tag is one of the allowed tags, then wrap the output in the outer tag.
-    if outer_tag in ["h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "span"]:
-        # If Microformats are enabled, use p-name with the outer tag.
-        mf = ' class="p-name"' if djpress_settings.MICROFORMATS_ENABLED else ""
+    if outer_tag not in ["h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "span"]:
+        return ""
 
-        output = f"<{outer_tag}{mf}>{output}</{outer_tag}>"
+    # If Microformats are enabled, use p-name with the outer tag.
+    mf = "p-name" if djpress_settings.MICROFORMATS_ENABLED else ""
+
+    outer_classes = f"{mf} {outer_class}".strip()
+    outer_class_html = f' class="{outer_classes}"' if outer_classes else ""
+
+    output = f"<{outer_tag}{outer_class_html}>{output}</{outer_tag}>"
 
     return mark_safe(output)
 
 
 @register.simple_tag(takes_context=True)
-def get_post_author(context: Context) -> str:
-    """Return the author display name.
+def post_content(
+    context: Context,
+    outer_tag: str = "",
+    *,
+    outer_class: str = "",
+    read_more_link_class: str = "",
+    read_more_text: str = "",
+) -> str:
+    """Return the content of a post.
 
-    Tries to display the first name and last name if available, otherwise falls back to
-    the username.
+    If the post is part of a posts collection, then we return the truncated content of
+    the post with the read more link.
 
-    Args:
-        context: The context.
+    If the post is a single post, return the full content of the post.
 
-    Returns:
-        str: The author display name.
-    """
-    post: Post | None = context.get("post")
-    if not post:
-        return ""
+    The outer tag can be any one of the following: "section", "div", "article", "p", "span". If the outer tag is not one
+    of these, then the content will be returned with no outer tag.
 
-    author = post.author
+    If there's an outer tag, and if microformats are enabled, then the outer tag will have the class "e-content".
 
-    return get_author_display_name(author)
-
-
-@register.simple_tag(takes_context=True)
-def post_author(context: Context, link_class: str = "") -> str:
-    """Return the author link for a post.
+    If there's no post, return an empty string.
 
     Args:
         context: The context.
-        link_class: The CSS class(es) for the link.
+        outer_tag: The outer HTML tag for the content.
+        outer_class: The CSS class(es) for the outer tag.
+        read_more_link_class: The CSS class(es) for the read more link.
+        read_more_text: The text for the read more link.
 
     Returns:
-        str: The author link.
+        str: The content of the post.
     """
+    # Check if there's a post or posts in the context.
     post: Post | None = context.get("post")
+    posts: Page | None = context.get("posts")
+
+    # If there's no post, return an empty string.
     if not post:
         return ""
 
-    author = post.author
-    author_display_name = get_author_display_name(author)
+    # If there's a posts in the context, then we need to display the truncated content.
+    # Note: the read more link will return an empty string if the post is not truncated.
+    if posts:
+        content = post.truncated_content_markdown + helpers.post_read_more_link(
+            post, read_more_link_class, read_more_text
+        )
+    else:
+        content = post.content_markdown
 
-    mf = ' class="p-author"' if djpress_settings.MICROFORMATS_ENABLED else ""
+    # If the outer tag is one of the allowed tags, then wrap the output in the outer tag.
+    if outer_tag in ["section", "div", "article", "p", "span"]:
+        # If Microformats are enabled, use e-content with the outer tag.
+        mf = "e-content" if djpress_settings.MICROFORMATS_ENABLED else ""
 
-    author_html = f"<span{mf}>{author_display_name}</span>"
+        outer_classes = f"{mf} {outer_class}".strip()
+        outer_class_html = f' class="{outer_classes}"' if outer_classes else ""
 
-    if not djpress_settings.AUTHOR_ENABLED:
-        return author_html
+        content = f"<{outer_tag}{outer_class_html}>{content}</{outer_tag}>"
 
-    author_url = url_utils.get_author_url(user=author)
-
-    link_class_html = f' class="{link_class}"' if link_class else ""
-
-    output = (
-        f'<a href="{author_url}" title="View all posts by {author_display_name}"{link_class_html}>{author_html}</a>'
-    )
-
-    return mark_safe(output)
-
-
-@register.simple_tag
-def post_category_link(category: Category, link_class: str = "") -> str:
-    """Return the category links for a post.
-
-    TODO: do we need this?
-
-    Args:
-        category: The category of the post.
-        link_class: The CSS class(es) for the link.
-    """
-    if not djpress_settings.CATEGORY_ENABLED:
-        return category.title
-
-    return mark_safe(helpers.category_link(category, link_class))
+    return mark_safe(content)
 
 
 @register.simple_tag(takes_context=True)
-def get_post_date(context: Context) -> str:
-    """Return the date of a post.
-
-    Args:
-        context: The context.
-
-    Returns:
-        str: The date of the post.
-    """
-    post: Post | None = context.get("post")
-    if not post:
-        return ""
-
-    output_date = post.local_datetime
-    return output_date.strftime("%b %-d, %Y")
-
-
-@register.simple_tag(takes_context=True)
-def post_date(context: Context, link_class: str = "") -> str:
+def post_date(
+    context: Context,
+    link_class: str = "",
+) -> str:
     """Return the date link for a post.
 
     Args:
@@ -655,214 +886,72 @@ def post_date(context: Context, link_class: str = "") -> str:
 
 
 @register.simple_tag(takes_context=True)
-def post_content(
+def post_author(
     context: Context,
+    outer_tag: str = "span",
     *,
-    outer_tag: str = "",
-    read_more_link_class: str = "",
-    read_more_text: str = "",
+    outer_class: str = "",
+    link_class: str = "",
+    pre_text: str = "",
+    post_text: str = "",
 ) -> str:
-    """Return the content of a post.
-
-    If the post is part of a posts collection, then we return the truncated content of
-    the post with the read more link.
-
-    If the post is a single post, return the full content of the post.
-
-    The outer tag can be any one of the following: "section", "div", "article", "p", "span". If the outer tag is not one
-    of these, then the content will be returned with no outer tag.
-
-    If there's an outer tag, and if microformats are enabled, then the outer tag will have the class "e-content".
-
-    If there's no post, return an empty string.
+    """Return the author link for a post.
 
     Args:
         context: The context.
-        outer_tag: The outer HTML tag for the content.
-        read_more_link_class: The CSS class(es) for the read more link.
-        read_more_text: The text for the read more link.
+        outer_tag: The outer tag for the author display name.
+        outer_class: The CSS class(es) for the outer tag.
+        link_class: The CSS class(es) for the link.
+        pre_text: The text to display before the author name.
+        post_text: The text to display after the author name.
 
     Returns:
-        str: The content of the post.
+        str: The author link.
     """
-    # Check if there's a post or posts in the context.
     post: Post | None = context.get("post")
-    posts: Page | None = context.get("posts")
-
-    # If there's no post, return an empty string.
     if not post:
         return ""
 
-    # If there's a posts in the context, then we need to display the truncated content.
-    if posts:
-        content = post.truncated_content_markdown
-        if post.is_truncated:
-            content += helpers.post_read_more_link(post, read_more_link_class, read_more_text)
-    else:
-        content = post.content_markdown
-
     # If the outer tag is one of the allowed tags, then wrap the output in the outer tag.
-    if outer_tag in ["section", "div", "article", "p", "span"]:
-        # If Microformats are enabled, use e-content with the outer tag.
-        mf = ' class="e-content"' if djpress_settings.MICROFORMATS_ENABLED else ""
-
-        content = f"<{outer_tag}{mf}>{content}</{outer_tag}>"
-
-    return mark_safe(content)
-
-
-@register.simple_tag(takes_context=True)
-def category_title(
-    context: Context,
-    outer: str = "",
-    outer_class: str = "",
-    pre_text: str = "",
-    post_text: str = "",
-) -> str:
-    """Return the title of a category.
-
-    Expects there to be an `category` in the context set to a Category object. If
-    there's no category in the context or category is not a Category object, then return
-    an empty string.
-
-
-    Args:
-        context: The context.
-        outer: The outer HTML tag for the category.
-        outer_class: The CSS class(es) for the outer tag.
-        pre_text: The text to prepend to the category title.
-        post_text: The text to append to the category title.
-
-    Returns:
-        str: The title of the category formatted with the outer tag and class if
-        provided.
-    """
-    category: Category | None = context.get("category")
-
-    if not category or not isinstance(category, Category):
+    allowed_tags = ["h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "span"]
+    if outer_tag not in allowed_tags:
         return ""
 
-    allowed_outer_tags = ["h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "span"]
-    outer_class = f' class="{outer_class}"' if outer_class else ""
+    # Add p-category if microformats are enabled
+    mf = "p-author" if djpress_settings.MICROFORMATS_ENABLED else ""
 
-    output = category.title
+    outer_classes = f"{mf} {outer_class}".strip()
+    outer_class_html = f' class="{outer_classes}"' if outer_classes else ""
 
-    if pre_text:
-        output = f"{pre_text}{output}"
+    link_class_html = f' class="{link_class}"' if link_class else ""
 
-    if post_text:
-        output = f"{output}{post_text}"
+    author = post.author
+    author_display_name = get_author_display_name(author)
 
-    if outer in allowed_outer_tags:
-        return mark_safe(f"<{outer}{outer_class}>{output}</{outer}>")
+    if not djpress_settings.AUTHOR_ENABLED:
+        return f"<{outer_tag}{outer_class_html}>{pre_text}{author_display_name}{post_text}</{outer_tag}>"
 
-    return output
+    author_url = url_utils.get_author_url(user=author)
 
+    output = (
+        f"<{outer_tag}{outer_class_html}>{pre_text}"
+        f'<a href="{author_url}" title="View all posts by {author_display_name}"{link_class_html}>'
+        f"{author_display_name}</a>{post_text}</{outer_tag}>"
+    )
 
-@register.simple_tag(takes_context=True)
-def tag_title(
-    context: Context,
-    outer: str = "",
-    outer_class: str = "",
-    pre_text: str = "",
-    post_text: str = "",
-) -> str:
-    """Return the title of the current tag.
-
-    Expects there to be 'tags' in the context set to a list of tag slugs. In the tag views,
-    this will show the tag or tags being displayed. If there's no tags in the context,
-    returns an empty string.
-
-    Args:
-        context: The context.
-        outer: The outer HTML tag for the tag title.
-        outer_class: The CSS class(es) for the outer tag.
-        pre_text: The text to prepend to the tag title.
-        post_text: The text to append to the tag title.
-
-    Returns:
-        str: The title of the tag formatted with the outer tag and class if
-        provided.
-    """
-    tag_slugs: list | None = context.get("tags")
-
-    if not tag_slugs:
-        return ""
-
-    allowed_outer_tags = ["h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "span"]
-    outer_class_html = f' class="{outer_class}"' if outer_class else ""
-
-    # Get tag titles from the slugs
-    tags = [Tag.objects.get_tag_by_slug(slug) for slug in tag_slugs]
-    tag_titles = [tag.title for tag in tags]
-
-    # Join multiple tags with commas
-    output = ", ".join(tag_titles) if len(tag_titles) > 1 else tag_titles[0]
-
-    if pre_text:
-        output = f"{pre_text}{output}"
-
-    if post_text:
-        output = f"{output}{post_text}"
-
-    if outer in allowed_outer_tags:
-        return mark_safe(f"<{outer}{outer_class_html}>{output}</{outer}>")
-
-    return output
-
-
-@register.simple_tag(takes_context=True)
-def author_name(
-    context: Context,
-    outer: str = "",
-    outer_class: str = "",
-    pre_text: str = "",
-    post_text: str = "",
-) -> str:
-    """Return the name of an author.
-
-    Expects there to be an `author` in the context set to a user object. If there's no
-    author in the context or author is not a User object, then return an empty string.
-
-    Args:
-        context: The context.
-        outer: The outer HTML tag for the author.
-        outer_class: The CSS class(es) for the outer tag.
-        pre_text: The text to prepend to the author name.
-        post_text: The text to append to the author name.
-
-    Returns:
-        str: The name of the author formatted with the outer tag and class if
-        provided.
-    """
-    author: User | None = context.get("author")
-
-    if not author or not isinstance(author, User):
-        return ""
-
-    allowed_outer_tags = ["h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "span"]
-    outer_class = f' class="{outer_class}"' if outer_class else ""
-
-    output = get_author_display_name(author)
-
-    if pre_text:
-        output = f"{pre_text}{output}"
-
-    if post_text:
-        output = f"{output}{post_text}"
-
-    if outer in allowed_outer_tags:
-        return mark_safe(f"<{outer}{outer_class}>{output}</{outer}>")
-
-    return output
+    return mark_safe(output)
 
 
 @register.simple_tag(takes_context=True)
 def post_categories(
     context: Context,
     outer_tag: str = "ul",
+    *,
     outer_class: str = "",
     link_class: str = "",
+    separator: str = ", ",
+    pre_text: str = "",
+    post_text: str = "",
 ) -> str:
     """Return the categories of a post.
 
@@ -873,6 +962,9 @@ def post_categories(
         outer_tag: The outer HTML tag for the categories.
         outer_class: The CSS class(es) for the outer tag.
         link_class: The CSS class(es) for the link.
+        separator: The separator between categories.
+        pre_text: The text to display before the categories.
+        post_text: The text to display after the categories.
 
     Returns:
         str: The categories of the post.
@@ -892,6 +984,9 @@ def post_categories(
             outer_tag=outer_tag,
             outer_class=outer_class,
             link_class=link_class,
+            separator=separator,
+            pre_text=pre_text,
+            post_text=post_text,
         ),
     )
 
@@ -900,8 +995,12 @@ def post_categories(
 def post_tags(
     context: Context,
     outer_tag: str = "ul",
+    *,
     outer_class: str = "",
     link_class: str = "",
+    separator: str = ", ",
+    pre_text: str = "",
+    post_text: str = "",
 ) -> str:
     """Return the tags of a post.
 
@@ -912,6 +1011,9 @@ def post_tags(
         outer_tag: The outer HTML tag for the tags.
         outer_class: The CSS class(es) for the outer tag.
         link_class: The CSS class(es) for the link.
+        separator: The separator between tags.
+        pre_text: The text to display before the tags.
+        post_text: The text to display after the tags.
 
     Returns:
         str: The tags of the post.
@@ -924,12 +1026,365 @@ def post_tags(
     if not tags:
         return ""
 
+    allowed_outer_tags = ["ul", "div", "span"]
+    if outer_tag not in allowed_outer_tags:
+        return ""
+
     # Explicitly pass outer_tag parameter for clarity
-    return mark_safe(helpers.tags_html(tags=tags, outer_tag=outer_tag, outer_class=outer_class, link_class=link_class))
+    return mark_safe(
+        helpers.tags_html(
+            tags=tags,
+            outer_tag=outer_tag,
+            outer_class=outer_class,
+            link_class=link_class,
+            separator=separator,
+            pre_text=pre_text,
+            post_text=post_text,
+        )
+    )
+
+
+"""
+# Search Tags
+
+These tags provide search functionality for your blog.
+"""
 
 
 @register.simple_tag(takes_context=True)
-def is_paginated(context: Context) -> bool:
+def search_form(
+    context: Context,
+    *,
+    placeholder: str = "Search...",
+    button_text: str = "Search",
+    form_class: str = "",
+    input_class: str = "",
+    button_class: str = "",
+    show_button: bool = True,
+) -> str:
+    """Return a search form as HTML.
+
+    For a custom search form, use the {% search_url %} tag instead.
+
+    Args:
+        context: The template context - this is added automatically by Django.
+        placeholder: Placeholder text for the search input.
+        button_text: Text for the submit button.
+        form_class: CSS class(es) for the form element.
+        input_class: CSS class(es) for the input element.
+        button_class: CSS class(es) for the button element.
+        show_button: Whether to show the submit button.
+
+    Returns:
+        str: The search form HTML, or empty string if search is disabled.
+
+    Example:
+        {% search_form %}
+        {% search_form placeholder="Search posts..." button_text="Go" form_class="my-form" %}
+    """
+    url = url_utils.get_search_url()
+
+    if not url:
+        return ""
+
+    current_query = context.get("search_query", "")
+
+    # Build the HTML
+    form_class_attr = f' class="{form_class}"' if form_class else ""
+    input_class_attr = f' class="{input_class}"' if input_class else ""
+    button_class_attr = f' class="{button_class}"' if button_class else ""
+
+    html = f'<form action="{url}" method="get"{form_class_attr}>'
+    html += '<input type="search" name="q" '
+    html += f'value="{current_query}" placeholder="{placeholder}" aria-label="Search"{input_class_attr}>'
+
+    if show_button:
+        html += f'<button type="submit"{button_class_attr}>{button_text}</button>'
+
+    html += "</form>"
+
+    return mark_safe(html)
+
+
+@register.simple_tag(takes_context=True)
+def search_errors(
+    context: Context,
+    outer_tag: str = "div",
+    *,
+    outer_class: str = "search-errors",
+    error_tag: str = "p",
+    error_class: str = "error",
+) -> str:
+    """Return search validation errors as HTML.
+
+    Expects there to be a `search_errors` list in the context. If there are no errors,
+    returns an empty string.
+
+    Args:
+        context: The template context.
+        outer_tag: The outer HTML tag to wrap all errors (div, section, etc).
+        outer_class: The CSS class(es) for the outer tag.
+        error_tag: The HTML tag for each individual error message.
+        error_class: The CSS class(es) for each error tag.
+
+    Returns:
+        str: The error messages HTML, or empty string if no errors.
+
+    Example:
+        {% search_errors %}
+        {% search_errors outer="section" outer_class="alert alert-danger" %}
+    """
+    errors: list | None = context.get("search_errors")
+
+    if not errors or not isinstance(errors, list):
+        return ""
+
+    allowed_outer_tags = ["div", "section", "aside", "article"]
+    allowed_error_tags = ["p", "span", "div", "li"]
+
+    if outer_tag not in allowed_outer_tags:
+        return ""
+
+    if error_tag not in allowed_error_tags:
+        return ""
+
+    outer_class_html = f' class="{outer_class}"' if outer_class else ""
+    error_class_html = f' class="{error_class}"' if error_class else ""
+
+    html = f"<{outer_tag}{outer_class_html}>"
+
+    for error in errors:
+        if isinstance(error, str):
+            html += f"<{error_tag}{error_class_html}>{error}</{error_tag}>"
+
+    html += f"</{outer_tag}>"
+
+    return mark_safe(html)
+
+
+"""
+# Utility Tags
+
+These tags provide additional helper functions for your templates.
+"""
+
+
+@register.simple_tag(takes_context=True)
+def category_title(
+    context: Context,
+    outer_tag: str = "",
+    *,
+    outer_class: str = "",
+    pre_text: str = "",
+    post_text: str = "",
+) -> str:
+    """Return the title of a category.
+
+    Expects there to be an `category` in the context set to a Category object. If there's no category in the context or
+    category is not a Category object, then return an empty string.
+
+
+    Args:
+        context: The context.
+        outer_tag: The outer HTML tag for the category.
+        outer_class: The CSS class(es) for the outer tag.
+        pre_text: The text to prepend to the category title.
+        post_text: The text to append to the category title.
+
+    Returns:
+        str: The title of the category formatted with the outer tag and class if provided.
+    """
+    category: Category | None = context.get("category")
+
+    if not category or not isinstance(category, Category):
+        return ""
+
+    outer_class = f' class="{outer_class}"' if outer_class else ""
+
+    output = category.title
+
+    if pre_text:
+        output = f"{pre_text}{output}"
+
+    if post_text:
+        output = f"{output}{post_text}"
+
+    if outer_tag == "":
+        return output
+
+    allowed_outer_tags = ["h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "span"]
+    if outer_tag not in allowed_outer_tags:
+        return ""
+
+    return mark_safe(f"<{outer_tag}{outer_class}>{output}</{outer_tag}>")
+
+    return output
+
+
+@register.simple_tag(takes_context=True)
+def tag_title(
+    context: Context,
+    outer_tag: str = "",
+    *,
+    outer_class: str = "",
+    pre_text: str = "",
+    post_text: str = "",
+    separator: str = ", ",
+) -> str:
+    """Return the title of the current tag.
+
+    Expects there to be 'tags' in the context set to a list of tag slugs. In the tag views,
+    this will show the tag or tags being displayed. If there's no tags in the context,
+    returns an empty string.
+
+    Args:
+        context: The context.
+        outer_tag: The outer HTML tag for the tag title.
+        outer_class: The CSS class(es) for the outer tag.
+        pre_text: The text to prepend to the tag title.
+        post_text: The text to append to the tag title.
+        separator: The separator between tag titles.
+
+    Returns:
+        str: The title of the tag formatted with the outer tag and class if
+        provided.
+    """
+    tag_slugs: list | None = context.get("tags")
+
+    if not tag_slugs:
+        return ""
+
+    # Get tag titles from the slugs
+    tags = [Tag.objects.get_tag_by_slug(slug) for slug in tag_slugs]
+    tag_titles = [tag.title for tag in tags]
+
+    # Join multiple tags with commas
+    output = separator.join(tag_titles) if len(tag_titles) > 1 else tag_titles[0]
+
+    if pre_text:
+        output = f"{pre_text}{output}"
+
+    if post_text:
+        output = f"{output}{post_text}"
+
+    if outer_tag == "":
+        return output
+
+    allowed_outer_tags = ["h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "span"]
+    if outer_tag not in allowed_outer_tags:
+        return ""
+
+    outer_class_html = f' class="{outer_class}"' if outer_class else ""
+
+    return mark_safe(f"<{outer_tag}{outer_class_html}>{output}</{outer_tag}>")
+
+    return output
+
+
+@register.simple_tag(takes_context=True)
+def search_title(
+    context: Context,
+    outer_tag: str = "",
+    *,
+    outer_class: str = "",
+    pre_text: str = "",
+    post_text: str = "",
+) -> str:
+    """Return the title of a search query.
+
+    Expects there to be an `search_query` in the context set to a string. If there's no search_query in the context or
+    search_query is not a string, then return an empty string.
+
+
+    Args:
+        context: The context.
+        outer_tag: The outer HTML tag for the category.
+        outer_class: The CSS class(es) for the outer tag.
+        pre_text: The text to prepend to the category title.
+        post_text: The text to append to the category title.
+
+    Returns:
+        str: The title of the search query formatted with the outer tag and class if provided.
+    """
+    search_query: str | None = context.get("search_query")
+
+    if not search_query or not isinstance(search_query, str):
+        return ""
+
+    output = search_query
+
+    if pre_text:
+        output = f"{pre_text}{output}"
+
+    if post_text:
+        output = f"{output}{post_text}"
+
+    if outer_tag == "":
+        return mark_safe(output)
+
+    allowed_outer_tags = ["h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "span"]
+    if outer_tag not in allowed_outer_tags:
+        return ""
+
+    outer_class = f' class="{outer_class}"' if outer_class else ""
+
+    return mark_safe(f"<{outer_tag}{outer_class}>{output}</{outer_tag}>")
+
+
+@register.simple_tag(takes_context=True)
+def author_name(
+    context: Context,
+    outer_tag: str = "",
+    *,
+    outer_class: str = "",
+    pre_text: str = "",
+    post_text: str = "",
+) -> str:
+    """Return the name of an author.
+
+    Expects there to be an `author` in the context set to a user object. If there's no
+    author in the context or author is not a User object, then return an empty string.
+
+    Args:
+        context: The context.
+        outer_tag: The outer HTML tag for the author.
+        outer_class: The CSS class(es) for the outer tag.
+        pre_text: The text to prepend to the author name.
+        post_text: The text to append to the author name.
+
+    Returns:
+        str: The name of the author formatted with the outer tag and class if
+        provided.
+    """
+    author: User | None = context.get("author")
+
+    if not author or not isinstance(author, User):
+        return ""
+
+    output = get_author_display_name(author)
+
+    if pre_text:
+        output = f"{pre_text}{output}"
+
+    if post_text:
+        output = f"{output}{post_text}"
+
+    if outer_tag == "":
+        return mark_safe(output)
+
+    allowed_outer_tags = ["h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "span"]
+    if outer_tag not in allowed_outer_tags:
+        return ""
+
+    outer_class = f' class="{outer_class}"' if outer_class else ""
+
+    return mark_safe(f"<{outer_tag}{outer_class}>{output}</{outer_tag}>")
+
+
+@register.simple_tag(takes_context=True)
+def is_paginated(
+    context: Context,
+) -> bool:
     """Return whether the posts are paginated.
 
     Args:
@@ -943,40 +1398,6 @@ def is_paginated(context: Context) -> bool:
         return False
 
     return True
-
-
-@register.simple_tag(takes_context=True)
-def get_pagination_range(context: Context) -> range:
-    """Return the range of pagination pages.
-
-    Args:
-        context: The context.
-
-    Returns:
-        range: The pagination pages.
-    """
-    page: Page | None = context.get("posts")
-    if not page or not isinstance(page, Page):
-        return range(0)
-
-    return page.paginator.page_range
-
-
-@register.simple_tag(takes_context=True)
-def get_pagination_current_page(context: Context) -> int:
-    """Return the current page number.
-
-    Args:
-        context: The context.
-
-    Returns:
-        int: The current page number.
-    """
-    page: Page | None = context.get("posts")
-    if not page or not isinstance(page, Page):
-        return 0
-
-    return page.number
 
 
 @register.simple_tag(takes_context=True)
@@ -1040,7 +1461,8 @@ def pagination_links(
 @register.simple_tag()
 def page_link(
     page_slug: str,
-    outer: str = "div",
+    *,
+    outer_tag: str = "",
     outer_class: str = "",
     link_class: str = "",
 ) -> str:
@@ -1048,7 +1470,7 @@ def page_link(
 
     Args:
         page_slug: The slug of the page.
-        outer: The outer HTML tag for the page link.
+        outer_tag: The outer HTML tag for the page link.
         outer_class: The CSS class(es) for the outer tag.
         link_class: The CSS class(es) for the link.
 
@@ -1062,26 +1484,16 @@ def page_link(
 
     output = helpers.get_page_link(page, link_class=link_class)
 
-    if outer == "li":
-        return mark_safe(f"<li{outer_class}>{output}</li>")
+    if outer_tag == "":
+        return mark_safe(output)
 
-    if outer == "span":
-        return mark_safe(f"<span{outer_class}>{output}</span>")
+    allowed_tags = ["h1", "h2", "h3", "h4", "h5", "h6", "div", "span", "li"]
+    if outer_tag not in allowed_tags:
+        return ""
 
-    if outer == "div":
-        return mark_safe(f"<div{outer_class}>{output}</div>")
+    outer_class_html = f' class="{outer_class}"' if outer_class else ""
 
-    return mark_safe(output)
-
-
-@register.simple_tag
-def get_rss_url() -> str:
-    """Return the URL to the RSS feed.
-
-    Returns:
-        str: The URL to the RSS feed.
-    """
-    return url_utils.get_rss_url()
+    return mark_safe(f"<{outer_tag}{outer_class_html}>{output}</{outer_tag}>")
 
 
 @register.simple_tag
@@ -1112,7 +1524,10 @@ def rss_link() -> str:
 
 
 @register.tag(name="post_wrap")
-def post_wrapper_tag(parser: template.base.Parser, token: template.base.Token) -> helpers.BlogPostWrapper:
+def post_wrapper_tag(
+    parser: template.base.Parser,
+    token: template.base.Token,
+) -> helpers.BlogPostWrapper:
     """Parse the blog post wrapper tag.
 
     This is a template tag that wraps the blog post content in a configurable HTML tag with a CSS class.
@@ -1148,203 +1563,31 @@ def post_wrapper_tag(parser: template.base.Parser, token: template.base.Token) -
 
 
 @register.simple_tag()
-def dj_header() -> str:
-    """Return HTML content from plugins registered to the dj_header hook.
+def djpress_header() -> str:
+    """Return HTML content from plugins registered to the djpress_header hook.
 
     This allows plugins to inject HTML content into the <head> section of templates.
-    Plugins can register callbacks for the DJ_HEADER hook to add meta tags, styles,
+    Plugins can register callbacks for the DJPRESS_HEADER hook to add meta tags, styles,
     scripts, or other head content.
 
     Returns:
-        str: HTML content from all registered dj_header hook callbacks, marked as safe.
+        str: HTML content from all registered djpress_header hook callbacks, marked as safe.
     """
-    content = registry.run_hook(DJ_HEADER)
+    content = registry.run_hook(DJPRESS_HEADER)
     return mark_safe(content or "")
 
 
 @register.simple_tag()
-def dj_footer() -> str:
-    """Return HTML content from plugins registered to the dj_footer hook.
+def djpress_footer() -> str:
+    """Return HTML content from plugins registered to the djpress_footer hook.
 
     This allows plugins to inject HTML content near the end of HTML documents,
     typically before the closing </body> tag or within <footer> elements.
-    Plugins can register callbacks for the DJ_FOOTER hook to add analytics,
+    Plugins can register callbacks for the DJPRESS_FOOTER hook to add analytics,
     scripts, or other footer content.
 
     Returns:
-        str: HTML content from all registered dj_footer hook callbacks, marked as safe.
+        str: HTML content from all registered djpress_footer hook callbacks, marked as safe.
     """
-    content = registry.run_hook(DJ_FOOTER)
+    content = registry.run_hook(DJPRESS_FOOTER)
     return mark_safe(content or "")
-
-
-@register.simple_tag(takes_context=True)
-def search_title(
-    context: Context,
-    outer: str = "",
-    outer_class: str = "",
-    pre_text: str = "",
-    post_text: str = "",
-) -> str:
-    """Return the title of a search query.
-
-    Expects there to be an `search_query` in the context set to a string. If there's no search_query in the context or
-    search_query is not a string, then return an empty string.
-
-
-    Args:
-        context: The context.
-        outer: The outer HTML tag for the category.
-        outer_class: The CSS class(es) for the outer tag.
-        pre_text: The text to prepend to the category title.
-        post_text: The text to append to the category title.
-
-    Returns:
-        str: The title of the search query formatted with the outer tag and class if provided.
-    """
-    search_query: str | None = context.get("search_query")
-
-    if not search_query or not isinstance(search_query, str):
-        return ""
-
-    allowed_outer_tags = ["h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "span"]
-    outer_class = f' class="{outer_class}"' if outer_class else ""
-
-    output = search_query
-
-    if pre_text:
-        output = f"{pre_text}{output}"
-
-    if post_text:
-        output = f"{output}{post_text}"
-
-    if outer in allowed_outer_tags:
-        return mark_safe(f"<{outer}{outer_class}>{output}</{outer}>")
-
-    return output
-
-
-@register.simple_tag
-def search_url() -> str:
-    """Return the search URL.
-
-    Returns:
-        str: The search URL path, or empty string if search is disabled.
-
-    Example:
-        <form action="{% search_url %}" method="get">
-            <input type="search" name="q" placeholder="Search...">
-            <button type="submit">Search</button>
-        </form>
-    """
-    return url_utils.get_search_url()
-
-
-@register.simple_tag(takes_context=True)
-def search_form(  # noqa: PLR0913
-    context: Context,
-    *,
-    placeholder: str = "Search...",
-    button_text: str = "Search",
-    form_class: str = "",
-    input_class: str = "",
-    button_class: str = "",
-    show_button: bool = True,
-) -> str:
-    """Return a search form as HTML.
-
-    For a custom search form, use the {% search_url %} tag instead.
-
-    Args:
-        context: The template context - this is added automatically by Django.
-        placeholder: Placeholder text for the search input.
-        button_text: Text for the submit button.
-        form_class: CSS class(es) for the form element.
-        input_class: CSS class(es) for the input element.
-        button_class: CSS class(es) for the button element.
-        show_button: Whether to show the submit button.
-
-    Returns:
-        str: The search form HTML, or empty string if search is disabled.
-
-    Example:
-        {% search_form %}
-        {% search_form placeholder="Search posts..." button_text="Go" form_class="my-form" %}
-    """
-    url = url_utils.get_search_url()
-
-    if not url:
-        return ""
-
-    current_query = context.get("search_query", "")
-
-    # Build the HTML
-    form_class_attr = f' class="{form_class}"' if form_class else ""
-    input_class_attr = f' class="{input_class}"' if input_class else ""
-    button_class_attr = f' class="{button_class}"' if button_class else ""
-
-    html = f'<form action="{url}" method="get"{form_class_attr}>'
-    html += '<input type="search" name="q" '
-    html += f'value="{current_query}" placeholder="{placeholder}" aria-label="Search"{input_class_attr}>'
-
-    if show_button:
-        html += f'<button type="submit"{button_class_attr}>{button_text}</button>'
-
-    html += "</form>"
-
-    return mark_safe(html)
-
-
-@register.simple_tag(takes_context=True)
-def search_errors(
-    context: Context,
-    outer: str = "div",
-    outer_class: str = "search-errors",
-    error_tag: str = "p",
-    error_class: str = "error",
-) -> str:
-    """Return search validation errors as HTML.
-
-    Expects there to be a `search_errors` list in the context. If there are no errors,
-    returns an empty string.
-
-    Args:
-        context: The template context.
-        outer: The outer HTML tag to wrap all errors (div, section, etc).
-        outer_class: The CSS class(es) for the outer tag.
-        error_tag: The HTML tag for each individual error message.
-        error_class: The CSS class(es) for each error tag.
-
-    Returns:
-        str: The error messages HTML, or empty string if no errors.
-
-    Example:
-        {% search_errors %}
-        {% search_errors outer="section" outer_class="alert alert-danger" %}
-    """
-    errors: list | None = context.get("search_errors")
-
-    if not errors or not isinstance(errors, list):
-        return ""
-
-    allowed_outer_tags = ["div", "section", "aside", "article"]
-    allowed_error_tags = ["p", "span", "div", "li"]
-
-    if outer not in allowed_outer_tags:
-        outer = "div"
-
-    if error_tag not in allowed_error_tags:
-        error_tag = "p"
-
-    outer_class_attr = f' class="{outer_class}"' if outer_class else ""
-    error_class_attr = f' class="{error_class}"' if error_class else ""
-
-    html = f"<{outer}{outer_class_attr}>"
-
-    for error in errors:
-        if isinstance(error, str):
-            html += f"<{error_tag}{error_class_attr}>{error}</{error_tag}>"
-
-    html += f"</{outer}>"
-
-    return mark_safe(html)

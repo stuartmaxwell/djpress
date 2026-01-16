@@ -97,7 +97,7 @@ def _validate_hook_callback(hook: _Hook, callback: Callable[..., Any]) -> tuple[
 # Define hooks
 PRE_RENDER_CONTENT = _Hook("pre_render_content", ContentTransformer)
 POST_RENDER_CONTENT = _Hook("post_render_content", ContentTransformer)
-DJ_HEADER = _Hook("dj_header", SimpleContentProvider)
-DJ_FOOTER = _Hook("dj_footer", SimpleContentProvider)
+DJPRESS_HEADER = _Hook("djpress_header", SimpleContentProvider)
+DJPRESS_FOOTER = _Hook("djpress_footer", SimpleContentProvider)
 POST_SAVE_POST = _Hook("post_save_post", PostObjectProvider)
 SEARCH_CONTENT = _Hook("search_content", SearchProvider)

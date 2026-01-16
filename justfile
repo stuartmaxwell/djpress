@@ -2,11 +2,8 @@
 @default:
     @just --list
 
-# Set the Python version
-python_version := "3.13"
-
 # Set the uv run command
-uv := "uv run --python 3.13 --extra test"
+uv := "uv run --extra test"
 
 #Set the uv command to run a tool
 uv-tool := "uv tool run"
@@ -85,11 +82,11 @@ BUILDDIR      := "docs/_build"
 
 # Sync the package
 @sync:
-    uv sync --python {{python_version}} --all-extras
+    uv sync --all-extras
 
 # Sync the package
 @sync-up:
-    uv sync --python {{python_version}} --all-extras --upgrade
+    uv sync --all-extras --upgrade
 
 # Lock the package version
 @lock:

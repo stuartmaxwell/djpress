@@ -12,7 +12,13 @@ from djpress.url_converters import SlugPathConverter
 from djpress.models import Category, Media, Post, Tag
 from djpress.plugins import DJPressPlugin
 from djpress.plugins.plugin_registry import PluginRegistry
-from djpress.plugins.hook_registry import POST_RENDER_CONTENT, PRE_RENDER_CONTENT, DJ_HEADER, DJ_FOOTER, POST_SAVE_POST
+from djpress.plugins.hook_registry import (
+    POST_RENDER_CONTENT,
+    PRE_RENDER_CONTENT,
+    DJPRESS_HEADER,
+    DJPRESS_FOOTER,
+    POST_SAVE_POST,
+)
 
 from example.config import settings_testing
 
@@ -278,8 +284,8 @@ def content_provider_plugin():
 
         name = "content_provider"
         hooks = [
-            (DJ_HEADER, "add_header"),
-            (DJ_FOOTER, "add_suffix"),
+            (DJPRESS_HEADER, "add_header"),
+            (DJPRESS_FOOTER, "add_suffix"),
         ]
 
         def add_header(self) -> str:

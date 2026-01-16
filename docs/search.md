@@ -46,7 +46,7 @@ The simplest way to add search is using the `{% search_form %}` tag:
 {% load djpress_tags %}
 
 <header>
-  <h1>{% site_title_link %}</h1>
+  {% site_title "h1" %}
   {% search_form %}
 </header>
 ```

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "djpress"
-version = "0.22.3"
+version = "0.23.0b0"
 description = "A blog application for Django sites, inspired by classic WordPress."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -84,6 +84,7 @@ ignore = [
   "S308",   # suspicious-mark-safe-usage
   "RUF012", # Checks for mutable default values in class attributes. https://github.com/astral-sh/ruff/issues/5243
   "COM812", # The following rule may cause conflicts when used with the formatter: `COM812`
+  "PLR0913", # Too many arguments in function definition
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -111,7 +112,7 @@ omit = ["*/tests/*", "*/migrations/*"]
 exclude_lines = ["if TYPE_CHECKING:", "# pragma: no cover"]
 
 [tool.bumpver]
-current_version = "0.22.3"
+current_version = "0.23.0b0"
 version_pattern = "MAJOR.MINOR.PATCH[PYTAGNUM]"
 commit_message = "👍 bump version {old_version} -> {new_version}"
 commit = true
