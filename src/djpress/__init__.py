@@ -1,3 +1,3 @@
 """djpress module."""
 
-__version__ = "0.22.4b0"
+__version__ = "0.23.0b0"
