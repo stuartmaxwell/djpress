@@ -8,7 +8,6 @@ from djpress.templatetags.helpers import (
     categories_html,
     category_link,
     post_read_more_link,
-    parse_post_wrapper_params,
     tags_html,
 )
 
@@ -415,35 +414,3 @@ def test_post_read_more_link(test_post1, test_long_post1):
 
     # Test case: a post with no truncation returns an empty string
     assert post_read_more_link(test_post1) == ""
-
-
-def test_parse_post_wrapper_params():
-    # Test case 1
-    params = ['tag="div"', 'class="blog-post"']
-    expected_output = ("div", "blog-post")
-    assert parse_post_wrapper_params(params) == expected_output
-
-    # Test case 2
-    params = ['class="blog-post"']
-    expected_output = ("", "blog-post")
-    assert parse_post_wrapper_params(params) == expected_output
-
-    # Test case 3
-    params = ['"div"', '"blog-post"']
-    expected_output = ("div", "blog-post")
-    assert parse_post_wrapper_params(params) == expected_output
-
-    # Test case 4
-    params = ['"blog-post"']
-    expected_output = ("blog-post", "")
-    assert parse_post_wrapper_params(params) == expected_output
-
-    # Test case 5
-    params = ['""', '"blog-post"']
-    expected_output = ("", "blog-post")
-    assert parse_post_wrapper_params(params) == expected_output
-
-    # Test case 6
-    params = ['tag="div"', 'class="blog-post"', 'extra="extra"']
-    expected_output = ("div", "blog-post")
-    assert parse_post_wrapper_params(params) == expected_output
