@@ -1,8 +1,6 @@
 """Helper functions for the template tags."""
 
-from django import template
 from django.db import models
-from django.utils.safestring import mark_safe
 
 from djpress.conf import settings as djpress_settings
 from djpress.models import Category, Post, Tag
@@ -263,69 +261,3 @@ def get_site_pages_list(
         output += "</li>"
 
     return output
-
-
-class BlogPostWrapper(template.Node):
-    """Wraps the blog post content.
-
-    This is a template tag that wraps the blog post content in a configurable HTML tag with a CSS class.
-
-    Args:
-        nodelist: The content to wrap.
-        tag: The HTML tag to wrap the content in.
-        css_class: The CSS class(es) for the tag.
-
-    Returns:
-        str: The wrapped content.
-    """
-
-    def __init__(self, nodelist: template.NodeList, tag: str = "", css_class: str = "") -> None:
-        """Initialize the BlogPostWrapper."""
-        self.nodelist = nodelist
-        self.tag = "article" if tag == "" else tag
-        self.css_class = css_class
-
-    def render(self, context: template.Context) -> str:
-        """Render the blog post content."""
-        content = self.nodelist.render(context)
-
-        # Just return the content if the tag isn't allowed
-        if self.tag not in ["div", "span", "section", "article"]:
-            return mark_safe(content)
-
-        return mark_safe(f"<{self.tag}{self.css_class}>{content}</{self.tag}>")
-
-
-def parse_post_wrapper_params(params: list) -> tuple[str, str]:
-    """Parse the parameters for the template tag.
-
-    Args:
-        params: The parameters for the template tag.
-
-    Returns:
-        tuple: The tag and CSS class.
-    """
-    tag = ""
-    css_class = ""
-
-    for num, param in enumerate(params):
-        # Support keyword arguments
-        if "=" in param:
-            name, value = param.split("=", 1)
-            value = value.strip("\"'")
-            if name == "tag":
-                tag = value
-            elif name == "class":
-                css_class = value
-            else:
-                # Ignore any other keyword arguments
-                pass
-        else:
-            # Support positional arguments too
-            value = param.strip("\"'")
-            if num == 0:
-                tag = value
-            if num == 1:
-                css_class = value
-
-    return tag, css_class
