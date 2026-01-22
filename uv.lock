@@ -472,7 +472,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "cogapp", marker = "extra == 'docs'", specifier = ">=3.4.1" },
-    { name = "django", specifier = ">=4.2.0,<6.1" },
+    { name = "django", specifier = ">=5.2.0,<6.1" },
     { name = "django-debug-toolbar", marker = "extra == 'test'", specifier = ">=4.4.0" },
     { name = "djpress-example-plugin", marker = "extra == 'test'", editable = "djpress-example-plugin" },
     { name = "furo", marker = "extra == 'docs'", specifier = ">=2024.8.6" },
