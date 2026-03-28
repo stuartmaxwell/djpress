@@ -338,7 +338,7 @@ def site_title(
     link_html = f'<a href="{reverse("djpress:index")}"{link_class_html}>{site_title}</a>' if link else site_title
 
     if outer_tag == "":
-        return link_html
+        return mark_safe(link_html)
 
     # If outer_tag is not one of the allowed tags, return an empty string.
     # TODO: move these tags to a constant?
