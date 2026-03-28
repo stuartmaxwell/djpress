@@ -20,7 +20,7 @@ Search can be configured using these settings:
 |---------------------------|------|------------|----------------------------------------------|
 | `SEARCH_ENABLED`          | bool | `True`     | Enable/disable search functionality.         |
 | `SEARCH_PREFIX`           | str  | `"search"` | Path for the search page.                    |
-| `SEARCH_QUERY_MIN_LENGTH` | int  | `3`        | Minimum character length for search queries. |
+| `SEARCH_QUERY_MIN_LENGTH` | int  | `2`        | Minimum character length for search queries. |
 | `SEARCH_QUERY_MAX_LENGTH` | int  | `100`      | Maximum character length for search queries. |
 
 ### Example Configuration
@@ -88,7 +88,7 @@ Create a custom search results template by adding `search.html` to your theme:
   <h1>Search Results</h1>
 
   {# Display the search query #}
-  {% search_title outer="h2" pre_text="Results for '" post_text="'" %}
+  {% search_title outer_tag="h2" pre_text="Results for '" post_text="'" %}
 
   {# Display any validation errors #}
   {% search_errors %}
