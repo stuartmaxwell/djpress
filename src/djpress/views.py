@@ -48,11 +48,6 @@ def dispatcher(request: HttpRequest, path: str) -> HttpResponse:  # noqa: C901, 
         if post:
             return single_post(request, post)
 
-        # If it doesn't look like an archive post, then it's a 404 - otherwise continue to the next step
-        if not archives_match:
-            msg = "Post not found"
-            raise Http404(msg)
-
     # 3. Check if it matches the archives regex
     if archives_match:
         archives_groups = archives_match.groupdict()

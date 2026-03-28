@@ -439,6 +439,22 @@ def test_success_run_content_provider(registry, content_provider_plugin):
     assert result == "header"
 
 
+def test_multiple_content_providers(registry):
+    """Test multiple content providers are concatenated."""
+
+    def provider1():
+        return "one"
+
+    def provider2():
+        return "two"
+
+    registry.register_hook(DJPRESS_HEADER, provider1)
+    registry.register_hook(DJPRESS_HEADER, provider2)
+
+    result = registry.run_hook(DJPRESS_HEADER)
+    assert result == "onetwo"
+
+
 def test_error_run_content_provider(registry, caplog):
     """Test running a failed content provider hook.
 
@@ -531,7 +547,7 @@ def test_success_run_search_provider(registry, test_post1, test_post2):
 def test_error_run_search_provider(registry, caplog):
     """Test running a failed search provider hook.
 
-    This should return None.
+    This should return the previous value.
     """
     caplog.set_level(logging.WARNING)
 
@@ -541,7 +557,7 @@ def test_error_run_search_provider(registry, caplog):
     registry.register_hook(SEARCH_CONTENT, callback)
 
     result = registry.run_hook(SEARCH_CONTENT, "test")
-    assert result is None
+    assert result == "test"
     assert "Error running callback" in caplog.text
     assert "Callback skipped" in caplog.text
     assert "This is a test error" in caplog.text
@@ -551,7 +567,7 @@ def test_error_run_search_provider(registry, caplog):
 def test_search_provider_returns_non_queryset(registry, caplog):
     """Test search provider that returns non-QuerySet.
 
-    This should return None.
+    This should return the previous value.
     """
     caplog.set_level(logging.DEBUG)
 
@@ -561,5 +577,26 @@ def test_search_provider_returns_non_queryset(registry, caplog):
     registry.register_hook(SEARCH_CONTENT, callback)
 
     result = registry.run_hook(SEARCH_CONTENT, "test")
-    assert result is None
+    assert result == "test"
     assert "did not return a QuerySet" in caplog.text
+
+
+@pytest.mark.django_db
+def test_search_provider_returns_queryset(registry, caplog, test_post1):
+    """If the value is a queryset, we just return it."""
+    caplog.set_level(logging.DEBUG)
+
+    previous_result = Post.objects.filter(title__icontains="test")
+
+    def callback1(query: str):
+        return Post.objects.filter(title__icontains=query)
+
+    def callback2(query: str):
+        return Post.objects.filter(title__icontains=query)
+
+    registry.register_hook(SEARCH_CONTENT, callback1)
+    registry.register_hook(SEARCH_CONTENT, callback2)
+
+    result = registry.run_hook(SEARCH_CONTENT, "test")
+    assert result.count() == 1
+    assert "not attempting to search again" in caplog.text
