@@ -238,7 +238,7 @@ DJ Press provides these context variables to your templates:
 | `posts`          | Paginator Page      | Index views            | Collection of posts for the current page |
 | `category`       | Category object     | Category views         | The current category                     |
 | `author`         | User object         | Author views           | The current author                       |
-| `tags`           | List of Tag objects | Tag views              | The current tag(s)                       |
+| `tags`           | List of strings     | Tag views              | The current tag slug(s)                  |
 
 ## Conditional Template Logic
 
