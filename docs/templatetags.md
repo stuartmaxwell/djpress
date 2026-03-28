@@ -290,7 +290,7 @@ Returns the author display name from the current context.
 
 Returns the date of a post from the current context.
 
-**Returns:** string - the date of the post in the format "Mon DD, YYYY". If there's no `post` in the context and empty
+**Returns:** string - the date of the post in the format "Jan 1, 2026". If there's no `post` in the context and empty
 string is returned.
 
 #### get_post_date Example
@@ -788,10 +788,11 @@ Get all site pages as a single-level list, wrapped in HTML that can be configure
 
 #### site_pages Parameters
 
-- `outer` (str): the outer tags that this should be wrapped in. Accepted options are "ul", "div", "span".
-Optional, default is: "ul".
+- `outer_tag` (str): the outer tags that this should be wrapped in. Accepted options are "div", "span".
+Optional, default is: "div".
 - `outer_class` (str): the CSS classes to apply to the outer tag. Optional, default: "".
 - `link_class` (str): the CSS classes to apply to the link tag. Optional, default: "".
+- `separator` (str): the separator to use between the pages. Optional, default: ", ".
 
 #### site_pages Examples
 
@@ -801,29 +802,10 @@ Just the tag, with no arguments.
 {% site_pages %}
 ```
 
-This will output the same HTML from the `get_pages` example.
+This will output a comma-separated list of pages, wrapped in a `div` tag.
 
 ```html
-<ul>
-  <li>
-    <a href="/about/">About me</a>
-  </li>
-  <li>
-    <a href="/contact/">Contact me</a>
-  </li>
-</ul>
-```
-
-Wrapped in a `div` tag with classes added, using positional arguments.
-
-```django
-{% site_pages "div" "class1" %}
-```
-
-Outputs a comma-separated list of pages, wrapped in a `div` tag.
-
-```html
-<div class="class1">
+<div class="">
   <a href="/about/">About me</a>,
   <a href="/contact/">Contact me</a>
 </div>
@@ -832,10 +814,10 @@ Outputs a comma-separated list of pages, wrapped in a `div` tag.
 Wrapped in a `span` tag with classes added, using named arguments.
 
 ```django
-{% site_pages outer="span" outer_class="class1" link_class="class2" %}
+{% site_pages outer_tag="span" outer_class="class1" link_class="class2" %}
 ```
 
-Outputs the same comma-separated list of pages, but wrapped in a `span` tag.
+Outputs the same comma-separated list of pages, but wrapped in a `span` tag and with extra CSS classes.
 
 ```html
 <span class="class1">
@@ -1559,7 +1541,7 @@ Returns a safely-marked HTML link to a specified page. If the page doesn't exist
 #### page_link Parameters
 
 - `page_slug` (str): Slug of the page to link to. Required.
-- `outer_tag` (str): HTML tag to wrap the link in. Optional, default: "span".
+- `outer_tag` (str): HTML tag to wrap the link in. Optional, default: "".
 - `outer_class` (str): CSS class(es) for the outer tag. Optional.
 - `link_class` (str): CSS class(es) for the link element. Optional.
 
