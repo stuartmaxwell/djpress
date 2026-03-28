@@ -56,8 +56,7 @@ Several settings affect how categories behave in your blog:
 ```python
 DJPRESS_SETTINGS = {
     "CATEGORY_ENABLED": True,          # Enable/disable category functionality
-    "CATEGORY_IN_URL": True,           # Include category in post URLs
-    "CATEGORY_BASE": "category",       # Base URL path for categories
+    "CATEGORY_PREFIX": "category",     # URL path prefix for categories
     "CACHE_CATEGORIES": True,          # Enable category caching
 }
 ```
