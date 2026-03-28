@@ -35,7 +35,6 @@ DJ Press supports the following media types:
 - `alt_text`: Alternative text for images (for accessibility)
 - `description`: A description of the media file
 - `uploaded_by`: The user who uploaded the file
-- `date`: The upload date and time
 - `uploaded_at`: The upload date and time
 - `updated_at`: The last modification date and time
 
