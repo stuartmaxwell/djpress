@@ -1132,7 +1132,7 @@ def search_errors(
 
     Example:
         {% search_errors %}
-        {% search_errors outer="section" outer_class="alert alert-danger" %}
+        {% search_errors outer_tag="section" outer_class="alert alert-danger" %}
     """
     errors: list | None = context.get("search_errors")
 

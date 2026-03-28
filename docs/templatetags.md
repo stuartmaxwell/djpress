@@ -1338,7 +1338,7 @@ This will output:
 Customized error display:
 
 ```django
-{% search_errors outer="section" outer_class="alert alert-danger" error_tag="div" error_class="error-message" %}
+{% search_errors outer_tag="section" outer_class="alert alert-danger" error_tag="div" error_class="error-message" %}
 ```
 
 This will output:
