@@ -36,16 +36,17 @@ Settings are grouped by functionality:
 
 #### Content Display
 
-| Setting                        | Type | Default              | Description                                        |
-|--------------------------------|------|----------------------|----------------------------------------------------|
-| `SITE_TITLE`                   | str  | `"My DJ Press Blog"` | Website title used in templates.                   |
-| `SITE_DESCRIPTION`             | str  | `""`                 | Website description for metadata.                  |
-| `RECENT_PUBLISHED_POSTS_COUNT` | int  | `20`                 | Number of posts displayed per page.                |
-| `POST_READ_MORE_TEXT`          | str  | `"Read more..."`     | Text for "Read more" links.                        |
-| `TRUNCATE_TAG`                 | str  | `"<!--more-->"`      | HTML comment that marks where to truncate content. |
-| `MICROFORMATS_ENABLED`         | bool | `True`               | Enable/disable microformats in HTML.               |
-| `SEARCH_QUERY_MIN_LENGTH`      | int  | `2`                  | Minimum character length for search queries.       |
-| `SEARCH_QUERY_MAX_LENGTH`      | int  | `100`                | Maximum character length for search queries.       |
+| Setting                        | Type | Default              | Description                                         |
+|--------------------------------|------|----------------------|-----------------------------------------------------|
+| `SITE_TITLE`                   | str  | `"My DJ Press Blog"` | Website title used in templates.                    |
+| `SITE_DESCRIPTION`             | str  | `""`                 | Website description for metadata.                   |
+| `RECENT_PUBLISHED_POSTS_COUNT` | int  | `20`                 | Number of posts displayed per page.                 |
+| `POST_READ_MORE_TEXT`          | str  | `"Read more..."`     | Text for "Read more" links.                         |
+| `TRUNCATE_TAG`                 | str  | `"<!--more-->"`      | HTML comment that marks where to truncate content.  |
+| `MICROFORMATS_ENABLED`         | bool | `True`               | Enable/disable microformats in HTML.                |
+| `SEARCH_QUERY_MIN_LENGTH`      | int  | `2`                  | Minimum character length for search queries.        |
+| `SEARCH_QUERY_MAX_LENGTH`      | int  | `100`                | Maximum character length for search queries.        |
+| `MAX_TAGS_PER_QUERY`           | int  | `5`                  | Maximum number of tags that can be queried at once. |
 
 #### Media Settings
 
@@ -75,6 +76,13 @@ Settings are grouped by functionality:
 |-------------------|------|---------|----------------------------------------|
 | `PLUGINS`         | list | `[]`    | List of plugin module paths to enable. |
 | `PLUGIN_SETTINGS` | dict | `{}`    | Configuration options for plugins.     |
+
+#### Theme Settings
+
+| Setting          | Type | Default   | Description                                                                     |
+|------------------|------|-----------|---------------------------------------------------------------------------------|
+| `THEME`          | str  | `default` | Which theme to use. See the [themes](themes.md) page for more details.          |
+| `THEME_SETTINGS` | dict | `{}`      | Optional theme settings. Refer to the specific theme documentation for details. |
 
 ### Example Configurations
 
