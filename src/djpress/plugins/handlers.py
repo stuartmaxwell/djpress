@@ -101,6 +101,7 @@ def _run_search_provider(
     """
     # If we already have a QuerySet from a previous plugin, just return it.
     if isinstance(value, models.QuerySet):
+        logger.debug(f"Callback '{callback}' received a QuerySet, not attempting to search again.")
         return value
 
     try:

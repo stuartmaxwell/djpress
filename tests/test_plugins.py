@@ -579,3 +579,24 @@ def test_search_provider_returns_non_queryset(registry, caplog):
     result = registry.run_hook(SEARCH_CONTENT, "test")
     assert result == "test"
     assert "did not return a QuerySet" in caplog.text
+
+
+@pytest.mark.django_db
+def test_search_provider_returns_queryset(registry, caplog, test_post1):
+    """If the value is a queryset, we just return it."""
+    caplog.set_level(logging.DEBUG)
+
+    previous_result = Post.objects.filter(title__icontains="test")
+
+    def callback1(query: str):
+        return Post.objects.filter(title__icontains=query)
+
+    def callback2(query: str):
+        return Post.objects.filter(title__icontains=query)
+
+    registry.register_hook(SEARCH_CONTENT, callback1)
+    registry.register_hook(SEARCH_CONTENT, callback2)
+
+    result = registry.run_hook(SEARCH_CONTENT, "test")
+    assert result.count() == 1
+    assert "not attempting to search again" in caplog.text
