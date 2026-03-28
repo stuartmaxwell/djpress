@@ -63,10 +63,10 @@ For more control over the appearance, customize the search form parameters:
 
 ### Building Your Own Form
 
-If you need complete control over the HTML structure, use the `{% search_url %}` tag:
+If you need complete control over the HTML structure, use the `{% get_search_url %}` tag:
 
 ```django
-<form action="{% search_url %}" method="get" class="my-custom-form">
+<form action="{% get_search_url %}" method="get" class="my-custom-form">
   <div class="search-wrapper">
     <input type="search" name="q" value="{{ search_query }}" placeholder="What are you looking for?">
     <button type="submit">
