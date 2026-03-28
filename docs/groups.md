@@ -24,7 +24,7 @@ The four groups are:
 
 | Permission            | Admin | Editor | Author | Contributor |
 | --------------------- | ----- | ------ | ------ | ----------- |
-| Publish own posts     | ✅    | ✅     | ✅     | ✅          |
+| Publish own posts     | ✅    | ✅     | ✅     | ❌          |
 | Publish other's posts | ✅    | ✅     | ❌     | ❌          |
 | Create draft posts    | ✅    | ✅     | ✅     | ✅          |
 | Edit own posts        | ✅    | ✅     | ✅     | ✅          |
