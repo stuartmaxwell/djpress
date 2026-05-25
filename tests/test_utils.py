@@ -52,7 +52,31 @@ def test_get_author_display_name(test_user):
         assert display_name == first_name
 
     if not first_name and last_name:
+        assert display_name == last_name
+
+    if not first_name and not last_name:
         assert display_name == user_name
+
+
+@pytest.mark.django_db
+def test_get_author_display_name_custom_usermodel(test_user, monkeypatch):
+    """Test the get_author_display_name function with a user model that doesn't implement a `get_full_name` method."""
+    monkeypatch.setattr(test_user, "get_full_name", None)
+
+    display_name = get_author_display_name(test_user)
+    first_name = test_user.first_name
+    last_name = test_user.last_name
+    user_name = test_user.username
+
+    # Assert that the display name is the first name and last name separated by a space
+    if first_name and last_name:
+        assert display_name == f"{first_name} {last_name}"
+
+    if first_name and not last_name:
+        assert display_name == first_name
+
+    if not first_name and last_name:
+        assert display_name == last_name
 
     if not first_name and not last_name:
         assert display_name == user_name

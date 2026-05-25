@@ -6,8 +6,9 @@ that returns a single post.
 
 import logging
 import re
+from typing import TYPE_CHECKING
 
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.core.paginator import Paginator
 from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import render
@@ -19,7 +20,12 @@ from djpress.models import Category, Post
 from djpress.url_utils import get_path_regex
 from djpress.utils import get_template_name, validate_date_parts
 
+if TYPE_CHECKING:
+    from django.contrib.auth.models import AbstractBaseUser
+
 logger = logging.getLogger(__name__)
+
+User = get_user_model()
 
 
 def dispatcher(request: HttpRequest, path: str) -> HttpResponse:  # noqa: C901, PLR0911, PLR0912
@@ -297,7 +303,8 @@ def author_posts(request: HttpRequest, author: str) -> HttpResponse:
         raise ValueError(msg)
 
     try:
-        user: User = User.objects.get(username=author)
+        username_field = getattr(User, "USERNAME_FIELD", "username")
+        user: AbstractBaseUser = User.objects.get(**{username_field: author})
     except User.DoesNotExist as exc:
         msg = "Author not found"
         raise Http404(msg) from exc

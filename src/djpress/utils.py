@@ -2,7 +2,7 @@
 
 from collections.abc import Callable
 
-from django.contrib.auth.models import User
+from django.contrib.auth.models import AbstractBaseUser
 from django.template.loader import TemplateDoesNotExist, select_template
 from django.utils import timezone
 from django.utils.module_loading import import_string
@@ -30,11 +30,17 @@ def get_markdown_renderer() -> Callable:
         raise ImproperlyConfigured(msg) from exc
 
 
-def get_author_display_name(user: User) -> str:
+def get_author_display_name(user: AbstractBaseUser) -> str:
     """Return the author display name.
 
     Tries to display the first name and last name if available, otherwise falls back to
     the username.
+
+    Order of preference:
+
+    1. If the User model implements a `get_full_name` method, use it
+    2. If the User model implements a `first_name` field and a `last_name` field, use them
+    3. Fall back to the `get_username()` method that is available on the `AbstractBaseUser` model
 
     Args:
         user: The user.
@@ -42,13 +48,22 @@ def get_author_display_name(user: User) -> str:
     Returns:
         str: The author display name.
     """
-    if user.first_name and user.last_name:
-        return f"{user.first_name} {user.last_name}"
+    get_full_name = getattr(user, "get_full_name", None)
+    if get_full_name and callable(get_full_name):
+        name = get_full_name().strip()
+        if name:
+            return name
 
-    if user.first_name:
-        return user.first_name
+    first_name = getattr(user, "first_name", None)
+    last_name = getattr(user, "last_name", None)
+    if first_name and last_name:
+        return f"{first_name} {last_name}".strip()
+    if first_name:
+        return first_name
+    if last_name:
+        return last_name
 
-    return user.username
+    return user.get_username()
 
 
 def validate_date_parts(year: str | None, month: str | None, day: str | None) -> dict[str, int]:

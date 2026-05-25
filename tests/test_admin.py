@@ -7,10 +7,9 @@ import pytest
 from django.contrib.admin import site
 from django.utils import timezone
 from datetime import timedelta
-
+from django.contrib.auth.models import User
 from djpress.admin import PostAdmin
 from djpress.models import Post
-from djpress.url_utils import User
 from tests.conftest import superuser
 from djpress.admin import MediaAdmin
 from djpress.models.media import Media

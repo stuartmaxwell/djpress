@@ -3,7 +3,7 @@
 import re
 
 from django.conf import settings as django_settings
-from django.contrib.auth.models import User
+from django.contrib.auth.models import AbstractBaseUser
 
 from djpress.conf import settings as djpress_settings
 from djpress.models.post import Category, Post, Tag
@@ -232,12 +232,12 @@ def get_path_regex(path_match: str) -> str:
     return f"^{regex}$"
 
 
-def get_author_url(user: User) -> str:
+def get_author_url(user: AbstractBaseUser) -> str:
     """Return the URL for the author's page."""
     url = (
-        f"/{djpress_settings.AUTHOR_PREFIX}/{user.username}"
+        f"/{djpress_settings.AUTHOR_PREFIX}/{user.get_username()}"
         if djpress_settings.AUTHOR_PREFIX
-        else f"/author/{user.username}"
+        else f"/author/{user.get_username()}"
     )
 
     if django_settings.APPEND_SLASH:
