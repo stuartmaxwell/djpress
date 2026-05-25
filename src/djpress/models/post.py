@@ -5,7 +5,7 @@ import logging
 from collections.abc import Iterable
 from typing import TYPE_CHECKING, TypedDict
 
-from django.contrib.auth.models import User
+from django.conf import settings
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -21,6 +21,9 @@ from djpress.models.tag import Tag
 from djpress.plugins import registry
 from djpress.plugins.hook_registry import POST_RENDER_CONTENT, POST_SAVE_POST, PRE_RENDER_CONTENT, SEARCH_CONTENT
 from djpress.utils import get_markdown_renderer
+
+if TYPE_CHECKING:
+    from django.contrib.auth.models import AbstractBaseUser
 
 logger = logging.getLogger(__name__)
 
@@ -467,7 +470,7 @@ class PostsManager(models.Manager):
 
     def get_published_posts_by_author(
         self,
-        author: User,
+        author: "AbstractBaseUser",
     ) -> models.QuerySet:
         """Return all published posts for a given author.
 
@@ -567,7 +570,7 @@ class Post(models.Model):
         ),
     )
     content = models.TextField()
-    author = models.ForeignKey(User, on_delete=models.CASCADE)
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     published_at = models.DateTimeField(default=timezone.now)
     _date = models.DateField(
         blank=True,

@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from django.contrib.auth.models import User
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
@@ -89,7 +89,7 @@ class Media(models.Model):
     )
     description = models.TextField("Description", blank=True, help_text="A description of the media file")
     uploaded_by = models.ForeignKey(
-        User,
+        settings.AUTH_USER_MODEL,
         verbose_name="Uploaded By",
         on_delete=models.SET_NULL,
         null=True,
