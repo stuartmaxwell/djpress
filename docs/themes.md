@@ -79,7 +79,7 @@ Creating a custom theme involves these steps:
    <head>
        <meta charset="UTF-8">
        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-       <title>{% page_title post_text="| " %}{% site_title %}</title>
+       <title>{% page_title post_text=" | " %}{% site_title %}</title>
        <link rel="stylesheet" href="{% static 'djpress/mytheme/css/style.css' %}">
        {% rss_link %}
    </head>
@@ -92,7 +92,7 @@ Creating a custom theme involves these steps:
        <main>
            {% if post %}
                {% post_wrap %}
-                   <h1>{% get_post_title %}</h1>
+                   {% post_title outer_tag="h1" %}
                    <div class="meta">
                        By {% post_author %} | {% post_date %}
                    </div>
@@ -108,7 +108,7 @@ Creating a custom theme involves these steps:
                <h1>Latest Posts</h1>
                {% for post in posts %}
                    {% post_wrap %}
-                       <h2>{% post_title %}</h2>
+                       {% post_title outer_tag="h2" %}
                        <div class="meta">
                            By {% post_author %} | {% post_date %}
                        </div>
