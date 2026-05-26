@@ -267,7 +267,7 @@ def test_get_post_category_slugs(settings, test_post1, category2):
 
 @pytest.mark.django_db
 def test_get_post_categories(test_post1, category1, category2):
-    """Test the `get_post_categories` tempalte tag.
+    """Test the `get_post_categories` template tag.
 
     test_post1 has a single category called `Test Category1`.
     """
