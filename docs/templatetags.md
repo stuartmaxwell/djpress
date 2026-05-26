@@ -320,6 +320,9 @@ string is returned.
 Returns a queryset of the categories that the post belongs to. Useful for building a list of categories that a post
 belongs to.
 
+**Note**: The returned text is not escaped and is susceptible to an XSS risk if untrusted users are
+creating/updating post categories. Use Django's `escape` filter as per the example below.
+
 **Returns:** queryset - the post's categories.
 
 **Related Topics:** Also see `post_categories` for a template tag that returns safely marked HTML that can be used to
@@ -331,7 +334,7 @@ create a list of categories.
 {% get_post_categories as post_categories %}
 <ul>
 {% for category in post_categories %}
-  <li><a href="{{ category.url }}">{{ category.name }}</a></li>
+  <li><a href="{{ category.url }}">{{ category.title|escape }}</a></li>
 {% endfor %}
 </ul>
 ```
