@@ -383,6 +383,21 @@ def test_post_title_with_prefix(settings, test_post1):
 
 
 @pytest.mark.django_db
+def test_post_title_xss(test_post1):
+    """Test post_title is escaped correctly."""
+    bad_string = '<script>alert("evil")</script>'
+    escaped_string = "&lt;script&gt;alert(&quot;evil&quot;)&lt;/script&gt;"
+
+    test_post1.title = bad_string
+    test_post1.save()
+
+    context = Context({"posts": [test_post1], "post": test_post1})
+
+    assert bad_string not in djpress_tags.post_title(context)
+    assert escaped_string in djpress_tags.post_title(context)
+
+
+@pytest.mark.django_db
 def test_get_post_author(test_post1):
     context = Context({"post": test_post1})
 

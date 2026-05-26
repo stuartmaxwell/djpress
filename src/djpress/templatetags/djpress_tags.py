@@ -130,6 +130,8 @@ def get_post_title(context: Context, *, include_empty: bool = False) -> str:
 
     This is just the title of the post from the current context with no further HTML.
 
+    This is not escaped and may be susceptiple to XSS if untrusted users are creating/editing post titles.
+
     If `include_empty` is set to `True`, then the title will be returned from the `post_title` property of the Post.
 
     Args:
@@ -740,7 +742,8 @@ def post_title(
         return ""
 
     # Get the title of the post
-    output = post.post_title if include_empty else post.title
+    post_title = post.post_title if include_empty else post.title
+    output = escape(post_title)
 
     # If there's a posts in the context, or if the link is forced, then we need to display the link.
     if posts or force_link:
