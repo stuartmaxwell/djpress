@@ -107,6 +107,9 @@ Another example for how this can be used, is to leave out the default value, and
 
 Returns all published posts as a queryset. Use this tag to access all published blog posts in your templates.
 
+**Note**: The returned text is not escaped and is susceptible to an XSS risk if untrusted users are
+creating/updating posts. Use Django's `escape` filter as per the example below.
+
 **Returns:** queryset of all published posts.
 
 **Related Topics:** See [url_structure.md](url_structure.md) for URL patterns and [themes.md](themes.md) for how to
@@ -121,7 +124,7 @@ This is useful for building an index page with all posts:
 
 {% for post in all_posts %}
 <ul>
-  <li>{{ post.title }}</li>
+  <li>{{ post.title|escape }}</li>
 </ul>
 {% endfor %}
 ```
@@ -130,6 +133,9 @@ This is useful for building an index page with all posts:
 
 Returns the most recent published posts as a queryset. Tries to be efficient by checking if there's a `posts` object in
 the context that can be used.
+
+**Note**: The returned text is not escaped and is susceptible to an XSS risk if untrusted users are
+creating/updating posts. Use Django's `escape` filter as per the example below.
 
 **Returns:** queryset of recent published posts.
 
@@ -141,7 +147,7 @@ the context that can be used.
 <h3>Recent Posts</h3>
 <ul>
   {% for post in recent_posts %}
-  <li><a href="{{ post.url }}">{{ post.title }}</a></li>
+  <li><a href="{{ post.url }}">{{ post.title|escape }}</a></li>
   {% endfor %}
 </ul>
 ```
@@ -189,6 +195,9 @@ single template tag.
 Get all categories as an iterable queryset. This can be useful if you want to build your own menu or list of categories
 on the blog.
 
+**Note**: The returned text is not escaped and is susceptible to an XSS risk if untrusted users are
+creating/updating categories. Use Django's `escape` filter as per the example below.
+
 **Returns:** queryset of categories that are sorted by the `menu_order` field, and then by the `title` field.
 
 **Related Topics:** Also see `site_categories` for a tag that produces similar output to the below example, but with
@@ -203,7 +212,7 @@ Get the categories and display as a list:
 <ul>
   {% for category in categories %}
     <li>
-      <a href="{% url 'djpress:category_posts' category.slug %}">{{ category.title }}</a>
+      <a href="{% url 'djpress:category_posts' category.slug %}">{{ category.title|escape }}</a>
     </li>
   {% endfor %}
 </ul>
@@ -226,6 +235,9 @@ Outputs the following:
 
 Returns all tags as a queryset.
 
+**Note**: The returned text is not escaped and is susceptible to an XSS risk if untrusted users are
+creating/updating post titles. Use Django's `escape` filter as per the example below.
+
 **Returns:** queryset of all tags.
 
 **Related Topics:** Also see `site_tags` for a template tag that produces similar output to the below example, but with
@@ -237,7 +249,7 @@ just a single template tag.
 {% get_tags as all_tags %}
 <div class="tag-cloud">
   {% for tag in all_tags %}
-    <a href="{% url 'djpress:tag_posts' tag.slug %}" class="tag">{{ tag.title }}</a>
+    <a href="{% url 'djpress:tag_posts' tag.slug %}" class="tag">{{ tag.title|escape }}</a>
   {% endfor %}
 </div>
 ```
@@ -245,6 +257,9 @@ just a single template tag.
 ### get_post_title
 
 Returns the title of a post from the current context.
+
+**Note**: The returned text is not escaped and is susceptible to an XSS risk if untrusted users are
+creating/updating post titles. Use Django's `escape` filter as per the example below.
 
 #### get_post_title Parameters
 
@@ -257,7 +272,7 @@ Default is false.
 
 ```django
 {% get_post_title as title %}
-<meta property="og:title" content="{{ title }}">
+<meta property="og:title" content="{{ title|escape }}">
 ```
 
 ### get_post_url
@@ -305,6 +320,9 @@ string is returned.
 Returns a queryset of the categories that the post belongs to. Useful for building a list of categories that a post
 belongs to.
 
+**Note**: The returned text is not escaped and is susceptible to an XSS risk if untrusted users are
+creating/updating post categories. Use Django's `escape` filter as per the example below.
+
 **Returns:** queryset - the post's categories.
 
 **Related Topics:** Also see `post_categories` for a template tag that returns safely marked HTML that can be used to
@@ -316,7 +334,7 @@ create a list of categories.
 {% get_post_categories as post_categories %}
 <ul>
 {% for category in post_categories %}
-  <li><a href="{{ category.url }}">{{ category.name }}</a></li>
+  <li><a href="{{ category.url }}">{{ category.title|escape }}</a></li>
 {% endfor %}
 </ul>
 ```

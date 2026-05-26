@@ -6,6 +6,7 @@ from django.core.paginator import Page
 from django.db import models
 from django.template import Context
 from django.urls import reverse
+from django.utils.html import escape
 from django.utils.safestring import mark_safe
 
 from djpress import url_utils
@@ -129,6 +130,8 @@ def get_post_title(context: Context, *, include_empty: bool = False) -> str:
 
     This is just the title of the post from the current context with no further HTML.
 
+    This is not escaped and may be susceptiple to XSS if untrusted users are creating/editing post titles.
+
     If `include_empty` is set to `True`, then the title will be returned from the `post_title` property of the Post.
 
     Args:
@@ -173,6 +176,9 @@ def get_post_author(context: Context) -> str:
 
     Tries to display the first name and last name if available, otherwise falls back to
     the username.
+
+    **Note**: The returned text is not escaped and is susceptible to an XSS risk if untrusted users are
+    creating/updating post authors. Use Django's `escape` filter when using this tag.
 
     Args:
         context: The context.
@@ -422,7 +428,7 @@ def page_title(
     if title:
         title = f"{pre_text}{title}{post_text}"
 
-    return title
+    return escape(title)
 
 
 @register.simple_tag
@@ -739,7 +745,8 @@ def post_title(
         return ""
 
     # Get the title of the post
-    output = post.post_title if include_empty else post.title
+    post_title = post.post_title if include_empty else post.title
+    output = escape(post_title)
 
     # If there's a posts in the context, or if the link is forced, then we need to display the link.
     if posts or force_link:
@@ -926,7 +933,7 @@ def post_author(
     link_class_html = f' class="{link_class}"' if link_class else ""
 
     author = post.author
-    author_display_name = get_author_display_name(author)
+    author_display_name = escape(get_author_display_name(author))
 
     if not djpress_settings.AUTHOR_ENABLED:
         return f"<{outer_tag}{outer_class_html}>{pre_text}{author_display_name}{post_text}</{outer_tag}>"
@@ -1088,6 +1095,7 @@ def search_form(
         return ""
 
     current_query = context.get("search_query", "")
+    current_query = escape(current_query)
 
     # Build the HTML
     form_class_attr = f' class="{form_class}"' if form_class else ""
@@ -1201,7 +1209,7 @@ def category_title(
 
     outer_class = f' class="{outer_class}"' if outer_class else ""
 
-    output = category.title
+    output = escape(category.title)
 
     if pre_text:
         output = f"{pre_text}{output}"
@@ -1217,8 +1225,6 @@ def category_title(
         return ""
 
     return mark_safe(f"<{outer_tag}{outer_class}>{output}</{outer_tag}>")
-
-    return output
 
 
 @register.simple_tag(takes_context=True)
@@ -1256,7 +1262,7 @@ def tag_title(
 
     # Get tag titles from the slugs
     tags = [Tag.objects.get_tag_by_slug(slug) for slug in tag_slugs]
-    tag_titles = [tag.title for tag in tags]
+    tag_titles = [escape(tag.title) for tag in tags]
 
     # Join multiple tags with commas
     output = separator.join(tag_titles) if len(tag_titles) > 1 else tag_titles[0]
@@ -1277,8 +1283,6 @@ def tag_title(
     outer_class_html = f' class="{outer_class}"' if outer_class else ""
 
     return mark_safe(f"<{outer_tag}{outer_class_html}>{output}</{outer_tag}>")
-
-    return output
 
 
 @register.simple_tag(takes_context=True)
@@ -1311,7 +1315,7 @@ def search_title(
     if not search_query or not isinstance(search_query, str):
         return ""
 
-    output = search_query
+    output = escape(search_query)
 
     if pre_text:
         output = f"{pre_text}{output}"
@@ -1361,7 +1365,7 @@ def author_name(
     if not author or not isinstance(author, User):
         return ""
 
-    output = get_author_display_name(author)
+    output = escape(get_author_display_name(author))
 
     if pre_text:
         output = f"{pre_text}{output}"
@@ -1478,7 +1482,7 @@ def page_link(
         str: The link to the page.
     """
     try:
-        page: Post | None = Post.page_objects.get_published_page_by_slug(page_slug)
+        page: Post = Post.page_objects.get_published_page_by_slug(page_slug)
     except PageNotFoundError:
         return ""
 

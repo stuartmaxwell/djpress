@@ -81,8 +81,8 @@ def test_create_groups_handles_programming_error(caplog):
 def test_create_groups_handles_object_does_not_exist(caplog):
     """Test that create_groups handles ObjectDoesNotExist gracefully."""
     with caplog.at_level("DEBUG"):
-        with patch("djpress.permissions.Permission.objects.get") as mock_get:
-            mock_get.side_effect = ObjectDoesNotExist("Permission does not exist")
+        with patch("djpress.permissions.Permission.objects.filter") as mock_filter:
+            mock_filter.side_effect = ObjectDoesNotExist("Permission does not exist")
 
             # Should not raise an exception
             create_groups()

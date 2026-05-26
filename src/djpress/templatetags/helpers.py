@@ -2,6 +2,7 @@
 
 from django import template
 from django.db import models
+from django.utils.html import escape
 from django.utils.safestring import mark_safe
 
 from djpress.conf import settings as djpress_settings
@@ -116,6 +117,7 @@ def category_link(category: Category, link_class: str = "") -> str:
         link_class: The CSS class(es) for the link.
     """
     category_url = category.url
+    category_title = escape(category.title)
 
     link_classes = ""
 
@@ -132,8 +134,8 @@ def category_link(category: Category, link_class: str = "") -> str:
     link_class_html = f' class="{link_classes}"' if link_classes else ""
 
     return (
-        f'<a href="{category_url}" title="View all posts in the {category.title} '
-        f'category"{link_class_html}>{category.title}</a>'
+        f'<a href="{category_url}" title="View all posts in the {category_title} '
+        f'category"{link_class_html}>{category_title}</a>'
     )
 
 
@@ -148,6 +150,7 @@ def tag_link(tag: "Tag", link_class: str = "") -> str:
         link_class: The CSS class(es) for the link.
     """
     tag_url = tag.url
+    tag_title = escape(tag.title)
 
     link_classes = ""
 
@@ -163,7 +166,7 @@ def tag_link(tag: "Tag", link_class: str = "") -> str:
 
     link_class_html = f' class="{link_classes}"' if link_classes else ""
 
-    return f'<a href="{tag_url}" title="View all posts tagged with {tag.title}"{link_class_html}>{tag.title}</a>'
+    return f'<a href="{tag_url}" title="View all posts tagged with {tag_title}"{link_class_html}>{tag_title}</a>'
 
 
 def get_page_link(page: Post, link_class: str = "") -> str:
@@ -177,10 +180,11 @@ def get_page_link(page: Post, link_class: str = "") -> str:
         link_class: The CSS class(es) for the link.
     """
     page_url = page.url
+    page_title = escape(page.title)
 
     link_class_html = f' class="{link_class}"' if link_class else ""
 
-    return f'<a href="{page_url}" title="View the {page.title} page"{link_class_html}>{page.title}</a>'
+    return f'<a href="{page_url}" title="View the {page_title} page"{link_class_html}>{page_title}</a>'
 
 
 def post_read_more_link(
@@ -210,7 +214,7 @@ def post_read_more_link(
     if post.is_truncated is False:
         return ""
 
-    read_more_text = read_more_text if read_more_text else post_read_more_text
+    read_more_text = read_more_text or post_read_more_text
     link_class_html = f' class="{link_class}"' if link_class else ""
 
     return f'<p><a href="{post.url}"{link_class_html}>{read_more_text}</a></p>'

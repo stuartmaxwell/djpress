@@ -267,7 +267,7 @@ def test_get_post_category_slugs(settings, test_post1, category2):
 
 @pytest.mark.django_db
 def test_get_post_categories(test_post1, category1, category2):
-    """Test the `get_post_categories` tempalte tag.
+    """Test the `get_post_categories` template tag.
 
     test_post1 has a single category called `Test Category1`.
     """
@@ -383,6 +383,21 @@ def test_post_title_with_prefix(settings, test_post1):
 
 
 @pytest.mark.django_db
+def test_post_title_xss(test_post1):
+    """Test post_title is escaped correctly."""
+    bad_string = '<script>alert("evil")</script>'
+    escaped_string = "&lt;script&gt;alert(&quot;evil&quot;)&lt;/script&gt;"
+
+    test_post1.title = bad_string
+    test_post1.save()
+
+    context = Context({"posts": [test_post1], "post": test_post1})
+
+    assert bad_string not in djpress_tags.post_title(context)
+    assert escaped_string in djpress_tags.post_title(context)
+
+
+@pytest.mark.django_db
 def test_get_post_author(test_post1):
     context = Context({"post": test_post1})
 
@@ -438,6 +453,22 @@ def test_post_author(settings, test_post1):
     # Test case: invalid outer tag
     expected_output = ""
     assert djpress_tags.post_author(context, outer_tag="invalid") == expected_output
+
+
+@pytest.mark.django_db
+def test_post_author_xss(test_post1):
+    """Test that author display name in post_author tag is escaped."""
+    bad_string = '<script>alert("evil")</script>'
+    escaped_string = "&lt;script&gt;alert(&quot;evil&quot;)&lt;/script&gt;"
+
+    test_post1.author.first_name = bad_string
+    test_post1.author.save()
+
+    context = Context({"post": test_post1})
+    result = djpress_tags.post_author(context)
+
+    assert bad_string not in result
+    assert escaped_string in result
 
 
 @pytest.mark.django_db
@@ -742,6 +773,22 @@ def test_author_name(user):
     )
 
 
+@pytest.mark.django_db
+def test_author_name_xss(user):
+    """Test that author name tag escapes display name."""
+    bad_string = '<script>alert("evil")</script>'
+    escaped_string = "&lt;script&gt;alert(&quot;evil&quot;)&lt;/script&gt;"
+
+    user.first_name = bad_string
+    user.save()
+
+    context = Context({"author": user})
+    result = djpress_tags.author_name(context)
+
+    assert bad_string not in result
+    assert escaped_string in result
+
+
 def test_author_name_no_author():
     """If there's no author in the context, return an empty string."""
     context = Context({"foo": "bar"})
@@ -792,6 +839,19 @@ def test_category_title_no_category():
 
     assert djpress_tags.category_title(context) == ""
     assert type(djpress_tags.category_title(context)) == str
+
+
+@pytest.mark.django_db
+def test_category_title_xss():
+    """Test that the category title is escaped."""
+    bad_string = '<script>alert("evil")</script>'
+    escaped_string = "&lt;script&gt;alert(&quot;evil&quot;)&lt;/script&gt;"
+
+    category = Category.objects.create(slug="evil", title=bad_string)
+    context = Context({"category": category})
+
+    assert bad_string not in djpress_tags.category_title(context)
+    assert escaped_string in djpress_tags.category_title(context)
 
 
 @pytest.mark.django_db
@@ -1010,24 +1070,16 @@ def test_tag_title(tag1):
 
 
 @pytest.mark.django_db
-def test_tag_title_multiple_tags(tag1, tag2):
-    context = Context({"tags": [tag1.slug, tag2.slug]})
+def test_tag_title_xss(tag1):
+    """Test that the tag title is escaped."""
+    bad_string = '<script>alert("evil")</script>'
+    escaped_string = "&lt;script&gt;alert(&quot;evil&quot;)&lt;/script&gt;"
 
-    # Test with default parameters
-    result = djpress_tags.tag_title(context)
-    assert result == f"{tag1.title}, {tag2.title}"
+    tag = Tag.objects.create(slug="evil", title=bad_string)
+    context = Context({"tags": [tag.slug]})
 
-    # Test with custom separator
-    result = djpress_tags.tag_title(context, separator=" | ")
-    assert result == f"{tag1.title} | {tag2.title}"
-
-    # Test with outer tag and class
-    result = djpress_tags.tag_title(context, outer_tag="h1", outer_class="test-class")
-    assert f'<h1 class="test-class">{tag1.title} | {tag2.title}</h1>' == result
-
-    # Test with pre and post text
-    result = djpress_tags.tag_title(context, pre_text="Posts tagged with: ", post_text="!")
-    assert f"Posts tagged with: {tag1.title} | {tag2.title}!" == result
+    assert bad_string not in djpress_tags.tag_title(context)
+    assert escaped_string in djpress_tags.tag_title(context)
 
 
 @pytest.mark.django_db
@@ -1663,6 +1715,41 @@ def test_page_title(test_post1, test_page1):
     # Test case 5 - no context
     context = Context()
     assert "" == djpress_tags.page_title(context)
+
+
+@pytest.mark.django_db
+def test_page_title_xss(test_post1, test_page1):
+    bad_string = '<script>alert("evil")</script>'
+    escaped_string = "&lt;script&gt;alert(&quot;evil&quot;)&lt;/script&gt;"
+
+    category = Category.objects.create(slug="evil", title=bad_string)
+    test_post1.categories.set([category])
+    test_post1.title = bad_string
+    test_post1.author.first_name = bad_string
+    test_post1.author.last_name = bad_string
+    test_post1.save()
+    test_page1.title = bad_string
+    test_page1.save()
+
+    # Test case 1 - category page
+    context = Context({"category": category})
+    assert bad_string not in djpress_tags.page_title(context)
+
+    # Test case 2 - author page
+    context = Context({"author": test_post1.author})
+    assert bad_string not in djpress_tags.page_title(context)
+
+    # Test case 3 - single post
+    context = Context({"post": test_post1})
+    assert bad_string not in djpress_tags.page_title(context)
+
+    # Test case 4 - single page
+    context = Context({"post": test_page1})
+    assert bad_string not in djpress_tags.page_title(context)
+
+    # Test case 5 - no context
+    context = Context()
+    assert bad_string not in djpress_tags.page_title(context)
 
 
 @pytest.mark.django_db
@@ -2306,21 +2393,37 @@ def test_tags_with_counts_empty():
 
 
 @pytest.mark.django_db
-def test_tag_title_multiple_tags(rf, tag1, tag2):
-    """Test tag_title with multiple tags in context."""
-    # Create a request with multiple tags in context
-    request = rf.get("/")
+def test_tags_with_counts_xss(test_post1):
+    """Make sure user-generated content is escaped."""
+    bad_string = '<script>alert("evil")</script>'
+    escaped_string = "&lt;script&gt;alert(&quot;evil&quot;)&lt;/script&gt;"
+
+    tag = Tag.objects.create(slug="evil", title=bad_string)
+    test_post1.tags.add(tag)
+
+    assert bad_string not in djpress_tags.tags_with_counts()
+    assert escaped_string in djpress_tags.tags_with_counts()
+
+
+@pytest.mark.django_db
+def test_tag_title_multiple_tags(tag1, tag2):
     context = Context({"tags": [tag1.slug, tag2.slug]})
 
     # Test with default parameters
     result = djpress_tags.tag_title(context)
-    expected = f"{tag1.title}, {tag2.title}"
-    assert result == expected
+    assert result == f"{tag1.title}, {tag2.title}"
+
+    # Test with custom separator
+    result = djpress_tags.tag_title(context, separator=" | ")
+    assert result == f"{tag1.title} | {tag2.title}"
+
+    # Test with outer tag and class
+    result = djpress_tags.tag_title(context, outer_tag="h1", outer_class="test-class")
+    assert f'<h1 class="test-class">{tag1.title}, {tag2.title}</h1>' == result
 
     # Test with pre and post text
     result = djpress_tags.tag_title(context, pre_text="Posts tagged with: ", post_text="!")
-    expected = f"Posts tagged with: {tag1.title}, {tag2.title}!"
-    assert result == expected
+    assert f"Posts tagged with: {tag1.title}, {tag2.title}!" == result
 
 
 @pytest.mark.django_db
@@ -2448,6 +2551,17 @@ def test_search_form(settings):
     assert result == ""
 
 
+def test_search_form_xss(settings):
+    bad_string = '<script>alert("evil")</script>'
+    escaped_string = "&lt;script&gt;alert(&quot;evil&quot;)&lt;/script&gt;"
+
+    context = Context({"search_query": bad_string})
+    result = djpress_tags.search_title(context)
+
+    assert bad_string not in result
+    assert escaped_string in result
+
+
 @pytest.mark.django_db
 def test_search_title(settings):
     """Test search_title template tag."""
@@ -2482,6 +2596,18 @@ def test_search_title(settings):
     context = Context({"search_query": 123})
     result = djpress_tags.search_title(context)
     assert result == ""
+
+
+def test_search_title_xss():
+    """Test search_title is escaped correctly."""
+    bad_string = '<script>alert("evil")</script>'
+    escaped_string = "&lt;script&gt;alert(&quot;evil&quot;)&lt;/script&gt;"
+
+    context = Context({"search_query": bad_string})
+    result = djpress_tags.search_title(context)
+
+    assert bad_string not in result
+    assert escaped_string in result
 
 
 @pytest.mark.django_db

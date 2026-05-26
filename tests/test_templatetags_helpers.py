@@ -10,6 +10,8 @@ from djpress.templatetags.helpers import (
     post_read_more_link,
     parse_post_wrapper_params,
     tags_html,
+    tag_link,
+    get_page_link,
 )
 
 
@@ -403,6 +405,30 @@ def test_category_link(settings, category1):
 
 
 @pytest.mark.django_db
+def test_category_link_xss():
+    """Test that the category title is escaped."""
+    bad_string = '<script>alert("evil")</script>'
+    escaped_string = "&lt;script&gt;alert(&quot;evil&quot;)&lt;/script&gt;"
+
+    category = Category.objects.create(slug="evil", title=bad_string)
+
+    assert bad_string not in category_link(category)
+    assert escaped_string in category_link(category)
+
+
+@pytest.mark.django_db
+def test_tag_link_xss():
+    """Test that the tag title is escaped."""
+    bad_string = '<script>alert("evil")</script>'
+    escaped_string = "&lt;script&gt;alert(&quot;evil&quot;)&lt;/script&gt;"
+
+    tag = Tag.objects.create(slug="evil", title=bad_string)
+
+    assert bad_string not in tag_link(tag)
+    assert escaped_string in tag_link(tag)
+
+
+@pytest.mark.django_db
 def test_post_read_more_link(test_post1, test_long_post1):
     assert settings.POST_READ_MORE_TEXT == "Test read more..."
     assert settings.POST_PREFIX == "test-posts"
@@ -453,3 +479,21 @@ def test_parse_post_wrapper_params():
     params = ['tag="div"', 'class="blog-post"', 'extra="extra"']
     expected_output = ("div", "blog-post")
     assert parse_post_wrapper_params(params) == expected_output
+
+
+@pytest.mark.django_db
+def test_get_page_link_xss(test_post1, test_page1):
+    """Test that the page title in the get_page_link tag is escaped."""
+    bad_string = '<script>alert("evil")</script>'
+    escaped_string = "&lt;script&gt;alert(&quot;evil&quot;)&lt;/script&gt;"
+
+    test_post1.title = bad_string
+    test_post1.save()
+    test_page1.title = bad_string
+    test_page1.save()
+
+    assert bad_string not in get_page_link(test_post1)
+    assert escaped_string in get_page_link(test_post1)
+
+    assert bad_string not in get_page_link(test_page1)
+    assert escaped_string in get_page_link(test_page1)
