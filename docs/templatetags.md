@@ -198,6 +198,9 @@ just a single template tag.
 
 Get the categories and display as a list:
 
+**Note**: `category.title` is not escaped in this example and could be susceptible to an XSS risk if untrusted users
+are creating/updating category titles.
+
 ```django
 {% get_categories as categories %}
 <ul>
@@ -232,6 +235,9 @@ Returns all tags as a queryset.
 just a single template tag.
 
 #### get_tags Example
+
+**Note**: `tag.title` is not escaped in this example and could be susceptible to an XSS risk if untrusted users are
+creating/updating category titles.
 
 ```django
 {% get_tags as all_tags %}

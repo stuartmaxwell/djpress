@@ -244,6 +244,9 @@ DJ Press provides these context variables to your templates:
 
 You can use conditional logic to create different layouts based on the view type:
 
+**Note**: in this example, `post.title`, `category.title`, and `author.get_full_name`, are retrieved directly from the
+database and are not escaped. This could be susceptible to an XSS risk if untrusted users are using your Django site.
+
 ```django
 {% if post %}
     {# Single post/page view #}
