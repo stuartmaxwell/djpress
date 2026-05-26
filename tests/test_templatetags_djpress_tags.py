@@ -1679,6 +1679,41 @@ def test_page_title(test_post1, test_page1):
 
 
 @pytest.mark.django_db
+def test_page_title_xss(test_post1, test_page1):
+    bad_string = '<script>alert("evil")</script>'
+    escaped_string = "&lt;script&gt;alert(&quot;evil&quot;)&lt;/script&gt;"
+
+    category = Category.objects.create(slug="evil", title=bad_string)
+    test_post1.categories.set([category])
+    test_post1.title = bad_string
+    test_post1.author.first_name = bad_string
+    test_post1.author.last_name = bad_string
+    test_post1.save()
+    test_page1.title = bad_string
+    test_page1.save()
+
+    # Test case 1 - category page
+    context = Context({"category": category})
+    assert bad_string not in djpress_tags.page_title(context)
+
+    # Test case 2 - author page
+    context = Context({"author": test_post1.author})
+    assert bad_string not in djpress_tags.page_title(context)
+
+    # Test case 3 - single post
+    context = Context({"post": test_post1})
+    assert bad_string not in djpress_tags.page_title(context)
+
+    # Test case 4 - single page
+    context = Context({"post": test_page1})
+    assert bad_string not in djpress_tags.page_title(context)
+
+    # Test case 5 - no context
+    context = Context()
+    assert bad_string not in djpress_tags.page_title(context)
+
+
+@pytest.mark.django_db
 def test_is_paginated(settings, test_post1, test_post2, test_long_post1):
     # Confirm settings are set according to settings_testing.py
     assert settings.DJPRESS_SETTINGS["RECENT_PUBLISHED_POSTS_COUNT"] == 3

@@ -423,7 +423,7 @@ def page_title(
     if title:
         title = f"{pre_text}{title}{post_text}"
 
-    return title
+    return escape(title)
 
 
 @register.simple_tag
