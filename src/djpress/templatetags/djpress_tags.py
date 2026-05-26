@@ -1256,7 +1256,7 @@ def tag_title(
 
     # Get tag titles from the slugs
     tags = [Tag.objects.get_tag_by_slug(slug) for slug in tag_slugs]
-    tag_titles = [tag.title for tag in tags]
+    tag_titles = [escape(tag.title) for tag in tags]
 
     # Join multiple tags with commas
     output = separator.join(tag_titles) if len(tag_titles) > 1 else tag_titles[0]
@@ -1277,8 +1277,6 @@ def tag_title(
     outer_class_html = f' class="{outer_class}"' if outer_class else ""
 
     return mark_safe(f"<{outer_tag}{outer_class_html}>{output}</{outer_tag}>")
-
-    return output
 
 
 @register.simple_tag(takes_context=True)

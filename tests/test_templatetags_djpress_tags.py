@@ -1023,24 +1023,16 @@ def test_tag_title(tag1):
 
 
 @pytest.mark.django_db
-def test_tag_title_multiple_tags(tag1, tag2):
-    context = Context({"tags": [tag1.slug, tag2.slug]})
+def test_tag_title_xss(tag1):
+    """Test that the tag title is escaped."""
+    bad_string = '<script>alert("evil")</script>'
+    escaped_string = "&lt;script&gt;alert(&quot;evil&quot;)&lt;/script&gt;"
 
-    # Test with default parameters
-    result = djpress_tags.tag_title(context)
-    assert result == f"{tag1.title}, {tag2.title}"
+    tag = Tag.objects.create(slug="evil", title=bad_string)
+    context = Context({"tags": [tag.slug]})
 
-    # Test with custom separator
-    result = djpress_tags.tag_title(context, separator=" | ")
-    assert result == f"{tag1.title} | {tag2.title}"
-
-    # Test with outer tag and class
-    result = djpress_tags.tag_title(context, outer_tag="h1", outer_class="test-class")
-    assert f'<h1 class="test-class">{tag1.title} | {tag2.title}</h1>' == result
-
-    # Test with pre and post text
-    result = djpress_tags.tag_title(context, pre_text="Posts tagged with: ", post_text="!")
-    assert f"Posts tagged with: {tag1.title} | {tag2.title}!" == result
+    assert bad_string not in djpress_tags.tag_title(context)
+    assert escaped_string in djpress_tags.tag_title(context)
 
 
 @pytest.mark.django_db
@@ -2367,21 +2359,24 @@ def test_tags_with_counts_xss(test_post1):
 
 
 @pytest.mark.django_db
-def test_tag_title_multiple_tags(rf, tag1, tag2):
-    """Test tag_title with multiple tags in context."""
-    # Create a request with multiple tags in context
-    request = rf.get("/")
+def test_tag_title_multiple_tags(tag1, tag2):
     context = Context({"tags": [tag1.slug, tag2.slug]})
 
     # Test with default parameters
     result = djpress_tags.tag_title(context)
-    expected = f"{tag1.title}, {tag2.title}"
-    assert result == expected
+    assert result == f"{tag1.title}, {tag2.title}"
+
+    # Test with custom separator
+    result = djpress_tags.tag_title(context, separator=" | ")
+    assert result == f"{tag1.title} | {tag2.title}"
+
+    # Test with outer tag and class
+    result = djpress_tags.tag_title(context, outer_tag="h1", outer_class="test-class")
+    assert f'<h1 class="test-class">{tag1.title} | {tag2.title}</h1>' == result
 
     # Test with pre and post text
     result = djpress_tags.tag_title(context, pre_text="Posts tagged with: ", post_text="!")
-    expected = f"Posts tagged with: {tag1.title}, {tag2.title}!"
-    assert result == expected
+    assert f"Posts tagged with: {tag1.title} | {tag2.title}!" == result
 
 
 @pytest.mark.django_db
