@@ -257,13 +257,16 @@ Returns the title of a post from the current context.
 - `include_empty` (boolean): Whether to include the title if it is empty, using the post_title property fallback.
 Default is false.
 
+**Note**: The returned text is not escaped and is susceptible to an XSS risk if untrusted users are
+creating/updating post titles. Use Django's `escape` filter as per the example below.
+
 **Returns:** string - the title of the post. If there's no `post` in the context and empty string is returned.
 
 #### get_post_title Example
 
 ```django
 {% get_post_title as title %}
-<meta property="og:title" content="{{ title }}">
+<meta property="og:title" content="{{ title|escape }}">
 ```
 
 ### get_post_url
