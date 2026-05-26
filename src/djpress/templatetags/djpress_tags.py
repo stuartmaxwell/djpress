@@ -1476,7 +1476,7 @@ def page_link(
         str: The link to the page.
     """
     try:
-        page: Post | None = Post.page_objects.get_published_page_by_slug(page_slug)
+        page: Post = Post.page_objects.get_published_page_by_slug(page_slug)
     except PageNotFoundError:
         return ""
 

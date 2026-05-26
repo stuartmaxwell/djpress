@@ -11,6 +11,7 @@ from djpress.templatetags.helpers import (
     parse_post_wrapper_params,
     tags_html,
     tag_link,
+    get_page_link,
 )
 
 
@@ -478,3 +479,21 @@ def test_parse_post_wrapper_params():
     params = ['tag="div"', 'class="blog-post"', 'extra="extra"']
     expected_output = ("div", "blog-post")
     assert parse_post_wrapper_params(params) == expected_output
+
+
+@pytest.mark.django_db
+def test_get_page_link_xss(test_post1, test_page1):
+    """Test that the page title in the get_page_link tag is escaped."""
+    bad_string = '<script>alert("evil")</script>'
+    escaped_string = "&lt;script&gt;alert(&quot;evil&quot;)&lt;/script&gt;"
+
+    test_post1.title = bad_string
+    test_post1.save()
+    test_page1.title = bad_string
+    test_page1.save()
+
+    assert bad_string not in get_page_link(test_post1)
+    assert escaped_string in get_page_link(test_post1)
+
+    assert bad_string not in get_page_link(test_page1)
+    assert escaped_string in get_page_link(test_page1)
