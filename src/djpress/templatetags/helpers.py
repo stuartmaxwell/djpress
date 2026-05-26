@@ -2,6 +2,7 @@
 
 from django import template
 from django.db import models
+from django.utils.html import escape
 from django.utils.safestring import mark_safe
 
 from djpress.conf import settings as djpress_settings
@@ -116,6 +117,7 @@ def category_link(category: Category, link_class: str = "") -> str:
         link_class: The CSS class(es) for the link.
     """
     category_url = category.url
+    category_title = escape(category.title)
 
     link_classes = ""
 
@@ -132,8 +134,8 @@ def category_link(category: Category, link_class: str = "") -> str:
     link_class_html = f' class="{link_classes}"' if link_classes else ""
 
     return (
-        f'<a href="{category_url}" title="View all posts in the {category.title} '
-        f'category"{link_class_html}>{category.title}</a>'
+        f'<a href="{category_url}" title="View all posts in the {category_title} '
+        f'category"{link_class_html}>{category_title}</a>'
     )
 
 

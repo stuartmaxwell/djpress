@@ -403,6 +403,18 @@ def test_category_link(settings, category1):
 
 
 @pytest.mark.django_db
+def test_category_link_xss():
+    """Test that the category title is escaped."""
+    bad_string = '<script>alert("evil")</script>'
+    escaped_string = "&lt;script&gt;alert(&quot;evil&quot;)&lt;/script&gt;"
+
+    category = Category.objects.create(slug="evil", title=bad_string)
+
+    assert bad_string not in category_link(category)
+    assert escaped_string in category_link(category)
+
+
+@pytest.mark.django_db
 def test_post_read_more_link(test_post1, test_long_post1):
     assert settings.POST_READ_MORE_TEXT == "Test read more..."
     assert settings.POST_PREFIX == "test-posts"
