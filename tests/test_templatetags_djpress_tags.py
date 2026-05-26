@@ -2387,11 +2387,11 @@ def test_tag_title_multiple_tags(tag1, tag2):
 
     # Test with outer tag and class
     result = djpress_tags.tag_title(context, outer_tag="h1", outer_class="test-class")
-    assert f'<h1 class="test-class">{tag1.title} | {tag2.title}</h1>' == result
+    assert f'<h1 class="test-class">{tag1.title}, {tag2.title}</h1>' == result
 
     # Test with pre and post text
     result = djpress_tags.tag_title(context, pre_text="Posts tagged with: ", post_text="!")
-    assert f"Posts tagged with: {tag1.title} | {tag2.title}!" == result
+    assert f"Posts tagged with: {tag1.title}, {tag2.title}!" == result
 
 
 @pytest.mark.django_db
