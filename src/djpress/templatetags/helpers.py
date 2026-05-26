@@ -210,7 +210,7 @@ def post_read_more_link(
     if post.is_truncated is False:
         return ""
 
-    read_more_text = read_more_text if read_more_text else post_read_more_text
+    read_more_text = read_more_text or post_read_more_text
     link_class_html = f' class="{link_class}"' if link_class else ""
 
     return f'<p><a href="{post.url}"{link_class_html}>{read_more_text}</a></p>'
