@@ -6,6 +6,7 @@ from django.core.paginator import Page
 from django.db import models
 from django.template import Context
 from django.urls import reverse
+from django.utils.html import escape
 from django.utils.safestring import mark_safe
 
 from djpress import url_utils
@@ -1088,6 +1089,7 @@ def search_form(
         return ""
 
     current_query = context.get("search_query", "")
+    current_query = escape(current_query)
 
     # Build the HTML
     form_class_attr = f' class="{form_class}"' if form_class else ""
@@ -1311,7 +1313,7 @@ def search_title(
     if not search_query or not isinstance(search_query, str):
         return ""
 
-    output = search_query
+    output = escape(search_query)
 
     if pre_text:
         output = f"{pre_text}{output}"
