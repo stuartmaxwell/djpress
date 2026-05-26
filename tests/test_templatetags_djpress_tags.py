@@ -2448,6 +2448,17 @@ def test_search_form(settings):
     assert result == ""
 
 
+def test_search_form_xss(settings):
+    bad_string = '<script>alert("evil")</script>'
+    escaped_string = "&lt;script&gt;alert(&quot;evil&quot;)&lt;/script&gt;"
+
+    context = Context({"search_query": bad_string})
+    result = djpress_tags.search_title(context)
+
+    assert bad_string not in result
+    assert escaped_string in result
+
+
 @pytest.mark.django_db
 def test_search_title(settings):
     """Test search_title template tag."""
@@ -2482,6 +2493,18 @@ def test_search_title(settings):
     context = Context({"search_query": 123})
     result = djpress_tags.search_title(context)
     assert result == ""
+
+
+def test_search_title_xss():
+    """Test search_title is escaped correctly."""
+    bad_string = '<script>alert("evil")</script>'
+    escaped_string = "&lt;script&gt;alert(&quot;evil&quot;)&lt;/script&gt;"
+
+    context = Context({"search_query": bad_string})
+    result = djpress_tags.search_title(context)
+
+    assert bad_string not in result
+    assert escaped_string in result
 
 
 @pytest.mark.django_db
