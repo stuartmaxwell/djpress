@@ -1203,7 +1203,7 @@ def category_title(
 
     outer_class = f' class="{outer_class}"' if outer_class else ""
 
-    output = category.title
+    output = escape(category.title)
 
     if pre_text:
         output = f"{pre_text}{output}"
@@ -1219,8 +1219,6 @@ def category_title(
         return ""
 
     return mark_safe(f"<{outer_tag}{outer_class}>{output}</{outer_tag}>")
-
-    return output
 
 
 @register.simple_tag(takes_context=True)

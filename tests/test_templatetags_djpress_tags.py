@@ -795,6 +795,19 @@ def test_category_title_no_category():
 
 
 @pytest.mark.django_db
+def test_category_title_xss():
+    """Test that the category title is escaped."""
+    bad_string = '<script>alert("evil")</script>'
+    escaped_string = "&lt;script&gt;alert(&quot;evil&quot;)&lt;/script&gt;"
+
+    category = Category.objects.create(slug="evil", title=bad_string)
+    context = Context({"category": category})
+
+    assert bad_string not in djpress_tags.category_title(context)
+    assert escaped_string in djpress_tags.category_title(context)
+
+
+@pytest.mark.django_db
 def test_post_categories(settings, test_post1):
     context = Context({"post": test_post1})
 
