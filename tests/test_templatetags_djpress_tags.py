@@ -2354,6 +2354,19 @@ def test_tags_with_counts_empty():
 
 
 @pytest.mark.django_db
+def test_tags_with_counts_xss(test_post1):
+    """Make sure user-generated content is escaped."""
+    bad_string = '<script>alert("evil")</script>'
+    escaped_string = "&lt;script&gt;alert(&quot;evil&quot;)&lt;/script&gt;"
+
+    tag = Tag.objects.create(slug="evil", title=bad_string)
+    test_post1.tags.add(tag)
+
+    assert bad_string not in djpress_tags.tags_with_counts()
+    assert escaped_string in djpress_tags.tags_with_counts()
+
+
+@pytest.mark.django_db
 def test_tag_title_multiple_tags(rf, tag1, tag2):
     """Test tag_title with multiple tags in context."""
     # Create a request with multiple tags in context

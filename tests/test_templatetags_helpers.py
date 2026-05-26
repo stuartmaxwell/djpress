@@ -10,6 +10,7 @@ from djpress.templatetags.helpers import (
     post_read_more_link,
     parse_post_wrapper_params,
     tags_html,
+    tag_link,
 )
 
 
@@ -412,6 +413,18 @@ def test_category_link_xss():
 
     assert bad_string not in category_link(category)
     assert escaped_string in category_link(category)
+
+
+@pytest.mark.django_db
+def test_tag_link_xss():
+    """Test that the tag title is escaped."""
+    bad_string = '<script>alert("evil")</script>'
+    escaped_string = "&lt;script&gt;alert(&quot;evil&quot;)&lt;/script&gt;"
+
+    tag = Tag.objects.create(slug="evil", title=bad_string)
+
+    assert bad_string not in tag_link(tag)
+    assert escaped_string in tag_link(tag)
 
 
 @pytest.mark.django_db

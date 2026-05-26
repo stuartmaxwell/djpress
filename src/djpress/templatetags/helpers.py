@@ -150,6 +150,7 @@ def tag_link(tag: "Tag", link_class: str = "") -> str:
         link_class: The CSS class(es) for the link.
     """
     tag_url = tag.url
+    tag_title = escape(tag.title)
 
     link_classes = ""
 
@@ -165,7 +166,7 @@ def tag_link(tag: "Tag", link_class: str = "") -> str:
 
     link_class_html = f' class="{link_classes}"' if link_classes else ""
 
-    return f'<a href="{tag_url}" title="View all posts tagged with {tag.title}"{link_class_html}>{tag.title}</a>'
+    return f'<a href="{tag_url}" title="View all posts tagged with {tag_title}"{link_class_html}>{tag_title}</a>'
 
 
 def get_page_link(page: Post, link_class: str = "") -> str:
