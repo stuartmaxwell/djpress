@@ -177,6 +177,9 @@ def get_post_author(context: Context) -> str:
     Tries to display the first name and last name if available, otherwise falls back to
     the username.
 
+    **Note**: The returned text is not escaped and is susceptible to an XSS risk if untrusted users are
+    creating/updating post authors. Use Django's `escape` filter when using this tag.
+
     Args:
         context: The context.
 
@@ -930,7 +933,7 @@ def post_author(
     link_class_html = f' class="{link_class}"' if link_class else ""
 
     author = post.author
-    author_display_name = get_author_display_name(author)
+    author_display_name = escape(get_author_display_name(author))
 
     if not djpress_settings.AUTHOR_ENABLED:
         return f"<{outer_tag}{outer_class_html}>{pre_text}{author_display_name}{post_text}</{outer_tag}>"
@@ -1362,7 +1365,7 @@ def author_name(
     if not author or not isinstance(author, User):
         return ""
 
-    output = get_author_display_name(author)
+    output = escape(get_author_display_name(author))
 
     if pre_text:
         output = f"{pre_text}{output}"

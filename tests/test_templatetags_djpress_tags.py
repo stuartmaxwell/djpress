@@ -456,6 +456,22 @@ def test_post_author(settings, test_post1):
 
 
 @pytest.mark.django_db
+def test_post_author_xss(test_post1):
+    """Test that author display name in post_author tag is escaped."""
+    bad_string = '<script>alert("evil")</script>'
+    escaped_string = "&lt;script&gt;alert(&quot;evil&quot;)&lt;/script&gt;"
+
+    test_post1.author.first_name = bad_string
+    test_post1.author.save()
+
+    context = Context({"post": test_post1})
+    result = djpress_tags.post_author(context)
+
+    assert bad_string not in result
+    assert escaped_string in result
+
+
+@pytest.mark.django_db
 def test_post_author_author_path_disabled(settings, test_post1):
     context = Context({"post": test_post1})
 
@@ -755,6 +771,22 @@ def test_author_name(user):
         )
         == expected_output
     )
+
+
+@pytest.mark.django_db
+def test_author_name_xss(user):
+    """Test that author name tag escapes display name."""
+    bad_string = '<script>alert("evil")</script>'
+    escaped_string = "&lt;script&gt;alert(&quot;evil&quot;)&lt;/script&gt;"
+
+    user.first_name = bad_string
+    user.save()
+
+    context = Context({"author": user})
+    result = djpress_tags.author_name(context)
+
+    assert bad_string not in result
+    assert escaped_string in result
 
 
 def test_author_name_no_author():
