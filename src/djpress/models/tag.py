@@ -100,7 +100,7 @@ class Tag(models.Model):
     slug = models.SlugField(max_length=100, unique=True)
     # Type hint for Django's reverse relationship
     if TYPE_CHECKING:
-        from djpress.models.post import Post
+        from djpress.models.post import Post  # noqa: PLC0415 TODO: review this
 
         _posts: models.Manager["Post"]
 
@@ -132,7 +132,9 @@ class Tag(models.Model):
     @property
     def url(self) -> str:
         """Return the tag's URL."""
-        from djpress.url_utils import get_tag_url
+        from djpress.url_utils import (  # noqa: PLC0415 Imported here to avoid a circular dependency. TODO: Review
+            get_tag_url,
+        )
 
         return get_tag_url(self)
 

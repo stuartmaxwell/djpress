@@ -13,12 +13,12 @@ class DjpressConfig(AppConfig):
     def ready(self) -> None:
         """Run when the app is ready."""
         # Import signals to ensure they are registered
-        import djpress.signals  # noqa: F401
+        import djpress.signals  # noqa: F401, PLC0415
 
         # Initialize plugin system
-        from djpress.plugins import registry
+        from djpress.plugins import registry  # noqa: PLC0415
 
         registry.load_plugins()
 
         # Register check explicitly
-        from djpress.checks import check_plugin_loading  # noqa: F401
+        from djpress.checks import check_plugin_loading  # noqa: F401, PLC0415

@@ -3,6 +3,7 @@
 from collections.abc import Callable
 
 from django.contrib.auth.models import AbstractBaseUser
+from django.core.exceptions import ImproperlyConfigured
 from django.template.loader import TemplateDoesNotExist, select_template
 from django.utils import timezone
 from django.utils.module_loading import import_string
@@ -24,8 +25,6 @@ def get_markdown_renderer() -> Callable:
     try:
         return import_string(renderer_path)
     except ImportError as exc:
-        from django.core.exceptions import ImproperlyConfigured
-
         msg = f"Could not import markdown renderer '{renderer_path}': {exc}"
         raise ImproperlyConfigured(msg) from exc
 

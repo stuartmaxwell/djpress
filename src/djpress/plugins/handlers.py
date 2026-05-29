@@ -33,7 +33,7 @@ def _run_content_transformer(
         msg = f"Error running callback {callback}. Callback skipped: {exc}"
         logger.warning(msg)
 
-    return result if result else original_value
+    return result or original_value
 
 
 def _run_content_provider(
@@ -49,7 +49,7 @@ def _run_content_provider(
     Returns:
         The generated `str` content concatenated with the previous value.
     """
-    previous_content = value if value else ""
+    previous_content = value or ""
     result = ""
     try:
         result = callback()

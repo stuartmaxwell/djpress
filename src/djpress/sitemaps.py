@@ -8,6 +8,7 @@ from django.db.models import QuerySet
 
 from djpress.conf import settings as djpress_settings
 from djpress.models import Category, Post
+from djpress.url_utils import get_archives_url
 
 
 class PostSitemap(Sitemap):
@@ -128,6 +129,4 @@ class DateBasedSitemap(Sitemap):
 
     def location(self, obj: dict[str, Any]) -> str:
         """Return the URL of the archive."""
-        from djpress.url_utils import get_archives_url
-
         return get_archives_url(obj["year"], obj.get("month"), obj.get("day"))

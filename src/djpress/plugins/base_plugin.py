@@ -2,6 +2,7 @@
 
 import logging
 
+from djpress.models import PluginStorage
 from djpress.plugins.hook_registry import _Hook
 
 logger = logging.getLogger(__name__)
@@ -33,8 +34,6 @@ class DJPressPlugin:
         Returns:
             dict: The plugin's stored data, or empty dict if none exists.
         """
-        from djpress.models import PluginStorage
-
         return PluginStorage.objects.get_data(self.name)
 
     def save_data(self, data: dict) -> None:
@@ -43,6 +42,4 @@ class DJPressPlugin:
         Args:
             data: The data to store for this plugin.
         """
-        from djpress.models import PluginStorage
-
         PluginStorage.objects.save_data(self.name, data)

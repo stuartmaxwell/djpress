@@ -73,7 +73,7 @@ class Category(models.Model):
     menu_order = models.IntegerField(default=0)
     # Type hint for Django's reverse relationship
     if TYPE_CHECKING:
-        from djpress.models.post import Post
+        from djpress.models.post import Post  # noqa: PLC0415 TODO: review this.
 
         _posts: models.Manager["Post"]
 
@@ -108,7 +108,8 @@ class Category(models.Model):
     @property
     def url(self) -> str:
         """Return the category's URL."""
-        from djpress.url_utils import get_category_url
+        # Avoid circular import
+        from djpress.url_utils import get_category_url  # noqa: PLC0415 TODO: review this
 
         return get_category_url(self)
 
