@@ -1,6 +1,6 @@
 """Custom checks for DJPress."""
 
-from django.core.checks import Tags, Warning, register
+from django.core.checks import Tags, Warning, register  # noqa: A004
 
 from djpress.plugins import registry
 

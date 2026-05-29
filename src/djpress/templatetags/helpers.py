@@ -2,12 +2,76 @@
 
 from django import template
 from django.db import models
-from django.utils.html import escape
-from django.utils.safestring import mark_safe
+from django.utils.html import conditional_escape, format_html, format_html_join
+from django.utils.safestring import SafeString, mark_safe
 
 from djpress.conf import settings as djpress_settings
 from djpress.models import Category, Post, Tag
 from djpress.models.post import PageNode
+
+
+def wrap_in_tag(content: str | SafeString, tag: str, css_class: str = "") -> str | SafeString:
+    """Wraps an HTML content snippet inside a whitelisted HTML tag with optional class.
+
+    If tag is empty, content is returned as-is.
+    If tag is not whitelisted, empty string is returned.
+
+    Args:
+        content (str | SafeString): The HTML content to wrap.
+        tag (str): The HTML tag to wrap the content in.
+        css_class (str, optional): The CSS class to apply to the tag. Defaults to "".
+
+    Returns:
+        str | SafeString: The wrapped HTML content, or an empty string if the tag is not whitelisted.
+    """
+    if not tag:
+        return format_html("{}", content)
+
+    allowed_tags = {"h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "span", "section", "article", "li", "ul"}
+    if tag not in allowed_tags:
+        return ""
+
+    if css_class:
+        return format_html('<{0} class="{1}">{2}</{0}>', tag, css_class, content)
+
+    return format_html("<{0}>{1}</{0}>", tag, content)
+
+
+def build_html_link(
+    url: str,
+    text: str,
+    title: str | SafeString,
+    css_class: str = "",
+    microformat_class: str = "",
+) -> SafeString:
+    """Builds a secure HTML anchor link.
+
+    Args:
+        url (str): The URL to link to.
+        text (str): The text to display.
+        title (str | SafeString): The title to display.
+        css_class (str, optional): The CSS class to apply to the link. Defaults to "".
+        microformat_class (str, optional): The microformat class to apply to the link. Defaults to "".
+
+    Returns:
+        SafeString: The HTML for the link.
+    """
+    classes = []
+    if microformat_class and djpress_settings.MICROFORMATS_ENABLED:
+        classes.append(microformat_class)
+    if css_class:
+        classes.append(css_class)
+
+    class_str = " ".join(classes)
+    class_html = format_html(' class="{}"', class_str) if class_str else ""
+
+    return format_html(
+        '<a href="{}" title="{}"{}>{}</a>',
+        url,
+        title,
+        class_html,
+        text,
+    )
 
 
 def categories_html(
@@ -18,48 +82,40 @@ def categories_html(
     separator: str,
     pre_text: str,
     post_text: str,
-) -> str:
+) -> str | SafeString:
     """Return the HTML for the categories.
 
     Note this isn't a template tag, but a helper function for the other template tags
 
     Args:
-        categories: The categories.
-        outer_tag: The outer HTML tag for the categories.
-        outer_class: The CSS class(es) for the outer tag.
-        link_class: The CSS class(es) for the link.
-        separator: The separator between categories.
-        pre_text: The text to display before the categories.
-        post_text: The text to display after the categories.
+        categories (models.QuerySet): The categories to display.
+        outer_tag (str): The HTML tag to wrap the categories in.
+        outer_class (str): The CSS class to apply to the outer tag.
+        link_class (str): The CSS class to apply to the category links.
+        separator (str): The separator to use between category links.
+        pre_text (str): The text to display before the category links.
+        post_text (str): The text to display after the category links.
 
     Returns:
-        str: The HTML for the categories.
+        str | SafeString: The HTML for the categories, or an empty string if no categories are provided.
     """
-    output = ""
-
-    outer_class_html = f' class="{outer_class}"' if outer_class else ""
+    if not categories:
+        return ""
 
     if outer_tag == "ul":
-        output += f"<ul{outer_class_html}>"
-        for category in categories:
-            output += f"<li>{category_link(category, link_class)}</li>"
-        output += "</ul>"
+        items_html = format_html_join(
+            "",
+            "<li>{}</li>",
+            ((get_category_link(category, link_class),) for category in categories),
+        )
+        return wrap_in_tag(items_html, "ul", outer_class)
 
-    if outer_tag == "div":
-        output += f"<div{outer_class_html}>{pre_text}"
-        for category in categories:
-            output += f"{category_link(category, link_class)}{separator}"
-        output = output[: -len(separator)]  # Remove the trailing separator
-        output += f"{post_text}</div>"
+    escaped_separator = conditional_escape(separator)
+    links = [get_category_link(category, link_class) for category in categories]
+    joined_links = mark_safe(escaped_separator.join(links))
 
-    if outer_tag == "span":
-        output += f"<span{outer_class_html}>{pre_text}"
-        for category in categories:
-            output += f"{category_link(category, link_class)}{separator}"
-        output = output[: -len(separator)]  # Remove the trailing separator
-        output += f"{post_text}</span>"
-
-    return output
+    content = format_html("{}{}{}", pre_text, joined_links, post_text)
+    return wrap_in_tag(content, outer_tag, outer_class)
 
 
 def tags_html(
@@ -70,139 +126,126 @@ def tags_html(
     separator: str,
     pre_text: str,
     post_text: str,
-) -> str:
+) -> str | SafeString:
     """Return the HTML for the tags.
 
     Note this isn't a template tag, but a helper function for the other template tags
 
     Args:
-        tags: The tags.
-        outer_tag: The outer HTML tag for the tags.
-        outer_class: The CSS class(es) for the outer tag.
-        link_class: The CSS class(es) for the link.
-        separator: The separator between tags.
-        pre_text: The text to display before the tags.
-        post_text: The text to display after the tags.
+        tags (models.QuerySet): The tags to display.
+        outer_tag (str): The outer tag to use.
+        outer_class (str): The outer tag class.
+        link_class (str): The link class.
+        separator (str): The separator to use between tags.
+        pre_text (str): The text to display before the tags.
+        post_text (str): The text to display after the tags.
 
     Returns:
-        str: The HTML for the tags.
+        str | SafeString: The HTML for the tags.
     """
-    output = ""
-
-    outer_class_html = f' class="{outer_class}"' if outer_class else ""
+    if not tags:
+        return ""
 
     if outer_tag == "ul":
-        output += f"<ul{outer_class_html}>"
-        for tag in tags:
-            output += f"<li>{tag_link(tag, link_class)}</li>"
-        output += "</ul>"
-    else:
-        output += f"<{outer_tag}{outer_class_html}>{pre_text}"
-        for tag in tags:
-            output += f"{tag_link(tag, link_class)}{separator}"
-        output = output[: -len(separator)]  # Remove the trailing separator
-        output += f"{post_text}</{outer_tag}>"
+        items_html = format_html_join(
+            "",
+            "<li>{}</li>",
+            ((get_tag_link(tag, link_class),) for tag in tags),
+        )
+        return wrap_in_tag(items_html, "ul", outer_class)
 
-    return output
+    escaped_separator = conditional_escape(separator)
+    links = [get_tag_link(tag, link_class) for tag in tags]
+    joined_links = mark_safe(escaped_separator.join(links))
+
+    content = format_html("{}{}{}", pre_text, joined_links, post_text)
+    return wrap_in_tag(content, outer_tag, outer_class)
 
 
-def category_link(category: Category, link_class: str = "") -> str:
+def get_category_link(category: Category, link_class: str = "") -> SafeString:
     """Return the category link.
 
     This is not intended to be used as a template tag. It is used by the other
     template tags in this module to generate the category links.
 
     Args:
-        category: The category.
-        link_class: The CSS class(es) for the link.
+        category (Category): The category to link to.
+        link_class (str): The link class.
+
+    Returns:
+        SafeString: The HTML for the category link.
     """
-    category_url = category.url
-    category_title = escape(category.title)
-
-    link_classes = ""
-
-    # Add p-category if microformats are enabled
-    if djpress_settings.MICROFORMATS_ENABLED:
-        link_classes += "p-category "
-
-    # Add the user-defined link class
-    link_classes += link_class
-
-    # Trim any trailing spaces
-    link_classes = link_classes.strip()
-
-    link_class_html = f' class="{link_classes}"' if link_classes else ""
-
-    return (
-        f'<a href="{category_url}" title="View all posts in the {category_title} '
-        f'category"{link_class_html}>{category_title}</a>'
+    title = format_html("View all posts in the {} category", category.title)
+    return build_html_link(
+        url=category.url,
+        text=category.title,
+        title=title,
+        css_class=link_class,
+        microformat_class="p-category",
     )
 
 
-def tag_link(tag: "Tag", link_class: str = "") -> str:
+def get_tag_link(tag: "Tag", link_class: str = "") -> SafeString:
     """Return the tag link.
 
     This is not intended to be used as a template tag. It is used by the other
     template tags in this module to generate the tag links.
 
     Args:
-        tag: The tag.
-        link_class: The CSS class(es) for the link.
+        tag (Tag): The tag to link to.
+        link_class (str): The link class.
+
+    Returns:
+        SafeString: The HTML for the tag link.
     """
-    tag_url = tag.url
-    tag_title = escape(tag.title)
-
-    link_classes = ""
-
-    # Add p-category if microformats are enabled
-    if djpress_settings.MICROFORMATS_ENABLED:
-        link_classes += "p-category "
-
-    # Add the user-defined link class
-    link_classes += link_class
-
-    # Trim any trailing spaces
-    link_classes = link_classes.strip()
-
-    link_class_html = f' class="{link_classes}"' if link_classes else ""
-
-    return f'<a href="{tag_url}" title="View all posts tagged with {tag_title}"{link_class_html}>{tag_title}</a>'
+    title = format_html("View all posts tagged with {}", tag.title)
+    return build_html_link(
+        url=tag.url,
+        text=tag.title,
+        title=title,
+        css_class=link_class,
+        microformat_class="p-category",
+    )
 
 
-def get_page_link(page: Post, link_class: str = "") -> str:
+def get_page_link(page: Post, link_class: str = "") -> SafeString:
     """Return the page link.
 
     This is not intended to be used as a template tag. It is used by the other
     template tags in this module to generate the page links.
 
     Args:
-        page: The page.
-        link_class: The CSS class(es) for the link.
+        page (Post): The page to link to.
+        link_class (str): The link class.
+
+    Returns:
+        SafeString: The HTML for the page link.
     """
-    page_url = page.url
-    page_title = escape(page.title)
-
-    link_class_html = f' class="{link_class}"' if link_class else ""
-
-    return f'<a href="{page_url}" title="View the {page_title} page"{link_class_html}>{page_title}</a>'
+    title = format_html("View the {} page", page.title)
+    return build_html_link(
+        url=page.url,
+        text=page.title,
+        title=title,
+        css_class=link_class,
+    )
 
 
 def post_read_more_link(
     post: Post,
     link_class: str = "",
     read_more_text: str = "",
-) -> str:
+) -> str | SafeString:
     """Return the read more link for a post.
 
     If the post isn't truncated, return an empty string.
 
     Args:
-        post: The post.
-        link_class: The CSS class(es) for the link.
-        read_more_text: The text for the read more link.
+        post (Post): The post to check.
+        link_class (str): The link class.
+        read_more_text (str): The read more text to display.
 
     Returns:
-        str: The read more link.
+        str | SafeString: The HTML for the read more link.
     """
     post_read_more_text = djpress_settings.POST_READ_MORE_TEXT
 
@@ -215,9 +258,14 @@ def post_read_more_link(
         return ""
 
     read_more_text = read_more_text or post_read_more_text
-    link_class_html = f' class="{link_class}"' if link_class else ""
+    class_html = format_html(' class="{}"', link_class) if link_class else ""
 
-    return f'<p><a href="{post.url}"{link_class_html}>{read_more_text}</a></p>'
+    return format_html(
+        '<p><a href="{}"{}>{}</a></p>',
+        post.url,
+        class_html,
+        read_more_text,
+    )
 
 
 def get_site_pages_list(
@@ -226,61 +274,58 @@ def get_site_pages_list(
     a_class: str = "",
     ul_child_class: str = "",
     levels: int = 0,
-) -> str:
+) -> str | SafeString:
     """Return the HTML for the site pages list.
 
     This expects to be passed the output of the get_page_tree method.
 
     Args:
-        pages: The pages from the get_page_tree method.
-        li_class: The CSS class(es) for the list item.
-        a_class: The CSS class(es) for the link.
-        ul_child_class: The CSS class(es) for the child ul
-        levels: The maximum depth of nested pages to include or 0 for unlimited.
+        pages (list[PageNode]): The pages to display.
+        li_class (str): The li class.
+        a_class (str): The a class.
+        ul_child_class (str): The ul child class.
+        levels (int): The number of levels to display.
 
     Returns:
-        str: The HTML for the site pages list.
+        str | SafeString: The HTML for the site pages list.
     """
-    class_li = f' class="{li_class}"' if li_class else ""
-    class_ul = f' class="{ul_child_class}"' if ul_child_class else ""
-
-    output = ""
+    output = []
 
     for page_data in pages:
         page = page_data["page"]
         children = page_data["children"]
 
-        output += f"<li{class_li}>{get_page_link(page, link_class=a_class)}"
+        page_link_html = get_page_link(page, link_class=a_class)
 
+        children_html = ""
         if children and (levels == 0 or levels > 1):
             new_levels = levels - 1 if levels > 0 else 0
-            output += f"<ul{class_ul}>"
-            output += get_site_pages_list(
+            inner_list = get_site_pages_list(
                 children,
                 li_class=li_class,
                 a_class=a_class,
                 ul_child_class=ul_child_class,
                 levels=new_levels,
             )
-            output += "</ul>"
+            if ul_child_class:
+                children_html = format_html('<ul class="{}">{}</ul>', ul_child_class, inner_list)
+            else:
+                children_html = format_html("<ul>{}</ul>", inner_list)
 
-        output += "</li>"
+        if li_class:
+            item_html = format_html('<li class="{}">{}{}</li>', li_class, page_link_html, children_html)
+        else:
+            item_html = format_html("<li>{}{}</li>", page_link_html, children_html)
 
-    return output
+        output.append(item_html)
+
+    return mark_safe("".join(output))
 
 
 class BlogPostWrapper(template.Node):
     """Wraps the blog post content.
 
     This is a template tag that wraps the blog post content in a configurable HTML tag with a CSS class.
-
-    Args:
-        nodelist: The content to wrap.
-        tag: The HTML tag to wrap the content in.
-        css_class: The CSS class(es) for the tag.
-
-    Returns:
-        str: The wrapped content.
     """
 
     def __init__(self, nodelist: template.NodeList, tag: str = "", css_class: str = "") -> None:
@@ -289,26 +334,21 @@ class BlogPostWrapper(template.Node):
         self.tag = "article" if tag == "" else tag
         self.css_class = css_class
 
-    def render(self, context: template.Context) -> str:
+    def render(self, context: template.Context) -> str | SafeString:
         """Render the blog post content."""
         content = self.nodelist.render(context)
 
         # Just return the content if the tag isn't allowed
         if self.tag not in ["div", "span", "section", "article"]:
-            return mark_safe(content)
+            return content
 
-        return mark_safe(f"<{self.tag}{self.css_class}>{content}</{self.tag}>")
+        if self.css_class:
+            return format_html('<{0} class="{1}">{2}</{0}>', self.tag, self.css_class, content)
+        return format_html("<{0}>{1}</{0}>", self.tag, content)
 
 
 def parse_post_wrapper_params(params: list) -> tuple[str, str]:
-    """Parse the parameters for the template tag.
-
-    Args:
-        params: The parameters for the template tag.
-
-    Returns:
-        tuple: The tag and CSS class.
-    """
+    """Parse the parameters for the template tag."""
     tag = ""
     css_class = ""
 

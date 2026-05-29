@@ -36,7 +36,7 @@ class PluginStorageManager(models.Manager):
         Returns:
             None
         """
-        storage, created = self.update_or_create(
+        _storage, _created = self.update_or_create(
             plugin_name=plugin_name,
             defaults={"plugin_data": data},
         )

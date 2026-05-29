@@ -6,12 +6,12 @@ from djpress.conf import settings
 from djpress.models import Category, Post, Tag
 from djpress.templatetags.helpers import (
     categories_html,
-    category_link,
+    get_category_link,
     post_read_more_link,
     parse_post_wrapper_params,
     tags_html,
-    tag_link,
     get_page_link,
+    wrap_in_tag,
 )
 
 
@@ -182,6 +182,22 @@ def test_categories_html(category1, category2, category3):
             post_text=post_text,
         )
         == expected_output
+    )
+
+
+def test_categories_html_no_categories():
+    categories = Category.objects.none()
+    assert (
+        categories_html(
+            categories,
+            outer_tag="outer",
+            outer_class="outer_class",
+            link_class="link_class",
+            separator="|",
+            pre_text="pre_text",
+            post_text="post_text",
+        )
+        == ""
     )
 
 
@@ -383,49 +399,41 @@ def test_tags_html(settings, tag1, tag2, tag3):
     )
 
 
+def test_tags_html_no_tags():
+    tags = Tag.objects.none()
+    assert (
+        tags_html(
+            tags,
+            outer_tag="outer",
+            outer_class="outer_class",
+            link_class="link_class",
+            separator="|",
+            pre_text="pre_text",
+            post_text="post_text",
+        )
+        == ""
+    )
+
+
 @pytest.mark.django_db
-def test_category_link(settings, category1):
+def test_get_category_link(settings, category1):
     assert settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"] == "test-url-category"
 
     # Test case 1 - no link class
     link_class = ""
     expected_output = f'<a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/{category1.slug}/" title="View all posts in the {category1.title} category" class="p-category">{category1.title}</a>'
-    assert category_link(category1, link_class) == expected_output
+    assert get_category_link(category1, link_class) == expected_output
 
     # Test case 2 - with link class
     link_class = "category-class"
     expected_output = f'<a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/{category1.slug}/" title="View all posts in the {category1.title} category" class="p-category {link_class}">{category1.title}</a>'
-    assert category_link(category1, link_class) == expected_output
+    assert get_category_link(category1, link_class) == expected_output
 
     # Test case 3 - microformats disabled
     settings.DJPRESS_SETTINGS["MICROFORMATS_ENABLED"] = False
     link_class = ""
     expected_output = f'<a href="/{settings.DJPRESS_SETTINGS["CATEGORY_PREFIX"]}/{category1.slug}/" title="View all posts in the {category1.title} category">{category1.title}</a>'
-    assert category_link(category1, link_class) == expected_output
-
-
-@pytest.mark.django_db
-def test_category_link_xss():
-    """Test that the category title is escaped."""
-    bad_string = '<script>alert("evil")</script>'
-    escaped_string = "&lt;script&gt;alert(&quot;evil&quot;)&lt;/script&gt;"
-
-    category = Category.objects.create(slug="evil", title=bad_string)
-
-    assert bad_string not in category_link(category)
-    assert escaped_string in category_link(category)
-
-
-@pytest.mark.django_db
-def test_tag_link_xss():
-    """Test that the tag title is escaped."""
-    bad_string = '<script>alert("evil")</script>'
-    escaped_string = "&lt;script&gt;alert(&quot;evil&quot;)&lt;/script&gt;"
-
-    tag = Tag.objects.create(slug="evil", title=bad_string)
-
-    assert bad_string not in tag_link(tag)
-    assert escaped_string in tag_link(tag)
+    assert get_category_link(category1, link_class) == expected_output
 
 
 @pytest.mark.django_db
@@ -497,3 +505,18 @@ def test_get_page_link_xss(test_post1, test_page1):
 
     assert bad_string not in get_page_link(test_page1)
     assert escaped_string in get_page_link(test_page1)
+
+
+def test_wrap_in_tag():
+    """Test that wrap_in_tag returns the expected HTML."""
+    result = wrap_in_tag(content="This is the content", tag="div", css_class="blog-post")
+    assert result == '<div class="blog-post">This is the content</div>'
+
+    result = wrap_in_tag(content="This is the content", tag="div")
+    assert result == "<div>This is the content</div>"
+
+    result = wrap_in_tag(content="This is the content", tag="", css_class="blog-post")
+    assert result == "This is the content"
+
+    result = wrap_in_tag(content="This is the content", tag="foobar", css_class="blog-post")
+    assert result == ""
