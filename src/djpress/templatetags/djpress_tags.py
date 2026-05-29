@@ -6,7 +6,7 @@ from django.core.paginator import Page
 from django.db import models
 from django.template import Context
 from django.urls import reverse
-from django.utils.html import escape
+from django.utils.html import conditional_escape, escape, format_html, format_html_join
 from django.utils.safestring import mark_safe
 
 from djpress import url_utils
@@ -335,27 +335,23 @@ def site_title(
     Returns:
         str: Safely-marked HTML with the site title.
     """
-    site_title = str(djpress_settings.SITE_TITLE)
-    if site_title == "":
+    site_title_val = str(djpress_settings.SITE_TITLE)
+    if not site_title_val:
         return ""
 
-    link_class_html = f' class="{link_class}"' if link_class else ""
-
-    link_html = f'<a href="{reverse("djpress:index")}"{link_class_html}>{site_title}</a>' if link else site_title
+    if link:
+        class_html = format_html(' class="{}"', link_class) if link_class else ""
+        link_html = format_html('<a href="{}"{}>{}</a>', reverse("djpress:index"), class_html, site_title_val)
+    else:
+        link_html = format_html("{}", site_title_val)
 
     if outer_tag == "":
-        return mark_safe(link_html)
+        return link_html
 
-    # If outer_tag is not one of the allowed tags, return an empty string.
-    # TODO: move these tags to a constant?
     if outer_tag not in ["p", "div", "span", "article", "h1", "h2", "h3", "h4", "h5", "h6"]:
         return ""
 
-    outer_class_html = f' class="{outer_class}"' if outer_class else ""
-
-    output = f"<{outer_tag}{outer_class_html}>{link_html}</{outer_tag}>"
-
-    return mark_safe(output)
+    return helpers.wrap_in_tag(link_html, outer_tag, outer_class)
 
 
 @register.simple_tag
@@ -375,23 +371,17 @@ def site_description(
     Returns:
         str: The site description as safely marked HTML.
     """
-    site_description = str(djpress_settings.SITE_DESCRIPTION)
-    if site_description == "":
+    site_desc_val = str(djpress_settings.SITE_DESCRIPTION)
+    if not site_desc_val:
         return ""
 
     if outer_tag == "":
-        return site_description
+        return format_html("{}", site_desc_val)
 
-    # If outer_tag is not one of the allowed tags, return an empty string.
-    # TODO: move these tags to a constant?
     if outer_tag not in ["p", "div", "span", "article", "h1", "h2", "h3", "h4", "h5", "h6"]:
         return ""
 
-    outer_class_html = f' class="{outer_class}"' if outer_class else ""
-
-    output = f"<{outer_tag}{outer_class_html}>{site_description}</{outer_tag}>"
-
-    return mark_safe(output)
+    return helpers.wrap_in_tag(site_desc_val, outer_tag, outer_class)
 
 
 @register.simple_tag(takes_context=True)
@@ -458,7 +448,8 @@ def site_categories(
     if not categories:
         return ""
 
-    return mark_safe(
+    return format_html(
+        "{}",
         helpers.categories_html(
             categories=categories,
             outer_tag=outer_tag,
@@ -498,7 +489,8 @@ def site_tags(
     if not tags:
         return ""
 
-    return mark_safe(
+    return format_html(
+        "{}",
         helpers.tags_html(
             tags=tags,
             outer_tag=outer_tag,
@@ -507,7 +499,7 @@ def site_tags(
             separator=separator,
             pre_text=pre_text,
             post_text=post_text,
-        )
+        ),
     )
 
 
@@ -536,37 +528,21 @@ def tags_with_counts(
     if not tags:
         return ""
 
-    # If outer_tag is not one of the allowed tags, return an empty string.
     if outer_tag not in ["ul", "div", "span"]:
         return ""
 
-    output = ""
-    outer_class_html = f' class="{outer_class}"' if outer_class else ""
-
     if outer_tag == "ul":
-        output += f"<ul{outer_class_html}>"
-        for tag in tags:
-            count = tag.posts.count()
-            output += f"<li>{helpers.tag_link(tag, link_class)} ({count})</li>"
-        output += "</ul>"
+        items_html = format_html_join(
+            "",
+            "<li>{} ({})</li>",
+            ((helpers.get_tag_link(tag, link_class), tag.posts.count()) for tag in tags),
+        )
+        return helpers.wrap_in_tag(items_html, "ul", outer_class)
 
-    if outer_tag == "div":
-        output += f"<div{outer_class_html}>"
-        for tag in tags:
-            count = tag.posts.count()
-            output += f"{helpers.tag_link(tag, link_class)} ({count}), "
-        output = output[:-2]  # Remove the trailing comma and space
-        output += "</div>"
-
-    if outer_tag == "span":
-        output += f"<span{outer_class_html}>"
-        for tag in tags:
-            count = tag.posts.count()
-            output += f"{helpers.tag_link(tag, link_class)} ({count}), "
-        output = output[:-2]  # Remove the trailing comma and space
-        output += "</span>"
-
-    return mark_safe(output)
+    # For div or span, we join with a comma and space
+    items = [format_html("{} ({})", helpers.get_tag_link(tag, link_class), tag.posts.count()) for tag in tags]
+    joined_items = mark_safe(", ".join(items))
+    return helpers.wrap_in_tag(joined_items, outer_tag, outer_class)
 
 
 @register.simple_tag
@@ -596,19 +572,14 @@ def site_pages(
     if not pages:
         return ""
 
-    allowed_tags = ["div", "span"]
-    if outer_tag not in allowed_tags:
+    if outer_tag not in ["div", "span"]:
         return ""
 
-    outer_class_html = f' class="{outer_class}"' if outer_class else ""
+    escaped_separator = conditional_escape(separator)
+    links = [helpers.get_page_link(page=page, link_class=link_class) for page in pages]
+    joined_links = mark_safe(escaped_separator.join(links))
 
-    output = f"<{outer_tag}{outer_class_html}>"
-    for page in pages:
-        output += f"{helpers.get_page_link(page=page, link_class=link_class)}{separator}"
-    output = output[: -len(separator)]  # Remove the trailing separator
-    output += f"</{outer_tag}>"
-
-    return mark_safe(output)
+    return helpers.wrap_in_tag(joined_links, outer_tag, outer_class)
 
 
 @register.simple_tag
@@ -663,27 +634,26 @@ def site_pages_list(
     """
     pages = Post.page_objects.get_page_tree()
 
-    output = ""
-
     if not pages and not include_home:
-        return output
+        return ""
 
-    if ul_outer_class:
-        ul_outer_class = f' class="{ul_outer_class}"'
-
-    output += f"<ul{ul_outer_class}>"
-
+    home_li = ""
     if include_home:
-        class_li = f' class="{li_class}"' if li_class else ""
-        class_a = f' class="{a_class}"' if a_class else ""
-        output += f'<li{class_li}><a href="{reverse("djpress:index")}"{class_a}>Home</a></li>'
+        class_li = format_html(' class="{}"', li_class) if li_class else ""
+        class_a = format_html(' class="{}"', a_class) if a_class else ""
+        home_li = format_html(
+            '<li{}><a href="{}"{}>Home</a></li>',
+            class_li,
+            reverse("djpress:index"),
+            class_a,
+        )
 
-    output += helpers.get_site_pages_list(
+    inner_list = helpers.get_site_pages_list(
         pages, li_class=li_class, a_class=a_class, ul_child_class=ul_child_class, levels=levels
     )
-    output += "</ul>"
+    content = format_html("{}{}", home_li, inner_list)
 
-    return mark_safe(output)
+    return helpers.wrap_in_tag(content, "ul", ul_outer_class)
 
 
 """
@@ -745,8 +715,7 @@ def post_title(
         return ""
 
     # Get the title of the post
-    post_title = post.post_title if include_empty else post.title
-    output = escape(post_title)
+    post_title_val = post.post_title if include_empty else post.title
 
     # If there's a posts in the context, or if the link is forced, then we need to display the link.
     if posts or force_link:
@@ -754,13 +723,17 @@ def post_title(
         mf_link = "u-url" if djpress_settings.MICROFORMATS_ENABLED else ""
 
         link_classes = f"{mf_link} {link_class}".strip()
-        link_class_html = f' class="{link_classes}"' if link_classes else ""
+        link_class_html = format_html(' class="{}"', link_classes) if link_classes else ""
 
-        output = f'<a href="{post.url}" title="{output}"{link_class_html}>{output}</a>'
+        output = format_html(
+            '<a href="{}" title="{}"{}>{}</a>', post.url, post_title_val, link_class_html, post_title_val
+        )
+    else:
+        output = format_html("{}", post_title_val)
 
     # If there's no outer tag, return the output as is
     if outer_tag == "":
-        return mark_safe(output)
+        return output
 
     # If the outer tag is one of the allowed tags, then wrap the output in the outer tag.
     if outer_tag not in ["h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "span"]:
@@ -770,11 +743,8 @@ def post_title(
     mf = "p-name" if djpress_settings.MICROFORMATS_ENABLED else ""
 
     outer_classes = f"{mf} {outer_class}".strip()
-    outer_class_html = f' class="{outer_classes}"' if outer_classes else ""
 
-    output = f"<{outer_tag}{outer_class_html}>{output}</{outer_tag}>"
-
-    return mark_safe(output)
+    return helpers.wrap_in_tag(output, outer_tag, outer_classes)
 
 
 @register.simple_tag(takes_context=True)
@@ -821,23 +791,24 @@ def post_content(
     # If there's a posts in the context, then we need to display the truncated content.
     # Note: the read more link will return an empty string if the post is not truncated.
     if posts:
-        content = post.truncated_content_markdown + helpers.post_read_more_link(
-            post, read_more_link_class, read_more_text
+        content = format_html(
+            "{}{}",
+            mark_safe(post.truncated_content_markdown),
+            helpers.post_read_more_link(post, read_more_link_class, read_more_text),
         )
     else:
-        content = post.content_markdown
+        content = format_html("{}", mark_safe(post.content_markdown))
 
     # If the outer tag is one of the allowed tags, then wrap the output in the outer tag.
-    if outer_tag in ["section", "div", "article", "p", "span"]:
-        # If Microformats are enabled, use e-content with the outer tag.
-        mf = "e-content" if djpress_settings.MICROFORMATS_ENABLED else ""
+    if outer_tag not in ["section", "div", "article", "p", "span"]:
+        return content
 
-        outer_classes = f"{mf} {outer_class}".strip()
-        outer_class_html = f' class="{outer_classes}"' if outer_classes else ""
+    # If Microformats are enabled, use e-content with the outer tag.
+    mf = "e-content" if djpress_settings.MICROFORMATS_ENABLED else ""
 
-        content = f"<{outer_tag}{outer_class_html}>{content}</{outer_tag}>"
+    outer_classes = f"{mf} {outer_class}".strip()
 
-    return mark_safe(content)
+    return helpers.wrap_in_tag(content, outer_tag, outer_classes)
 
 
 @register.simple_tag(takes_context=True)
@@ -860,7 +831,7 @@ def post_date(
     output_date = post.local_datetime
 
     if not djpress_settings.ARCHIVE_ENABLED:
-        return mark_safe(output_date.strftime("%b %-d, %Y"))
+        return format_html("{}", output_date.strftime("%b %-d, %Y"))
 
     post_year = output_date.strftime("%Y")
     post_month = output_date.strftime("%m")
@@ -873,23 +844,32 @@ def post_date(
     month_url = url_utils.get_archives_url(year=int(post_year), month=int(post_month))
     day_url = url_utils.get_archives_url(year=int(post_year), month=int(post_month), day=int(post_day))
 
-    link_class_html = f' class="{link_class}"' if link_class else ""
+    link_class_html = format_html(' class="{}"', link_class) if link_class else ""
 
-    output = (
-        f'<a href="{month_url}" title="View all posts in {post_month_name} {post_year}"'
-        f"{link_class_html}>{post_month_name}</a> "
-        f'<a href="{day_url}" title="View all posts on {post_day_name} '
-        f'{post_month_name} {post_year}"{link_class_html}>{post_day_name}</a>, '
-        f'<a href="{year_url}" title="View all posts in {post_year}"{link_class_html}>'
-        f"{post_year}</a>, "
-        f"{post_time}."
+    output = format_html(
+        '<a href="{0}" title="View all posts in {1} {2}"{3}>{1}</a> '
+        '<a href="{4}" title="View all posts on {5} {1} {2}"{3}>{5}</a>, '
+        '<a href="{6}" title="View all posts in {2}"{3}>{2}</a>, '
+        "{7}.",
+        month_url,
+        post_month_name,
+        post_year,
+        link_class_html,
+        day_url,
+        post_day_name,
+        year_url,
+        post_time,
     )
 
     # If Microformats are enabled, use dt-published with the date.
     if djpress_settings.MICROFORMATS_ENABLED:
-        output = f'<time class="dt-published" datetime="{output_date.isoformat()}">{output}</time>'
+        output = format_html(
+            '<time class="dt-published" datetime="{}">{}</time>',
+            output_date.isoformat(),
+            output,
+        )
 
-    return mark_safe(output)
+    return output
 
 
 @register.simple_tag(takes_context=True)
@@ -928,25 +908,27 @@ def post_author(
     mf = "p-author" if djpress_settings.MICROFORMATS_ENABLED else ""
 
     outer_classes = f"{mf} {outer_class}".strip()
-    outer_class_html = f' class="{outer_classes}"' if outer_classes else ""
-
-    link_class_html = f' class="{link_class}"' if link_class else ""
 
     author = post.author
-    author_display_name = escape(get_author_display_name(author))
+    author_display_name = get_author_display_name(author)
 
     if not djpress_settings.AUTHOR_ENABLED:
-        return f"<{outer_tag}{outer_class_html}>{pre_text}{author_display_name}{post_text}</{outer_tag}>"
+        content = format_html("{}{}{}", pre_text, author_display_name, post_text)
+        return helpers.wrap_in_tag(content, outer_tag, outer_classes)
 
     author_url = url_utils.get_author_url(user=author)
+    link_class_html = format_html(' class="{}"', link_class) if link_class else ""
 
-    output = (
-        f"<{outer_tag}{outer_class_html}>{pre_text}"
-        f'<a href="{author_url}" title="View all posts by {author_display_name}"{link_class_html}>'
-        f"{author_display_name}</a>{post_text}</{outer_tag}>"
+    link_html = format_html(
+        '<a href="{}" title="View all posts by {}"{}>{}</a>',
+        author_url,
+        author_display_name,
+        link_class_html,
+        author_display_name,
     )
+    content = format_html("{}{}{}", pre_text, link_html, post_text)
 
-    return mark_safe(output)
+    return helpers.wrap_in_tag(content, outer_tag, outer_classes)
 
 
 @register.simple_tag(takes_context=True)
@@ -984,8 +966,8 @@ def post_categories(
     if not categories:
         return ""
 
-    # Explicitly pass outer_tag parameter for clarity
-    return mark_safe(
+    return format_html(
+        "{}",
         helpers.categories_html(
             categories=categories,
             outer_tag=outer_tag,
@@ -1037,8 +1019,8 @@ def post_tags(
     if outer_tag not in allowed_outer_tags:
         return ""
 
-    # Explicitly pass outer_tag parameter for clarity
-    return mark_safe(
+    return format_html(
+        "{}",
         helpers.tags_html(
             tags=tags,
             outer_tag=outer_tag,
@@ -1047,7 +1029,7 @@ def post_tags(
             separator=separator,
             pre_text=pre_text,
             post_text=post_text,
-        )
+        ),
     )
 
 
@@ -1095,23 +1077,27 @@ def search_form(
         return ""
 
     current_query = context.get("search_query", "")
-    current_query = escape(current_query)
 
-    # Build the HTML
-    form_class_attr = f' class="{form_class}"' if form_class else ""
-    input_class_attr = f' class="{input_class}"' if input_class else ""
-    button_class_attr = f' class="{button_class}"' if button_class else ""
+    form_class_attr = format_html(' class="{}"', form_class) if form_class else ""
+    input_class_attr = format_html(' class="{}"', input_class) if input_class else ""
+    button_class_attr = format_html(' class="{}"', button_class) if button_class else ""
 
-    html = f'<form action="{url}" method="get"{form_class_attr}>'
-    html += '<input type="search" name="q" '
-    html += f'value="{current_query}" placeholder="{placeholder}" aria-label="Search"{input_class_attr}>'
-
+    button_html = ""
     if show_button:
-        html += f'<button type="submit"{button_class_attr}>{button_text}</button>'
+        button_html = format_html('<button type="submit"{}>{}</button>', button_class_attr, button_text)
 
-    html += "</form>"
-
-    return mark_safe(html)
+    return format_html(
+        '<form action="{}" method="get"{}>'
+        '<input type="search" name="q" value="{}" placeholder="{}" aria-label="Search"{} >'
+        "{}"
+        "</form>",
+        url,
+        form_class_attr,
+        current_query,
+        placeholder,
+        input_class_attr,
+        button_html,
+    )
 
 
 @register.simple_tag(takes_context=True)
@@ -1156,18 +1142,14 @@ def search_errors(
     if error_tag not in allowed_error_tags:
         return ""
 
-    outer_class_html = f' class="{outer_class}"' if outer_class else ""
-    error_class_html = f' class="{error_class}"' if error_class else ""
+    # Build error list item HTML snippets securely
+    error_items = format_html_join(
+        "",
+        f'<{error_tag} class="{error_class}">{{}}</{error_tag}>' if error_class else f"<{error_tag}>{{}}</{error_tag}>",
+        ((error,) for error in errors if isinstance(error, str)),
+    )
 
-    html = f"<{outer_tag}{outer_class_html}>"
-
-    for error in errors:
-        if isinstance(error, str):
-            html += f"<{error_tag}{error_class_html}>{error}</{error_tag}>"
-
-    html += f"</{outer_tag}>"
-
-    return mark_safe(html)
+    return helpers.wrap_in_tag(error_items, outer_tag, outer_class)
 
 
 """
@@ -1207,24 +1189,16 @@ def category_title(
     if not category or not isinstance(category, Category):
         return ""
 
-    outer_class = f' class="{outer_class}"' if outer_class else ""
-
-    output = escape(category.title)
-
-    if pre_text:
-        output = f"{pre_text}{output}"
-
-    if post_text:
-        output = f"{output}{post_text}"
+    content = format_html("{}{}{}", pre_text, category.title, post_text)
 
     if outer_tag == "":
-        return output
+        return content
 
     allowed_outer_tags = ["h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "span"]
     if outer_tag not in allowed_outer_tags:
         return ""
 
-    return mark_safe(f"<{outer_tag}{outer_class}>{output}</{outer_tag}>")
+    return helpers.wrap_in_tag(content, outer_tag, outer_class)
 
 
 @register.simple_tag(takes_context=True)
@@ -1260,29 +1234,23 @@ def tag_title(
     if not tag_slugs:
         return ""
 
-    # Get tag titles from the slugs
     tags = [Tag.objects.get_tag_by_slug(slug) for slug in tag_slugs]
-    tag_titles = [escape(tag.title) for tag in tags]
+    tag_titles = [tag.title for tag in tags]
 
-    # Join multiple tags with commas
-    output = separator.join(tag_titles) if len(tag_titles) > 1 else tag_titles[0]
+    escaped_separator = conditional_escape(separator)
+    escaped_titles = [conditional_escape(t) for t in tag_titles]
+    joined_titles = mark_safe(escaped_separator.join(escaped_titles))
 
-    if pre_text:
-        output = f"{pre_text}{output}"
-
-    if post_text:
-        output = f"{output}{post_text}"
+    content = format_html("{}{}{}", pre_text, joined_titles, post_text)
 
     if outer_tag == "":
-        return output
+        return content
 
     allowed_outer_tags = ["h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "span"]
     if outer_tag not in allowed_outer_tags:
         return ""
 
-    outer_class_html = f' class="{outer_class}"' if outer_class else ""
-
-    return mark_safe(f"<{outer_tag}{outer_class_html}>{output}</{outer_tag}>")
+    return helpers.wrap_in_tag(content, outer_tag, outer_class)
 
 
 @register.simple_tag(takes_context=True)
@@ -1315,24 +1283,16 @@ def search_title(
     if not search_query or not isinstance(search_query, str):
         return ""
 
-    output = escape(search_query)
-
-    if pre_text:
-        output = f"{pre_text}{output}"
-
-    if post_text:
-        output = f"{output}{post_text}"
+    content = format_html("{}{}{}", pre_text, search_query, post_text)
 
     if outer_tag == "":
-        return mark_safe(output)
+        return content
 
     allowed_outer_tags = ["h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "span"]
     if outer_tag not in allowed_outer_tags:
         return ""
 
-    outer_class = f' class="{outer_class}"' if outer_class else ""
-
-    return mark_safe(f"<{outer_tag}{outer_class}>{output}</{outer_tag}>")
+    return helpers.wrap_in_tag(content, outer_tag, outer_class)
 
 
 @register.simple_tag(takes_context=True)
@@ -1365,24 +1325,17 @@ def author_name(
     if not author or not isinstance(author, User):
         return ""
 
-    output = escape(get_author_display_name(author))
-
-    if pre_text:
-        output = f"{pre_text}{output}"
-
-    if post_text:
-        output = f"{output}{post_text}"
+    author_display_name = get_author_display_name(author)
+    content = format_html("{}{}{}", pre_text, author_display_name, post_text)
 
     if outer_tag == "":
-        return mark_safe(output)
+        return content
 
     allowed_outer_tags = ["h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "span"]
     if outer_tag not in allowed_outer_tags:
         return ""
 
-    outer_class = f' class="{outer_class}"' if outer_class else ""
-
-    return mark_safe(f"<{outer_tag}{outer_class}>{output}</{outer_tag}>")
+    return helpers.wrap_in_tag(content, outer_tag, outer_class)
 
 
 @register.simple_tag(takes_context=True)
@@ -1432,33 +1385,34 @@ def pagination_links(
         if request and hasattr(request, "GET"):
             params = request.GET.copy()
             params["page"] = page_number
-            return f"?{params.urlencode()}"
+            return mark_safe(f"?{params.urlencode()}")
         return f"?page={page_number}"
 
     if page.has_previous():
-        previous_output = (
-            f'<span class="previous">'
-            f'<a href="{build_pagination_url(1)}">&laquo; first</a> '
-            f'<a href="{build_pagination_url(page.previous_page_number())}">previous</a>'
-            f"</span>"
+        previous_output = format_html(
+            '<span class="previous"><a href="{}">&laquo; first</a> <a href="{}">previous</a></span>',
+            build_pagination_url(1),
+            build_pagination_url(page.previous_page_number()),
         )
     else:
         previous_output = ""
 
     if page.has_next():
-        next_output = (
-            f'<span class="next">'
-            f'<a href="{build_pagination_url(page.next_page_number())}">next</a> '
-            f'<a href="{build_pagination_url(page.paginator.num_pages)}">last &raquo;</a>'
-            f"</span>"
+        next_output = format_html(
+            '<span class="next"><a href="{}">next</a> <a href="{}">last &raquo;</a></span>',
+            build_pagination_url(page.next_page_number()),
+            build_pagination_url(page.paginator.num_pages),
         )
     else:
         next_output = ""
 
-    current_output = f'<span class="current">Page {page.number} of {page.paginator.num_pages}</span>'
+    current_output = format_html('<span class="current">Page {} of {}</span>', page.number, page.paginator.num_pages)
 
-    return mark_safe(
-        f'<div class="pagination">{previous_output} {current_output} {next_output}</div>',
+    return format_html(
+        '<div class="pagination">{} {} {}</div>',
+        previous_output,
+        current_output,
+        next_output,
     )
 
 
@@ -1489,15 +1443,13 @@ def page_link(
     output = helpers.get_page_link(page, link_class=link_class)
 
     if outer_tag == "":
-        return mark_safe(output)
+        return output
 
     allowed_tags = ["h1", "h2", "h3", "h4", "h5", "h6", "div", "span", "li"]
     if outer_tag not in allowed_tags:
         return ""
 
-    outer_class_html = f' class="{outer_class}"' if outer_class else ""
-
-    return mark_safe(f"<{outer_tag}{outer_class_html}>{output}</{outer_tag}>")
+    return helpers.wrap_in_tag(output, outer_tag, outer_class)
 
 
 @register.simple_tag
@@ -1524,7 +1476,7 @@ def rss_link() -> str:
 
     rss_url = url_utils.get_rss_url()
 
-    return mark_safe(f'<link rel="alternate" type="application/rss+xml" title="Latest Posts" href="{rss_url}">')
+    return format_html('<link rel="alternate" type="application/rss+xml" title="Latest Posts" href="{}">', rss_url)
 
 
 @register.tag(name="post_wrap")
@@ -1553,9 +1505,6 @@ def post_wrapper_tag(
     # If microformats are enabled, add the h-entry class before the css class
     if djpress_settings.MICROFORMATS_ENABLED:
         css_class = f"h-entry {css_class}" if css_class else "h-entry"
-
-    if css_class:
-        css_class = f' class="{css_class}"'
 
     nodelist = parser.parse(("end_post_wrap",))
     parser.delete_first_token()
