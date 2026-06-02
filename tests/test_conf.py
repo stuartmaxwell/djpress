@@ -412,3 +412,16 @@ def test_flexible_json_form_field():
     # Disabled fields should bypass cleaning and return the value as-is
     disabled_field = FlexibleJSONFormField(disabled=True)
     assert disabled_field.to_python("some_value") == "some_value"
+
+
+def test_dynamic_settings_during_bootstrap(settings):
+    """Test that dynamic settings are bypassed during Django app loading/bootstrap."""
+    from unittest.mock import patch
+
+    settings.DJPRESS_SETTINGS = {
+        "DATABASE_SETTINGS_ENABLED": True,
+    }
+
+    with patch("django.apps.apps.ready", False):
+        # Even though DATABASE_SETTINGS_ENABLED is True, it should return default/overridden setting without DB lookup
+        assert djpress_settings.SITE_TITLE == "My DJ Press Blog"

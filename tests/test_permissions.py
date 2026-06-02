@@ -120,3 +120,25 @@ def test_create_groups_logs_on_new_group_creation(caplog):
     assert "Created 'djpress_author' group" in caplog.text
     assert "Created 'djpress_contributor' group" in caplog.text
     assert "Successfully configured DJ Press groups and permissions" in caplog.text
+
+
+@pytest.mark.django_db
+def test_group_setting_permissions() -> None:
+    """Test that Setting permissions belong exclusively to the djpress_admin group."""
+    from djpress.models import Setting
+
+    setting_content_type = ContentType.objects.get_for_model(Setting)
+
+    admin = Group.objects.get(name="djpress_admin")
+    editor = Group.objects.get(name="djpress_editor")
+    author = Group.objects.get(name="djpress_author")
+    contributor = Group.objects.get(name="djpress_contributor")
+
+    # Check setting permissions
+    setting_perms = Permission.objects.filter(content_type=setting_content_type)
+    assert setting_perms.exists()
+    for perm in setting_perms:
+        assert perm in admin.permissions.all()
+        assert perm not in editor.permissions.all()
+        assert perm not in author.permissions.all()
+        assert perm not in contributor.permissions.all()
