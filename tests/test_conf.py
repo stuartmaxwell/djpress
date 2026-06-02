@@ -188,3 +188,9 @@ def test_invalid_settings_tag(settings):
         "TAG_PREFIX cannot be empty if TAG_ENABLED is True.",
         id="djpress.E004",
     )
+
+
+def test_author_enabled_default_is_false(settings):
+    """Test that AUTHOR_ENABLED defaults to False."""
+    settings.DJPRESS_SETTINGS.clear()
+    assert djpress_settings.AUTHOR_ENABLED is False

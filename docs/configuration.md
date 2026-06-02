@@ -27,7 +27,7 @@ Settings are grouped by functionality:
 | `CATEGORY_PREFIX`  | str  | `"category"`                         | Prefix for category URLs.                         |
 | `TAG_ENABLED`      | bool | `True`                               | Enable/disable tag pages.                         |
 | `TAG_PREFIX`       | str  | `"tag"`                              | Prefix for tag URLs.                              |
-| `AUTHOR_ENABLED`   | bool | `True`                               | Enable/disable author pages.                      |
+| `AUTHOR_ENABLED`   | bool | `False`                              | Enable/disable author pages.                      |
 | `AUTHOR_PREFIX`    | str  | `"author"`                           | Prefix for author URLs.                           |
 | `RSS_ENABLED`      | bool | `True`                               | Enable/disable RSS feed.                          |
 | `RSS_PATH`         | str  | `"rss"`                              | Path for RSS feed.                                |
@@ -134,3 +134,31 @@ DJPRESS_SETTINGS = {
 ```
 
 To create your own theme, please read the [Theme documentation](themes.md)
+
+## Custom User Models
+
+If your Django project uses a custom user model (`AUTH_USER_MODEL`), you should consider how author display names and
+archive pages are generated.
+
+### Author Display Names
+
+The author's name is rendered in templates using the `{% post_author %}` tag. DJ Press resolves the author's display
+name in the following order of preference:
+
+1. **`get_full_name()`**: If your custom user model implements a custom `get_full_name()` method, it will be used first.
+2. **`first_name` & `last_name`**: If the user model has direct `first_name` and `last_name` fields, it will concatenate them.
+3. **`get_username()`**: Falls back to the username field defined by your custom user model.
+
+**Note**: If your custom user model uses the email address as the unique username (login identifier) and does not
+define a `first_name`/`last_name` or implement a custom `get_full_name()` method, the user's plain email address will
+be rendered as their display name on the public website. To prevent this, ensure that your custom user model implements
+a custom `get_full_name()` method returning a safe display name.
+
+### Author Archive URLs
+
+By default, author archive URLs are disabled (`AUTHOR_ENABLED = False`). If you choose to enable them by setting
+`"AUTHOR_ENABLED": True` in your `DJPRESS_SETTINGS`:
+
+- The URL slug generated for an author relies on the string returned by `get_username()`.
+- Ensure that `get_username()` returns a URL-safe string consisting only of letters, numbers, underscores, and hyphens (matching the pattern `^[\w-]+$`).
+- If `get_username()` returns an email address or a string containing spaces, dots, or special characters, those characters will violate the URL routing regular expression pattern and will cause 404 page-not-found errors when visitors try to view the author's archive.

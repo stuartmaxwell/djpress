@@ -126,7 +126,12 @@ The `AUTHOR_PREFIX` is required (default is "author"):
 | Default       | `/author/johndoe` | All posts by user "johndoe" |
 | Custom prefix | `/writer/johndoe` | All posts by user "johndoe" |
 
-Enable/disable with `AUTHOR_ENABLED` (default: `True`).
+Enable/disable with `AUTHOR_ENABLED` (default: `False`).
+
+**Note**: Author URLs rely on the value returned by `get_username()`. This value must be URL-safe (consisting only of
+letters, numbers, underscores, and hyphens matching `^[\w-]+$`). If your project uses a custom user model with an email
+address as the username, these URLs will not match the required pattern and will return `404 Not Found` errors. In such
+cases, keep `AUTHOR_ENABLED` disabled (set to `False`).
 
 ### Tag Page
 
