@@ -35,11 +35,17 @@ class DJPressSettings:
 
     def _get_db_settings(self) -> dict[str, SettingValueType]:
         """Fetch settings from the database, utilizing caching to optimize performance."""
+        # Avoid database lookup during app loading
+        from django.apps import apps  # noqa: PLC0415
+
+        if not apps.ready:
+            return {}
+
         settings_dict = cache.get(SETTING_CACHE_KEY)
 
         if settings_dict is None:
             try:
-                from djpress.models import Setting  # noqa: PLC0415 # Circular import
+                from djpress.models.setting import Setting  # noqa: PLC0415 # Circular import
 
                 settings_dict = {setting.key: setting.value for setting in Setting.objects.all()}
                 cache.set(SETTING_CACHE_KEY, settings_dict, timeout=None)
