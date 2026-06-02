@@ -7,7 +7,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import OperationalError, ProgrammingError
 
-from djpress.models import Category, Media, PluginStorage, Post, Tag
+from djpress.models import Category, Media, PluginStorage, Post, Setting, Tag
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +30,7 @@ def create_groups() -> None:
         tag_content_type = ContentType.objects.get_for_model(Tag)
         media_content_type = ContentType.objects.get_for_model(Media)
         plugin_storage_content_type = ContentType.objects.get_for_model(PluginStorage)
+        setting_content_type = ContentType.objects.get_for_model(Setting)
 
         # Get all permissions for admin group
         all_post_permissions = Permission.objects.filter(content_type=post_content_type)
@@ -37,6 +38,7 @@ def create_groups() -> None:
         all_tag_permissions = Permission.objects.filter(content_type=tag_content_type)
         all_media_permissions = Permission.objects.filter(content_type=media_content_type)
         all_plugin_storage_permissions = Permission.objects.filter(content_type=plugin_storage_content_type)
+        all_setting_permissions = Permission.objects.filter(content_type=setting_content_type)
 
         # Get specific permissions for other groups
         post_permissions = Permission.objects.filter(
@@ -91,6 +93,7 @@ def create_groups() -> None:
                 *all_tag_permissions,
                 *all_media_permissions,
                 *all_plugin_storage_permissions,
+                *all_setting_permissions,
             ]
         )
 
