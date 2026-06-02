@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import patch
 
 from django.conf import settings as django_settings
 from django.core.exceptions import ImproperlyConfigured
@@ -6,6 +7,9 @@ from django.core.checks import Error
 
 from djpress.conf import settings as djpress_settings
 from djpress.conf import check_djpress_settings
+from django.core.exceptions import ValidationError
+from djpress.models.setting import Setting
+from django.core.cache import cache
 
 
 def test_load_default_test_settings_example_project(settings):
@@ -194,3 +198,180 @@ def test_author_enabled_default_is_false(settings):
     """Test that AUTHOR_ENABLED defaults to False."""
     settings.DJPRESS_SETTINGS.clear()
     assert djpress_settings.AUTHOR_ENABLED is False
+
+
+@pytest.mark.django_db
+def test_dynamic_settings_disabled_by_default():
+    """Test that database settings are disabled by default."""
+    assert djpress_settings.DATABASE_SETTINGS_ENABLED is False
+
+    # Create a setting in the database
+    Setting.objects.create(key="SITE_TITLE", value="DB Site Title")
+
+    # The lookup should NOT check the DB and should fall back to Django settings
+    assert djpress_settings.SITE_TITLE == "My Test DJ Press Blog"
+
+
+@pytest.mark.django_db
+def test_dynamic_settings_precedence(settings):
+    """Test that DB settings take precedence over Django settings when enabled."""
+    # Enable database settings lookups
+    settings.DJPRESS_SETTINGS = {
+        "DATABASE_SETTINGS_ENABLED": True,
+        "SITE_TITLE": "Django settings title",
+    }
+
+    assert djpress_settings.DATABASE_SETTINGS_ENABLED is True
+
+    # Check initially it returns the Django settings value
+    assert djpress_settings.SITE_TITLE == "Django settings title"
+
+    # Create the setting in the database
+    Setting.objects.create(key="SITE_TITLE", value="DB Site Title")
+
+    # Database setting takes precedence!
+    assert djpress_settings.SITE_TITLE == "DB Site Title"
+
+
+@pytest.mark.django_db
+def test_dynamic_settings_validation():
+    """Test type validation for dynamic settings."""
+    # Expected type for RSS_ENABLED is bool. Try setting to integer 123.
+    setting = Setting(key="RSS_ENABLED", value=123)
+    with pytest.raises(ValidationError) as exc_info:
+        setting.full_clean()
+    assert "Expected bool, got int" in str(exc_info.value)
+
+    # Expected type for RECENT_PUBLISHED_POSTS_COUNT is int. Try setting to a negative number.
+    setting = Setting(key="RECENT_PUBLISHED_POSTS_COUNT", value=-5)
+    with pytest.raises(ValidationError) as exc_info:
+        setting.full_clean()
+    assert "must be greater than or equal to 0" in str(exc_info.value)
+
+    # Valid values should clean successfully
+    setting = Setting(key="RSS_ENABLED", value=False)
+    setting.full_clean()  # should not raise
+
+
+@pytest.mark.django_db
+def test_dynamic_settings_lockout_prevention():
+    """Test that DATABASE_SETTINGS_ENABLED is prevented from being saved in DB."""
+    setting = Setting(key="DATABASE_SETTINGS_ENABLED", value=True)
+    with pytest.raises(ValidationError) as exc_info:
+        setting.full_clean()
+    assert "DATABASE_SETTINGS_ENABLED is a system-level setting" in str(exc_info.value)
+
+
+@pytest.mark.django_db
+def test_dynamic_settings_unrecognized_keys(settings):
+    """Test that unrecognized settings are saved without error but ignored."""
+    settings.DJPRESS_SETTINGS = {
+        "DATABASE_SETTINGS_ENABLED": True,
+    }
+
+    # Save an unrecognized key
+    setting = Setting(key="SOME_CUSTOM_UNRECOGNIZED_KEY", value="custom_value")
+    setting.full_clean()
+    setting.save()
+
+    # The settings object shouldn't resolve it (it raises AttributeError)
+    with pytest.raises(AttributeError):
+        _ = djpress_settings.SOME_CUSTOM_UNRECOGNIZED_KEY
+
+
+@pytest.mark.django_db
+def test_dynamic_settings_caching_and_invalidation(settings):
+    """Test that dynamic settings cache is correctly invalidated on save/delete."""
+    settings.DJPRESS_SETTINGS = {
+        "DATABASE_SETTINGS_ENABLED": True,
+        "SITE_TITLE": "Django Title",
+    }
+
+    # Clear cache first to ensure a clean state
+    cache.delete("djpress:settings")
+
+    # Initial query should set the cache (which will be empty since no DB settings exist yet)
+    assert djpress_settings.SITE_TITLE == "Django Title"
+    assert cache.get("djpress:settings") == {}
+
+    # Creating a setting should invalidate the cache automatically via signals
+    setting = Setting.objects.create(key="SITE_TITLE", value="DB Cached Title")
+    assert cache.get("djpress:settings") is None  # Signal deleted it!
+
+    # Querying again should hit the DB, refresh the cache, and return the new value
+    assert djpress_settings.SITE_TITLE == "DB Cached Title"
+    assert cache.get("djpress:settings") == {"SITE_TITLE": "DB Cached Title"}
+
+    # Modifying the setting should invalidate the cache
+    setting.value = "DB New Cached Title"
+    setting.save()
+    assert cache.get("djpress:settings") is None
+
+    # Querying should refresh again
+    assert djpress_settings.SITE_TITLE == "DB New Cached Title"
+    assert cache.get("djpress:settings") == {"SITE_TITLE": "DB New Cached Title"}
+
+    # Deleting the setting should invalidate the cache
+    setting.delete()
+    assert cache.get("djpress:settings") is None
+    assert djpress_settings.SITE_TITLE == "Django Title"
+
+
+def test_database_settings_enabled_invalid_type(settings):
+    """Test that invalid type for DATABASE_SETTINGS_ENABLED in Django settings raises a TypeError."""
+    settings.DJPRESS_SETTINGS = {
+        "DATABASE_SETTINGS_ENABLED": "not-a-boolean",
+    }
+    with pytest.raises(TypeError) as exc_info:
+        _ = djpress_settings.database_settings_enabled()
+    assert "Expected bool for DATABASE_SETTINGS_ENABLED" in str(exc_info.value)
+
+
+@pytest.mark.django_db
+def test_dynamic_settings_runtime_type_error(settings):
+    """Test that invalid DB value type raises TypeError at runtime."""
+    settings.DJPRESS_SETTINGS = {
+        "DATABASE_SETTINGS_ENABLED": True,
+    }
+
+    # Return invalid value for RSS_ENABLED (which expects bool) from DB
+    with patch.object(djpress_settings, "_get_db_settings", return_value={"RSS_ENABLED": 123}):
+        with pytest.raises(TypeError) as exc_info:
+            _ = djpress_settings.RSS_ENABLED
+        assert "Expected bool for RSS_ENABLED, got int" in str(exc_info.value)
+
+
+@pytest.mark.django_db
+def test_dynamic_settings_runtime_value_error(settings):
+    """Test that negative int DB value raises ValueError at runtime."""
+    settings.DJPRESS_SETTINGS = {
+        "DATABASE_SETTINGS_ENABLED": True,
+    }
+
+    # Return invalid negative integer for RECENT_PUBLISHED_POSTS_COUNT from DB
+    with patch.object(djpress_settings, "_get_db_settings", return_value={"RECENT_PUBLISHED_POSTS_COUNT": -5}):
+        with pytest.raises(ValueError) as exc_info:
+            _ = djpress_settings.RECENT_PUBLISHED_POSTS_COUNT
+        assert "RECENT_PUBLISHED_POSTS_COUNT must be greater than or equal to 0" in str(exc_info.value)
+
+
+@pytest.mark.django_db
+def test_dynamic_settings_db_exception_graceful_fallback(settings):
+    """Test that database exceptions during settings retrieval are caught and fall back gracefully."""
+    settings.DJPRESS_SETTINGS = {
+        "DATABASE_SETTINGS_ENABLED": True,
+    }
+
+    # Clear cache first to force a database query attempt
+    cache.delete("djpress:settings")
+
+    with patch.object(Setting.objects, "all", side_effect=Exception("DB Connection Error")):
+        # Querying settings should not raise an exception, and should return the default value
+        assert djpress_settings.SITE_TITLE == "My DJ Press Blog"
+
+
+@pytest.mark.django_db
+def test_setting_str_method():
+    """Test the __str__ method of the Setting model."""
+    setting = Setting(key="SITE_TITLE", value="My Test Title")
+    assert str(setting) == "SITE_TITLE: My Test Title"
