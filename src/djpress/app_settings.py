@@ -4,7 +4,7 @@
 DJPRESS_SETTINGS = {
     "ARCHIVE_ENABLED": (True, bool),
     "ARCHIVE_PREFIX": ("", str),
-    "AUTHOR_ENABLED": (True, bool),
+    "AUTHOR_ENABLED": (False, bool),
     "AUTHOR_PREFIX": ("author", str),
     "CACHE_CATEGORIES": (True, bool),
     "CACHE_RECENT_PUBLISHED_POSTS": (False, bool),
