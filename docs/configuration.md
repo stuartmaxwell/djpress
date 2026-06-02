@@ -162,3 +162,52 @@ By default, author archive URLs are disabled (`AUTHOR_ENABLED = False`). If you 
 - The URL slug generated for an author relies on the string returned by `get_username()`.
 - Ensure that `get_username()` returns a URL-safe string consisting only of letters, numbers, underscores, and hyphens (matching the pattern `^[\w-]+$`).
 - If `get_username()` returns an email address or a string containing spaces, dots, or special characters, those characters will violate the URL routing regular expression pattern and will cause 404 page-not-found errors when visitors try to view the author's archive.
+
+## Dynamic Database Settings
+
+For most simple use-cases, configuring settings in the `DJPRESS_SETTINGS` object is recommended. However, DJ Press
+allows you to configure settings in your database via a `Setting` model, which takes precedence over the file-based
+settings and defaults.
+
+This allows administrators to change settings like `SITE_TITLE` or `SITE_DESCRIPTION` directly from the Django Admin interface without needing to redeploy or modify code files.
+
+### Enabling Dynamic Database Settings
+
+Dynamic database settings are disabled by default. To enable them, add the `DATABASE_SETTINGS_ENABLED` toggle to your
+`DJPRESS_SETTINGS` dictionary in your `settings.py` file:
+
+```python
+DJPRESS_SETTINGS = {
+    "DATABASE_SETTINGS_ENABLED": True,
+}
+```
+
+### Database Settings Precedence
+
+When `DATABASE_SETTINGS_ENABLED` is `True`, settings are resolved in the following order of precedence:
+
+1. **Database settings** (configured via the `Setting` model in Django Admin).
+2. **Django settings** (defined in `DJPRESS_SETTINGS` inside `settings.py`).
+3. **App defaults** (pre-defined defaults in `app_settings.py`).
+
+If a setting key does not exist in the database, DJ Press falls back to the subsequent layers. Unrecognised
+keys in the database are safely ignored.
+
+### Caching and Performance
+
+To avoid executing a database query on every setting retrieval, DJ Press utilises Django's default caching framework.
+
+All database settings are retrieved in a single query and cached under the key `"djpress:settings"`. This cache is
+automatically invalidated and refreshed whenever a setting is created, saved, or deleted.
+
+### Configuring Settings in Django Admin
+
+When configuring settings via the Django Admin interface:
+- **Keys**: Enter any setting key (e.g. `SITE_TITLE`, `RSS_ENABLED`, `RECENT_PUBLISHED_POSTS_COUNT`).
+- **Values**: Stored as a standard JSONField. To make this easier, the admin form uses a custom parser:
+  - **Booleans**: Enter standard Python/JSON booleans (`True` / `true` / `False` / `false`) directly without quotes.
+  - **Null values**: Enter `None` or `null` directly.
+  - **Text strings**: Plain text strings (e.g. `My Awesome Blog`) can be entered **without quotes**. The form field will automatically fall back to raw strings if standard JSON parsing fails.
+  - **Numbers and Collections**: Standard numbers (e.g. `10`) or JSON collections (e.g. `["markdown.extensions.tables"]` or `{"theme_color": "blue"}`) are parsed natively into their correct types.
+- **Validation**: Any setting matching a key in `DJPRESS_SETTINGS` is validated when saved to ensure that the value's type matches the expected setting type, preventing configuration mistakes.
+- **Lockout Protection**: To avoid circular conflicts, the system-level master toggle `DATABASE_SETTINGS_ENABLED` cannot be configured in the database and must be configured in the file-based settings.

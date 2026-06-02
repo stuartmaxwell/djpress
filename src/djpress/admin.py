@@ -1,5 +1,8 @@
 """djpress admin configuration."""
 
+import json
+
+from django import forms
 from django.contrib import admin
 from django.db.models.query import QuerySet
 from django.http import HttpRequest
@@ -7,7 +10,7 @@ from django.utils import timezone
 from django.utils.html import format_html
 
 # Register the models here.
-from djpress.models import Category, Media, PluginStorage, Post, Tag
+from djpress.models import Category, Media, PluginStorage, Post, Setting, Tag
 
 
 @admin.register(Category)
@@ -399,6 +402,70 @@ class PluginStorageAdmin(admin.ModelAdmin):
     ordering = ["plugin_name"]
     search_fields = ["plugin_name"]
     list_filter = ["plugin_name"]
+
+
+class FlexibleJSONFormField(forms.JSONField):
+    """Custom JSON form field.
+
+    This enables easier input of values into a JSONField model field in the Django Admin.
+    It handles common Python/JSON boolean/null inputs gracefully.
+
+    Some examples:
+
+    - If you enter: `My Blog Title` (without quotes), this will save the value as `"My Blog Title"`
+    - You can enter `true` or `True`, `false` or `False`, `null` or `None`
+    """
+
+    def to_python(self, value):  # noqa: ANN001, ANN201, PLR0911
+        """Convert the input value to a Python object, handling common JSON boolean/null inputs gracefully."""
+        if self.disabled:
+            return value
+        if value in self.empty_values:
+            return None
+        if isinstance(value, (list, dict, int, float, bool)):
+            return value
+
+        # Handle Python/JSON boolean and null strings gracefully
+        val_str = str(value).strip()
+        if val_str in ("True", "true"):
+            return True
+        if val_str in ("False", "false"):
+            return False
+        if val_str in ("None", "null"):
+            return None
+
+        # Try standard JSON parsing (covers lists, dicts, integers, floats, and quoted strings)
+        try:
+            return json.loads(val_str, cls=self.decoder)
+        except (json.JSONDecodeError, TypeError):
+            # Fall back to treating the input as a raw string
+            return value
+
+
+class SettingAdminForm(forms.ModelForm):
+    """Admin form for dynamic settings with flexible type resolution."""
+
+    value = FlexibleJSONFormField(
+        required=False,
+        help_text="Enter a value. Natively supports booleans (True/False), numbers, lists, or plain text.",
+    )
+
+    class Meta:
+        """Meta options for SettingAdminForm."""
+
+        model = Setting
+        fields = ["key", "value"]
+
+
+@admin.register(Setting)
+class SettingAdmin(admin.ModelAdmin):
+    """Setting admin configuration."""
+
+    form = SettingAdminForm
+    list_display = ["key", "value"]
+    list_display_links = ["key"]
+    ordering = ["key"]
+    search_fields = ["key"]
 
 
 @admin.register(Tag)

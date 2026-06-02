@@ -9,6 +9,7 @@ DJPRESS_SETTINGS = {
     "CACHE_CATEGORIES": (True, bool),
     "CACHE_RECENT_PUBLISHED_POSTS": (False, bool),
     "CACHE_TAGS": (False, bool),
+    "DATABASE_SETTINGS_ENABLED": (False, bool),
     "CATEGORY_ENABLED": (True, bool),
     "CATEGORY_PREFIX": ("category", str),
     "MARKDOWN_EXTENSION_CONFIGS": ({}, dict),

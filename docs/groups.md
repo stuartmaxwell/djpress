@@ -17,7 +17,7 @@ There are four key permissions that are used to control access in DJ Press:
 
 The four groups are:
 
-- **djpress_admin**: Full permissions to all djpress models (posts, pages, categories, tags, media, plugin storage).
+- **djpress_admin**: Full permissions to all djpress models (posts, pages, categories, tags, media, plugin storage, settings).
 - **djpress_editor**: Full permissions over all content (posts, pages, categories, tags, media).
 - **djpress_author**: Can publish, create, edit, and delete their own content. Unable to edit or delete other's posts.
 - **djpress_contributor**: Can create, edit, and delete their own content. Unable to publish their own posts, nor edit or delete other's posts.
@@ -35,6 +35,7 @@ The four groups are:
 | Manage tags           | ✅    | ✅     | ✅\*   | ✅\*        |
 | Manage media          | ✅    | ✅     | ✅     | ✅          |
 | Manage plugin storage | ✅    | ❌     | ❌     | ❌          |
+| Manage settings       | ✅    | ❌     | ❌     | ❌          |
 
 \* Authors and Contributors can add tags but cannot edit or delete existing tags.
 

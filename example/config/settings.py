@@ -100,6 +100,7 @@ DJPRESS_SETTINGS = {
     "PLUGINS": [
         "djpress_example_plugin",
     ],
+    "DATABASE_SETTINGS_ENABLED": True,
 }
 
 LOGGING = {
