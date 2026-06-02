@@ -7,7 +7,7 @@ from django.utils import timezone
 from django.utils.html import format_html
 
 # Register the models here.
-from djpress.models import Category, Media, PluginStorage, Post, Tag
+from djpress.models import Category, Media, PluginStorage, Post, Setting, Tag
 
 
 @admin.register(Category)
@@ -399,6 +399,16 @@ class PluginStorageAdmin(admin.ModelAdmin):
     ordering = ["plugin_name"]
     search_fields = ["plugin_name"]
     list_filter = ["plugin_name"]
+
+
+@admin.register(Setting)
+class SettingAdmin(admin.ModelAdmin):
+    """Setting admin configuration."""
+
+    list_display = ["key", "value"]
+    list_display_links = ["key"]
+    ordering = ["key"]
+    search_fields = ["key"]
 
 
 @admin.register(Tag)

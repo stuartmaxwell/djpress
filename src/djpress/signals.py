@@ -13,6 +13,10 @@ from djpress.models.post import (
     PUBLISHED_POSTS_CACHE_KEY,
     Post,
 )
+from djpress.models.setting import (
+    SETTING_CACHE_KEY,
+    Setting,
+)
 from djpress.models.tag import (
     TAG_CACHE_KEY,
     Tag,
@@ -57,3 +61,13 @@ def invalidate_tag_cache(**_) -> None:  # noqa: ANN003
     We invalidate the cache when a tag is saved or deleted.
     """
     cache.delete(TAG_CACHE_KEY)
+
+
+@receiver(post_save, sender=Setting)
+@receiver(post_delete, sender=Setting)
+def invalidate_setting_cache(**_) -> None:  # noqa: ANN003
+    """Invalidate the settings cache.
+
+    We invalidate the cache when a setting is saved or deleted.
+    """
+    cache.delete(SETTING_CACHE_KEY)
