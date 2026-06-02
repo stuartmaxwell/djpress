@@ -375,3 +375,40 @@ def test_setting_str_method():
     """Test the __str__ method of the Setting model."""
     setting = Setting(key="SITE_TITLE", value="My Test Title")
     assert str(setting) == "SITE_TITLE: My Test Title"
+
+
+@pytest.mark.django_db
+def test_flexible_json_form_field():
+    """Test that FlexibleJSONFormField handles dynamic and native types gracefully."""
+    from djpress.admin import FlexibleJSONFormField
+
+    field = FlexibleJSONFormField()
+
+    # Native types should be returned as-is
+    assert field.to_python(True) is True
+    assert field.to_python(123) == 123
+    assert field.to_python({"a": 1}) == {"a": 1}
+
+    # Empty values should return None
+    assert field.to_python("") is None
+    assert field.to_python(None) is None
+
+    # Handle Python/JSON boolean and null strings
+    assert field.to_python("True") is True
+    assert field.to_python("true") is True
+    assert field.to_python("False") is False
+    assert field.to_python("false") is False
+    assert field.to_python("None") is None
+    assert field.to_python("null") is None
+
+    # Standard JSON parsed types
+    assert field.to_python('["a", "b"]') == ["a", "b"]
+    assert field.to_python('{"x": 10}') == {"x": 10}
+    assert field.to_python("100.5") == 100.5
+
+    # Fall back to raw string
+    assert field.to_python("My raw string") == "My raw string"
+
+    # Disabled fields should bypass cleaning and return the value as-is
+    disabled_field = FlexibleJSONFormField(disabled=True)
+    assert disabled_field.to_python("some_value") == "some_value"
