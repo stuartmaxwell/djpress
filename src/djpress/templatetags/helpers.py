@@ -234,7 +234,8 @@ def tags_html(
                 "<li>{}</li>",
                 ((get_tag_link(tag, link_class),) for tag in tags),
             )
-        return wrap_in_tag(items_html, outer_tag, outer_class)
+        wrapped = wrap_in_tag(items_html, outer_tag, outer_class)
+        return format_html("{}{}{}", pre_text, wrapped, post_text)
 
     if show_post_count:
         items = [format_html("{} ({})", get_tag_link(tag, link_class), getattr(tag, "num_posts", 0)) for tag in tags]
