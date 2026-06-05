@@ -1057,12 +1057,12 @@ def test_site_tags_no_tags():
 
 
 @pytest.mark.django_db
-def test_tags_with_counts(test_post1, test_post2, tag1, tag2, tag3):
+def test_site_tags_with_counts(test_post1, test_post2, tag1, tag2, tag3):
     test_post1.tags.add(tag1)
     test_post2.tags.add(tag2)
 
     # Only tags 1 and 2 have posts, tag3 is empty
-    result = djpress_tags.tags_with_counts()
+    result = djpress_tags.site_tags(show_post_count=True)
 
     # Should only show tags with published posts
     assert tag1.title in result
@@ -2372,12 +2372,12 @@ def test_post_tags(test_post1, tag1):
 
 
 @pytest.mark.django_db
-def test_tags_with_counts_outer_div(test_post1, test_post2, tag1, tag2):
-    """Test tags_with_counts with div as outer tag."""
+def test_site_tags_with_counts_outer_div(test_post1, test_post2, tag1, tag2):
+    """Test site_tags with counts with div as outer tag."""
     test_post1.tags.add(tag1)
     test_post2.tags.add(tag2)
 
-    result = djpress_tags.tags_with_counts(outer_tag="div", outer_class="tag-list")
+    result = djpress_tags.site_tags(outer_tag="div", outer_class="tag-list", show_post_count=True)
 
     assert '<div class="tag-list">' in result
     assert tag1.title in result
@@ -2386,23 +2386,23 @@ def test_tags_with_counts_outer_div(test_post1, test_post2, tag1, tag2):
 
 
 @pytest.mark.django_db
-def test_tags_with_counts_incorrect_outer_div(test_post1, test_post2, tag1, tag2):
-    """Test tags_with_counts with incorrect outer tag."""
+def test_site_tags_with_counts_incorrect_outer_div(test_post1, test_post2, tag1, tag2):
+    """Test site_tags with counts with incorrect outer tag."""
     test_post1.tags.add(tag1)
     test_post2.tags.add(tag2)
 
-    result = djpress_tags.tags_with_counts(outer_tag="main", outer_class="tag-list")
+    result = djpress_tags.site_tags(outer_tag="main", outer_class="tag-list", show_post_count=True)
 
     assert result == ""
 
 
 @pytest.mark.django_db
-def test_tags_with_counts_outer_span(test_post1, test_post2, tag1, tag2):
-    """Test tags_with_counts with span as outer tag."""
+def test_site_tags_with_counts_outer_span(test_post1, test_post2, tag1, tag2):
+    """Test site_tags with counts with span as outer tag."""
     test_post1.tags.add(tag1)
     test_post2.tags.add(tag2)
 
-    result = djpress_tags.tags_with_counts(outer_tag="span", outer_class="tag-list")
+    result = djpress_tags.site_tags(outer_tag="span", outer_class="tag-list", show_post_count=True)
 
     assert '<span class="tag-list">' in result
     assert tag1.title in result
@@ -2411,14 +2411,14 @@ def test_tags_with_counts_outer_span(test_post1, test_post2, tag1, tag2):
 
 
 @pytest.mark.django_db
-def test_tags_with_counts_empty():
-    """Test tags_with_counts when there are no tags with published posts."""
-    result = djpress_tags.tags_with_counts()
+def test_site_tags_with_counts_empty():
+    """Test site_tags with counts when there are no tags with published posts."""
+    result = djpress_tags.site_tags(show_post_count=True)
     assert result == ""
 
 
 @pytest.mark.django_db
-def test_tags_with_counts_xss(test_post1):
+def test_site_tags_with_counts_xss(test_post1):
     """Make sure user-generated content is escaped."""
     bad_string = '<script>alert("evil")</script>'
     escaped_string = "&lt;script&gt;alert(&quot;evil&quot;)&lt;/script&gt;"
@@ -2426,8 +2426,8 @@ def test_tags_with_counts_xss(test_post1):
     tag = Tag.objects.create(slug="evil", title=bad_string)
     test_post1.tags.add(tag)
 
-    assert bad_string not in djpress_tags.tags_with_counts()
-    assert escaped_string in djpress_tags.tags_with_counts()
+    assert bad_string not in djpress_tags.site_tags(show_post_count=True)
+    assert escaped_string in djpress_tags.site_tags(show_post_count=True)
 
 
 @pytest.mark.django_db

@@ -399,6 +399,59 @@ def test_tags_html(settings, tag1, tag2, tag3):
         == expected_output
     )
 
+    # Test case: show_post_count=True with ul
+    outer = "ul"
+    outer_class = "tags"
+    link_class = "tag"
+    # Annotate tags with some artificial post counts to test getattr(tag, "num_posts", 0)
+    for i, t in enumerate(tags):
+        t.num_posts = i + 1
+    expected_output = (
+        '<ul class="tags">'
+        f'<li><a href="/{settings.DJPRESS_SETTINGS["TAG_PREFIX"]}/{tag1.slug}/" title="View all posts tagged with {tag1.title}" class="{link_class}">{tag1.title}</a> (1)</li>'
+        f'<li><a href="/{settings.DJPRESS_SETTINGS["TAG_PREFIX"]}/{tag2.slug}/" title="View all posts tagged with {tag2.title}" class="{link_class}">{tag2.title}</a> (2)</li>'
+        f'<li><a href="/{settings.DJPRESS_SETTINGS["TAG_PREFIX"]}/{tag3.slug}/" title="View all posts tagged with {tag3.title}" class="{link_class}">{tag3.title}</a> (3)</li>'
+        "</ul>"
+    )
+    assert (
+        tags_html(
+            tags,
+            outer_tag=outer,
+            outer_class=outer_class,
+            link_class=link_class,
+            separator=", ",
+            pre_text="",
+            post_text="",
+            show_post_count=True,
+        )
+        == expected_output
+    )
+
+    # Test case: show_post_count=True with span
+    outer = "span"
+    outer_class = "tags"
+    link_class = "tag"
+    expected_output = (
+        '<span class="tags">'
+        f'<a href="/{settings.DJPRESS_SETTINGS["TAG_PREFIX"]}/{tag1.slug}/" title="View all posts tagged with {tag1.title}" class="{link_class}">{tag1.title}</a> (1), '
+        f'<a href="/{settings.DJPRESS_SETTINGS["TAG_PREFIX"]}/{tag2.slug}/" title="View all posts tagged with {tag2.title}" class="{link_class}">{tag2.title}</a> (2), '
+        f'<a href="/{settings.DJPRESS_SETTINGS["TAG_PREFIX"]}/{tag3.slug}/" title="View all posts tagged with {tag3.title}" class="{link_class}">{tag3.title}</a> (3)'
+        "</span>"
+    )
+    assert (
+        tags_html(
+            tags,
+            outer_tag=outer,
+            outer_class=outer_class,
+            link_class=link_class,
+            separator=", ",
+            pre_text="",
+            post_text="",
+            show_post_count=True,
+        )
+        == expected_output
+    )
+
 
 def test_tags_html_no_tags():
     tags = Tag.objects.none()

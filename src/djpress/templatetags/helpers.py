@@ -192,12 +192,14 @@ def categories_html(
 
 def tags_html(
     tags: models.QuerySet,
+    *,
     outer_tag: str,
     outer_class: str,
     link_class: str,
     separator: str,
     pre_text: str,
     post_text: str,
+    show_post_count: bool = False,
 ) -> str | SafeString:
     """Return the HTML for the tags.
 
@@ -211,6 +213,7 @@ def tags_html(
         separator (str): The separator to use between tags.
         pre_text (str): The text to display before the tags.
         post_text (str): The text to display after the tags.
+        show_post_count (bool): Whether to display post counts.
 
     Returns:
         str | SafeString: The HTML for the tags.
@@ -218,17 +221,28 @@ def tags_html(
     if not tags:
         return ""
 
-    if outer_tag == "ul":
-        items_html = format_html_join(
-            "",
-            "<li>{}</li>",
-            ((get_tag_link(tag, link_class),) for tag in tags),
-        )
-        return wrap_in_tag(items_html, "ul", outer_class)
+    if outer_tag in {"ul", "ol"}:
+        if show_post_count:
+            items_html = format_html_join(
+                "",
+                "<li>{} ({})</li>",
+                ((get_tag_link(tag, link_class), getattr(tag, "num_posts", 0)) for tag in tags),
+            )
+        else:
+            items_html = format_html_join(
+                "",
+                "<li>{}</li>",
+                ((get_tag_link(tag, link_class),) for tag in tags),
+            )
+        return wrap_in_tag(items_html, outer_tag, outer_class)
+
+    if show_post_count:
+        items = [format_html("{} ({})", get_tag_link(tag, link_class), getattr(tag, "num_posts", 0)) for tag in tags]
+    else:
+        items = [get_tag_link(tag, link_class) for tag in tags]
 
     escaped_separator = conditional_escape(separator)
-    links = [get_tag_link(tag, link_class) for tag in tags]
-    joined_links = mark_safe(escaped_separator.join(links))
+    joined_links = mark_safe(escaped_separator.join(items))
 
     content = format_html("{}{}{}", pre_text, joined_links, post_text)
     return wrap_in_tag(content, outer_tag, outer_class)
