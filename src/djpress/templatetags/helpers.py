@@ -156,6 +156,8 @@ def categories_html(
 
     Note this isn't a template tag, but a helper function for the other template tags
 
+    Note that separator has no effect when used with a list (i.e. `ol`, `ul`)
+
     Args:
         categories (models.QuerySet): The categories to display.
         outer_tag (str): The HTML tag to wrap the categories in.
@@ -171,13 +173,14 @@ def categories_html(
     if not categories:
         return ""
 
-    if outer_tag == "ul":
+    if outer_tag in {"ul", "ol"}:
         items_html = format_html_join(
             "",
             "<li>{}</li>",
             ((get_category_link(category, link_class),) for category in categories),
         )
-        return wrap_in_tag(items_html, "ul", outer_class)
+        wrapped = wrap_in_tag(items_html, outer_tag, outer_class)
+        return format_html("{}{}{}", pre_text, wrapped, post_text)
 
     escaped_separator = conditional_escape(separator)
     links = [get_category_link(category, link_class) for category in categories]

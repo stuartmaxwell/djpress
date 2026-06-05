@@ -1006,8 +1006,31 @@ def test_site_categories(category1, category2):
     assert category1 in categories
     assert category2 in categories
 
-    assert djpress_tags.site_categories() == categories_html(
-        categories=categories, outer_tag="ul", outer_class="", link_class="", separator=", ", pre_text="", post_text=""
+    expected_html = '<ul><li><a href="/test-url-category/test-category1/" title="View all posts in the Test Category1 category" class="p-category">Test Category1</a></li><li><a href="/test-url-category/test-category2/" title="View all posts in the Test Category2 category" class="p-category">Test Category2</a></li></ul>'
+    assert djpress_tags.site_categories() == expected_html
+
+    expected_html_pre_text = '<h2>Categories</h2><ul><li><a href="/test-url-category/test-category1/" title="View all posts in the Test Category1 category" class="p-category">Test Category1</a></li><li><a href="/test-url-category/test-category2/" title="View all posts in the Test Category2 category" class="p-category">Test Category2</a></li></ul>'
+    assert djpress_tags.site_categories(pre_text=mark_safe("<h2>Categories</h2>")) == expected_html_pre_text
+
+    expected_html_post_text = '<ul><li><a href="/test-url-category/test-category1/" title="View all posts in the Test Category1 category" class="p-category">Test Category1</a></li><li><a href="/test-url-category/test-category2/" title="View all posts in the Test Category2 category" class="p-category">Test Category2</a></li></ul><h2>Categories</h2>'
+    assert djpress_tags.site_categories(post_text=mark_safe("<h2>Categories</h2>")) == expected_html_post_text
+
+    expected_html_div = '<div><a href="/test-url-category/test-category1/" title="View all posts in the Test Category1 category" class="p-category">Test Category1</a>, <a href="/test-url-category/test-category2/" title="View all posts in the Test Category2 category" class="p-category">Test Category2</a></div>'
+    assert djpress_tags.site_categories(outer_tag="div") == expected_html_div
+
+    expected_html_div_separator = '<div><a href="/test-url-category/test-category1/" title="View all posts in the Test Category1 category" class="p-category">Test Category1</a> | <a href="/test-url-category/test-category2/" title="View all posts in the Test Category2 category" class="p-category">Test Category2</a></div>'
+    assert djpress_tags.site_categories(outer_tag="div", separator=" | ") == expected_html_div_separator
+
+    expected_html_div_pre_text = '<div><h2>Categories</h2><a href="/test-url-category/test-category1/" title="View all posts in the Test Category1 category" class="p-category">Test Category1</a>, <a href="/test-url-category/test-category2/" title="View all posts in the Test Category2 category" class="p-category">Test Category2</a></div>'
+    assert (
+        djpress_tags.site_categories(outer_tag="div", pre_text=mark_safe("<h2>Categories</h2>"))
+        == expected_html_div_pre_text
+    )
+
+    expected_html_div_post_text = '<div><a href="/test-url-category/test-category1/" title="View all posts in the Test Category1 category" class="p-category">Test Category1</a>, <a href="/test-url-category/test-category2/" title="View all posts in the Test Category2 category" class="p-category">Test Category2</a><h2>Categories</h2></div>'
+    assert (
+        djpress_tags.site_categories(outer_tag="div", post_text=mark_safe("<h2>Categories</h2>"))
+        == expected_html_div_post_text
     )
 
 
