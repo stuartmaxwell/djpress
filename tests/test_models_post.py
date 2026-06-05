@@ -1631,3 +1631,136 @@ def test_post_search_plugin_returns_queryset(test_post1, test_post2):
         assert posts.count() == 1
         assert test_post1 in posts
         assert test_post2 not in posts
+
+
+@pytest.mark.django_db
+def test_get_archive_periods(user):
+    # Setup posts:
+    # 1. Active posts:
+    #   - Post A: 2024-06-04
+    #   - Post B: 2024-06-05
+    #   - Post C: 2024-05-15
+    #   - Post D: 2023-01-01
+    # 2. Excluded posts:
+    #   - Post E: Draft post
+    #   - Post F: Future post
+    #   - Page G: Page type post
+
+    now = timezone.now()
+
+    # 2024-06-04 post
+    Post.post_objects.create(
+        title="Post A",
+        slug="post-a",
+        content="A",
+        author=user,
+        status="published",
+        post_type="post",
+        published_at=datetime.datetime(2024, 6, 4, 12, 0, tzinfo=timezone.get_current_timezone()),
+    )
+    # 2024-06-05 post (same month/year as A, but different day)
+    Post.post_objects.create(
+        title="Post B",
+        slug="post-b",
+        content="B",
+        author=user,
+        status="published",
+        post_type="post",
+        published_at=datetime.datetime(2024, 6, 5, 12, 0, tzinfo=timezone.get_current_timezone()),
+    )
+    # 2024-05-15 post (same year, different month)
+    Post.post_objects.create(
+        title="Post C",
+        slug="post-c",
+        content="C",
+        author=user,
+        status="published",
+        post_type="post",
+        published_at=datetime.datetime(2024, 5, 15, 12, 0, tzinfo=timezone.get_current_timezone()),
+    )
+    # 2023-01-01 post (different year)
+    Post.post_objects.create(
+        title="Post D",
+        slug="post-d",
+        content="D",
+        author=user,
+        status="published",
+        post_type="post",
+        published_at=datetime.datetime(2023, 1, 1, 12, 0, tzinfo=timezone.get_current_timezone()),
+    )
+
+    # Draft post
+    Post.post_objects.create(
+        title="Post E (Draft)",
+        slug="post-e",
+        content="E",
+        author=user,
+        status="draft",
+        post_type="post",
+        published_at=datetime.datetime(2024, 6, 4, 12, 0, tzinfo=timezone.get_current_timezone()),
+    )
+    # Future post
+    Post.post_objects.create(
+        title="Post F (Future)",
+        slug="post-f",
+        content="F",
+        author=user,
+        status="published",
+        post_type="post",
+        published_at=now + datetime.timedelta(days=10),
+    )
+    # Page
+    Post.post_objects.create(
+        title="Page G",
+        slug="page-g",
+        content="G",
+        author=user,
+        status="published",
+        post_type="page",
+        published_at=datetime.datetime(2024, 6, 4, 12, 0, tzinfo=timezone.get_current_timezone()),
+    )
+
+    # Test monthly (default) - DESC (default)
+    monthly_desc = Post.post_objects.get_archive_periods(period_type="monthly", order="DESC")
+    # Expected:
+    # 1. 2024-06-01 (count=2: Post A and B)
+    # 2. 2024-05-01 (count=1: Post C)
+    # 3. 2023-01-01 (count=1: Post D)
+    assert len(monthly_desc) == 3
+    assert monthly_desc[0]["period"] == datetime.date(2024, 6, 1)
+    assert monthly_desc[0]["count"] == 2
+    assert monthly_desc[1]["period"] == datetime.date(2024, 5, 1)
+    assert monthly_desc[1]["count"] == 1
+    assert monthly_desc[2]["period"] == datetime.date(2023, 1, 1)
+    assert monthly_desc[2]["count"] == 1
+
+    # Test monthly - ASC
+    monthly_asc = Post.post_objects.get_archive_periods(period_type="monthly", order="ASC")
+    assert len(monthly_asc) == 3
+    assert monthly_asc[0]["period"] == datetime.date(2023, 1, 1)
+    assert monthly_asc[1]["period"] == datetime.date(2024, 5, 1)
+    assert monthly_asc[2]["period"] == datetime.date(2024, 6, 1)
+
+    # Test yearly - DESC
+    yearly_desc = Post.post_objects.get_archive_periods(period_type="yearly", order="DESC")
+    # Expected:
+    # 1. 2024-01-01 (count=3: A, B, C)
+    # 2. 2023-01-01 (count=1: D)
+    assert len(yearly_desc) == 2
+    assert yearly_desc[0]["period"] == datetime.date(2024, 1, 1)
+    assert yearly_desc[0]["count"] == 3
+    assert yearly_desc[1]["period"] == datetime.date(2023, 1, 1)
+    assert yearly_desc[1]["count"] == 1
+
+    # Test daily - DESC
+    daily_desc = Post.post_objects.get_archive_periods(period_type="daily", order="DESC")
+    # Expected:
+    # 1. 2024-06-05 (count=1: B)
+    # 2. 2024-06-04 (count=1: A)
+    # 3. 2024-05-15 (count=1: C)
+    # 4. 2023-01-01 (count=1: D)
+    assert len(daily_desc) == 4
+    assert daily_desc[0]["period"] == datetime.date(2024, 6, 5)
+    assert daily_desc[1]["period"] == datetime.date(2024, 6, 4)
+    assert daily_desc[2]["period"] == datetime.date(2024, 5, 15)
+    assert daily_desc[3]["period"] == datetime.date(2023, 1, 1)
