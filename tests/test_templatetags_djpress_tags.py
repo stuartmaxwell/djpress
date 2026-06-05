@@ -1,6 +1,7 @@
 from djpress.conf import settings as djpress_settings
 from django.utils import timezone
 import pytest
+import datetime
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.template import Context, Template
@@ -2713,3 +2714,148 @@ def test_get_theme_setting(settings):
 
     # Test with a theme setting
     assert djpress_tags.get_theme_setting("test_setting") == "test_value"
+
+
+@pytest.mark.django_db
+def test_get_archives(user, settings):
+    # Enable archives
+    settings.DJPRESS_SETTINGS["ARCHIVE_ENABLED"] = True
+
+    # Setup posts:
+    # 2024-06-04 post
+    Post.post_objects.create(
+        title="Post A",
+        slug="post-a",
+        content="A",
+        author=user,
+        status="published",
+        post_type="post",
+        published_at=datetime.datetime(2024, 6, 4, 12, 0, tzinfo=timezone.get_current_timezone()),
+    )
+    # 2024-06-05 post (same month/year as A, but different day)
+    Post.post_objects.create(
+        title="Post B",
+        slug="post-b",
+        content="B",
+        author=user,
+        status="published",
+        post_type="post",
+        published_at=datetime.datetime(2024, 6, 5, 12, 0, tzinfo=timezone.get_current_timezone()),
+    )
+    # 2024-05-15 post (same year, different month)
+    Post.post_objects.create(
+        title="Post C",
+        slug="post-c",
+        content="C",
+        author=user,
+        status="published",
+        post_type="post",
+        published_at=datetime.datetime(2024, 5, 15, 12, 0, tzinfo=timezone.get_current_timezone()),
+    )
+    # 2023-01-01 post (different year)
+    Post.post_objects.create(
+        title="Post D",
+        slug="post-d",
+        content="D",
+        author=user,
+        status="published",
+        post_type="post",
+        published_at=datetime.datetime(2023, 1, 1, 12, 0, tzinfo=timezone.get_current_timezone()),
+    )
+
+    # Test monthly
+    res_monthly = djpress_tags.get_archives(type_="monthly")
+    assert len(res_monthly) == 3
+    assert res_monthly[0]["label"] == "June 2024"
+    assert res_monthly[0]["count"] == 2
+    assert res_monthly[0]["url"] == f"/{settings.DJPRESS_SETTINGS['ARCHIVE_PREFIX']}/2024/06/"
+    assert res_monthly[1]["label"] == "May 2024"
+    assert res_monthly[1]["count"] == 1
+    assert res_monthly[2]["label"] == "January 2023"
+    assert res_monthly[2]["count"] == 1
+
+    # Test monthly limited
+    res_monthly_lim = djpress_tags.get_archives(type_="monthly", limit=2)
+    assert len(res_monthly_lim) == 2
+    assert res_monthly_lim[0]["label"] == "June 2024"
+    assert res_monthly_lim[1]["label"] == "May 2024"
+
+    # Test yearly
+    res_yearly = djpress_tags.get_archives(type_="yearly")
+    assert len(res_yearly) == 2
+    assert res_yearly[0]["label"] == "2024"
+    assert res_yearly[0]["count"] == 3
+    assert res_yearly[0]["url"] == f"/{settings.DJPRESS_SETTINGS['ARCHIVE_PREFIX']}/2024/"
+    assert res_yearly[1]["label"] == "2023"
+    assert res_yearly[1]["count"] == 1
+
+    # Test daily
+    res_daily = djpress_tags.get_archives(type_="daily")
+    assert len(res_daily) == 4
+    assert res_daily[0]["label"] == "June 5, 2024"
+    assert res_daily[0]["count"] == 1
+    assert res_daily[0]["url"] == f"/{settings.DJPRESS_SETTINGS['ARCHIVE_PREFIX']}/2024/06/05/"
+    assert res_daily[1]["label"] == "June 4, 2024"
+    assert res_daily[1]["count"] == 1
+    assert res_daily[2]["label"] == "May 15, 2024"
+    assert res_daily[3]["label"] == "January 1, 2023"
+
+    # Test invalid type (defaults to empty list)
+    res_invalid = djpress_tags.get_archives(type_="invalid")
+    assert len(res_invalid) == 0
+
+
+@pytest.mark.django_db
+def test_site_archives(user, settings):
+    # Enable archives
+    settings.DJPRESS_SETTINGS["ARCHIVE_ENABLED"] = True
+
+    # Setup post
+    Post.post_objects.create(
+        title="Post A",
+        slug="post-a",
+        content="A",
+        author=user,
+        status="published",
+        post_type="post",
+        published_at=datetime.datetime(2024, 6, 4, 12, 0, tzinfo=timezone.get_current_timezone()),
+    )
+
+    prefix = settings.DJPRESS_SETTINGS["ARCHIVE_PREFIX"]
+    expected_html = (
+        f'<ul><li><a href="/{prefix}/2024/06/" title="View all posts from June 2024">June 2024</a></li></ul>'
+    )
+    assert djpress_tags.site_archives() == expected_html
+
+    expected_html_with_count = (
+        f'<ul><li><a href="/{prefix}/2024/06/" title="View all posts from June 2024">June 2024</a> (1)</li></ul>'
+    )
+    assert djpress_tags.site_archives(show_post_count=True) == expected_html_with_count
+
+    # Test site_archives when get_archives returns empty
+    settings.DJPRESS_SETTINGS["ARCHIVE_ENABLED"] = False
+    assert djpress_tags.site_archives() == ""
+
+    settings.DJPRESS_SETTINGS["ARCHIVE_ENABLED"] = True
+    # Delete posts to simulate no archives found
+    Post.objects.all().delete()
+    assert djpress_tags.site_archives() == ""
+
+
+@pytest.mark.django_db
+def test_archives_disabled(user, settings):
+    settings.DJPRESS_SETTINGS["ARCHIVE_ENABLED"] = False
+
+    # Setup post
+    Post.post_objects.create(
+        title="Post A",
+        slug="post-a",
+        content="A",
+        author=user,
+        status="published",
+        post_type="post",
+        published_at=datetime.datetime(2024, 6, 4, 12, 0, tzinfo=timezone.get_current_timezone()),
+    )
+
+    assert djpress_tags.get_archives() == []
+    assert djpress_tags.site_archives() == ""

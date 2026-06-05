@@ -12,6 +12,7 @@ from djpress.templatetags.helpers import (
     tags_html,
     get_page_link,
     wrap_in_tag,
+    archives_html,
 )
 
 
@@ -515,8 +516,89 @@ def test_wrap_in_tag():
     result = wrap_in_tag(content="This is the content", tag="div")
     assert result == "<div>This is the content</div>"
 
+    result = wrap_in_tag(content="This is the content", tag="ol", css_class="archive-list")
+    assert result == '<ol class="archive-list">This is the content</ol>'
+
     result = wrap_in_tag(content="This is the content", tag="", css_class="blog-post")
     assert result == "This is the content"
 
     result = wrap_in_tag(content="This is the content", tag="foobar", css_class="blog-post")
     assert result == ""
+
+
+def test_archives_html():
+    archives = [
+        {"url": "/2026/06/", "label": "June 2026", "count": 3},
+        {"url": "/2026/05/", "label": "May 2026", "count": 1},
+    ]
+
+    # Test case 1: default options (ul, no counts, no classes)
+    expected_output = (
+        "<ul>"
+        '<li><a href="/2026/06/" title="View all posts from June 2026">June 2026</a></li>'
+        '<li><a href="/2026/05/" title="View all posts from May 2026">May 2026</a></li>'
+        "</ul>"
+    )
+    assert archives_html(archives) == expected_output
+
+    # Test case 2: showing post counts in list
+    expected_output_counts = (
+        "<ul>"
+        '<li><a href="/2026/06/" title="View all posts from June 2026">June 2026</a> (3)</li>'
+        '<li><a href="/2026/05/" title="View all posts from May 2026">May 2026</a> (1)</li>'
+        "</ul>"
+    )
+    assert archives_html(archives, show_post_count=True) == expected_output_counts
+
+    # Test case 3: ol tag with classes
+    expected_output_ol = (
+        '<ol class="outer-c">'
+        '<li class="li-c"><a href="/2026/06/" title="View all posts from June 2026" class="link-c">June 2026</a></li>'
+        '<li class="li-c"><a href="/2026/05/" title="View all posts from May 2026" class="link-c">May 2026</a></li>'
+        "</ol>"
+    )
+    assert (
+        archives_html(
+            archives,
+            outer_tag="ol",
+            outer_class="outer-c",
+            li_class="li-c",
+            link_class="link-c",
+        )
+        == expected_output_ol
+    )
+
+    # Test case 4: div with custom separator, pre_text, post_text
+    expected_output_div = (
+        "Pre-text"
+        '<div class="outer-c">'
+        '<a href="/2026/06/" title="View all posts from June 2026" class="link-c">June 2026</a> (3) | '
+        '<a href="/2026/05/" title="View all posts from May 2026" class="link-c">May 2026</a> (1)'
+        "</div>"
+        "Post-text"
+    )
+    assert (
+        archives_html(
+            archives,
+            outer_tag="div",
+            outer_class="outer-c",
+            link_class="link-c",
+            separator=" | ",
+            show_post_count=True,
+            pre_text="Pre-text",
+            post_text="Post-text",
+        )
+        == expected_output_div
+    )
+
+    # Test case 5: empty list
+    assert archives_html([]) == ""
+
+    # Test case 6: invalid tag defaults to ul
+    expected_invalid = (
+        "<ul>"
+        '<li><a href="/2026/06/" title="View all posts from June 2026">June 2026</a></li>'
+        '<li><a href="/2026/05/" title="View all posts from May 2026">May 2026</a></li>'
+        "</ul>"
+    )
+    assert archives_html(archives, outer_tag="invalid") == expected_invalid

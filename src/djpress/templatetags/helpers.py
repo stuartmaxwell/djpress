@@ -27,7 +27,7 @@ def wrap_in_tag(content: str | SafeString, tag: str, css_class: str = "") -> str
     if not tag:
         return format_html("{}", content)
 
-    allowed_tags = {"h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "span", "section", "article", "li", "ul"}
+    allowed_tags = {"h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "span", "section", "article", "li", "ul", "ol"}
     if tag not in allowed_tags:
         return ""
 
@@ -72,6 +72,75 @@ def build_html_link(
         class_html,
         text,
     )
+
+
+def archives_html(
+    archives: list[dict],
+    *,
+    outer_tag: str = "ul",
+    outer_class: str = "",
+    link_class: str = "",
+    li_class: str = "",
+    separator: str = ", ",
+    show_post_count: bool = False,
+    pre_text: str = "",
+    post_text: str = "",
+) -> str | SafeString:
+    """Return the HTML representation of a list of archives.
+
+    Args:
+        archives: List of archive dictionaries.
+        outer_tag: Outer tag (ul, ol, div, span).
+        outer_class: CSS class for the outer tag.
+        link_class: CSS class for anchor tags.
+        li_class: CSS class for list item tags (if outer_tag is ul or ol).
+        separator: Separator used between links (if outer_tag is div or span).
+        show_post_count: Whether to display post count next to links.
+        pre_text: Text/HTML to prepend.
+        post_text: Text/HTML to append.
+
+    Returns:
+        str | SafeString: Safe HTML representation.
+    """
+    if not archives:
+        return ""
+
+    # The helper tag is more forgiving. The user-facing tags should enforce stricter tag selection.
+    if outer_tag not in {"ul", "ol", "div", "span"}:
+        outer_tag = "ul"
+
+    items = []
+    for archive in archives:
+        url = archive["url"]
+        label = archive["label"]
+        count = archive["count"]
+        title = f"View all posts from {label}"
+
+        link_html = build_html_link(
+            url=url,
+            text=label,
+            title=title,
+            css_class=link_class,
+        )
+
+        item_content = format_html("{} ({})", link_html, count) if show_post_count else link_html
+
+        if outer_tag in {"ul", "ol"}:
+            li_class_html = format_html(' class="{}"', li_class) if li_class else ""
+            item_html = format_html("<li{}>{}</li>", li_class_html, item_content)
+        else:
+            item_html = item_content
+
+        items.append(item_html)
+
+    if outer_tag in {"ul", "ol"}:
+        joined_items = mark_safe("".join(items))
+    else:
+        escaped_separator = conditional_escape(separator)
+        joined_items = mark_safe(escaped_separator.join(items))
+
+    wrapped = wrap_in_tag(joined_items, outer_tag, outer_class)
+    return format_html("{}{}{}", pre_text, wrapped, post_text)
 
 
 def categories_html(

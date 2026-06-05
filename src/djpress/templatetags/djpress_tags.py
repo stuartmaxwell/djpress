@@ -303,6 +303,76 @@ def get_pagination_current_page(context: Context) -> int:
     return page.number
 
 
+@register.simple_tag
+def get_archives(
+    type_: str = "monthly",
+    *,
+    limit: int | None = None,
+    order: str = "DESC",
+) -> list[dict]:
+    """Return date-based archives.
+
+    The type of archives can be provided as an argument. All other parameters must be passed as keyword arguments.
+    The type (`type_`) must be one of: "yearly", "monthly", "daily".
+
+    The limit must be an integer, or `None` to mean no limit. If omitted, the default is no limit (`None`).
+
+    The order must be one of: "ASC", "DESC". If ommitted, the default is descending (`DESC`).
+
+    Args:
+        type_: "yearly", "monthly", or "daily".
+        limit: Maximum number of archive periods to return.
+        order: Sort order, "ASC" or "DESC".
+
+    Returns:
+        list[dict]: A list of dictionaries containing:
+            - 'date': datetime.date object representing the archive period
+            - 'url': The URL of the archive page
+            - 'count': Number of posts in this archive period
+            - 'label': A formatted string representation (e.g. "June 2026")
+    """
+    if (
+        not djpress_settings.ARCHIVE_ENABLED
+        or type_ not in {"yearly", "monthly", "daily"}
+        or order not in {"ASC", "DESC"}
+    ):
+        return []
+
+    periods = Post.post_objects.get_archive_periods(period_type=type_, order=order)
+    if limit is not None:
+        periods = periods[:limit]
+
+    results = []
+    for item in periods:
+        period_date = item["period"]
+        count = item["count"]
+
+        if type_ == "yearly":
+            url = url_utils.get_archives_url(year=period_date.year)
+            label = period_date.strftime("%Y")
+        elif type_ == "daily":
+            url = url_utils.get_archives_url(
+                year=period_date.year,
+                month=period_date.month,
+                day=period_date.day,
+            )
+            label = f"{period_date.strftime('%B')} {period_date.day}, {period_date.strftime('%Y')}"
+        else:  # monthly
+            url = url_utils.get_archives_url(year=period_date.year, month=period_date.month)
+            label = period_date.strftime("%B %Y")
+
+        results.append(
+            {
+                "date": period_date,
+                "url": url,
+                "count": count,
+                "label": label,
+            }
+        )
+
+    return results
+
+
 """
 # Display Tags - Site-wide
 
@@ -654,6 +724,76 @@ def site_pages_list(
     content = format_html("{}{}", home_li, inner_list)
 
     return helpers.wrap_in_tag(content, "ul", ul_outer_class)
+
+
+@register.simple_tag
+def site_archives(
+    type_: str = "monthly",
+    *,
+    outer_tag: str = "ul",
+    limit: int | None = None,
+    order: str = "DESC",
+    show_post_count: bool = False,
+    outer_class: str = "",
+    li_class: str = "",
+    link_class: str = "",
+    separator: str = ", ",
+    pre_text: str = "",
+    post_text: str = "",
+) -> str:
+    """Return the archives of the blog as HTML.
+
+    The type of archives can be provided as an argument. All other parameters must be passed as keyword arguments.
+    The type (`type_`) must be one of: "yearly", "monthly", "daily", and defaults to "monthly" if not provided.
+
+    The outer tag must be one of: "ul", "ol", "div", "span".
+
+    The limit must be an integer, or `None` to mean no limit. If omitted, the default is no limit (`None`).
+
+    The order must be one of: "ASC", "DESC". If ommitted, the default is descending (`DESC`).
+
+    Args:
+        type_: "yearly", "monthly", or "daily".
+        outer_tag: The outer HTML tag for the archives ("ul", "ol", "div", "span").
+        limit: Maximum number of archive periods to display.
+        order: Sort order, "ASC" or "DESC".
+        show_post_count: Whether to display post counts.
+        outer_class: CSS class(es) for the outer tag.
+        li_class: CSS class(es) for the list items (only if outer_tag is "ul" or "ol").
+        link_class: CSS class(es) for the anchor tags.
+        separator: Separator between items (only if outer_tag is "div" or "span").
+        pre_text: Text/HTML to prepend to the list.
+        post_text: Text/HTML to append to the list.
+
+    Returns:
+        str: The archives list as safely marked HTML.
+    """
+    if (
+        not djpress_settings.ARCHIVE_ENABLED
+        or type_ not in {"yearly", "monthly", "daily"}
+        or outer_tag not in {"ul", "ol", "div", "span"}
+        or order not in {"ASC", "DESC"}
+    ):
+        return ""
+
+    archives = get_archives(type_=type_, limit=limit, order=order)
+    if not archives:
+        return ""
+
+    return format_html(
+        "{}",
+        helpers.archives_html(
+            archives=archives,
+            outer_tag=outer_tag,
+            outer_class=outer_class,
+            link_class=link_class,
+            li_class=li_class,
+            separator=separator,
+            show_post_count=show_post_count,
+            pre_text=pre_text,
+            post_text=post_text,
+        ),
+    )
 
 
 """
