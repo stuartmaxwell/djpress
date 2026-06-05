@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from django.core.cache import cache
 from django.db import IntegrityError, models, transaction
-from django.db.models import Max
+from django.db.models import Count, Max, Q
 from django.utils import timezone
 from django.utils.text import slugify
 
@@ -82,12 +82,25 @@ class TagManager(models.Manager):
 
         return tag
 
-    def get_tags_with_published_posts(self) -> models.QuerySet:
-        """Return a queryset of tags that have published posts.
+    def get_tags_with_counts(self, *, published_only: bool = True) -> models.QuerySet:
+        """Return a queryset of tags annotated with the count of their published posts.
 
-        We can use the has_posts property to include only tags with published posts.
+        Args:
+            published_only: If True (default), filter out tags with no published posts.
         """
-        return Tag.objects.filter(pk__in=[tag.pk for tag in self.get_queryset() if tag.has_posts])
+        qs = self.get_queryset().annotate(
+            num_posts=Count(
+                "_posts",
+                filter=Q(
+                    _posts__post_type="post",
+                    _posts__status="published",
+                    _posts__published_at__lte=timezone.now(),
+                ),
+            )
+        )
+        if published_only:
+            qs = qs.filter(num_posts__gt=0)
+        return qs
 
 
 class Tag(models.Model):

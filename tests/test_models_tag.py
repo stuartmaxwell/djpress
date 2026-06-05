@@ -221,20 +221,52 @@ def test_tag_has_posts(test_post1, test_post2, tag1, tag2):
 
 
 @pytest.mark.django_db
-def test_get_tag_published(test_post1, test_post2, tag1, tag2):
-    assert list(Tag.objects.get_tags_with_published_posts()) == []
+def test_get_tags_with_counts(test_post1, test_post2, tag1, tag2, tag3):
+    # Initially no tags have published posts
+    tags = list(Tag.objects.get_tags_with_counts(published_only=True))
+    assert tags == []
 
+    # If published_only=False, all tags should be returned with num_posts=0
+    all_tags = list(Tag.objects.get_tags_with_counts(published_only=False).order_by("title"))
+    assert len(all_tags) == 3
+    assert {t.title for t in all_tags} == {tag1.title, tag2.title, tag3.title}
+    for tag in all_tags:
+        assert tag.num_posts == 0
+
+    # Associate posts with tags
     test_post1.tags.add(tag1)
     test_post2.tags.add(tag2)
-    assert list(Tag.objects.get_tags_with_published_posts()) == [tag1, tag2]
 
+    # Now get_tags_with_counts(published_only=True) should return tag1 and tag2, sorted or not, let's sort them
+    published_tags = list(Tag.objects.get_tags_with_counts(published_only=True).order_by("title"))
+    assert len(published_tags) == 2
+    # Check that the annotated count is 1 for each
+    tag1_with_count = next(t for t in published_tags if t.pk == tag1.pk)
+    tag2_with_count = next(t for t in published_tags if t.pk == tag2.pk)
+    assert tag1_with_count.num_posts == 1
+    assert tag2_with_count.num_posts == 1
+
+    # When test_post1 becomes a draft, it shouldn't be counted, and tag1 shouldn't be returned when published_only=True
     test_post1.status = "draft"
     test_post1.save()
-    assert list(Tag.objects.get_tags_with_published_posts()) == [tag2]
+    published_tags = list(Tag.objects.get_tags_with_counts(published_only=True))
+    assert len(published_tags) == 1
+    assert published_tags[0].pk == tag2.pk
+    assert published_tags[0].num_posts == 1
 
+    # If published_only=False, tag1 is still returned but with count 0
+    all_tags = list(Tag.objects.get_tags_with_counts(published_only=False).order_by("title"))
+    assert len(all_tags) == 3
+    tag1_with_count = next(t for t in all_tags if t.pk == tag1.pk)
+    tag2_with_count = next(t for t in all_tags if t.pk == tag2.pk)
+    assert tag1_with_count.num_posts == 0
+    assert tag2_with_count.num_posts == 1
+
+    # When test_post2 published_at is set to future, tag2 shouldn't be returned when published_only=True
     test_post2.published_at = timezone.now() + timezone.timedelta(days=1)
     test_post2.save()
-    assert list(Tag.objects.get_tags_with_published_posts()) == []
+    published_tags = list(Tag.objects.get_tags_with_counts(published_only=True))
+    assert published_tags == []
 
 
 @pytest.mark.django_db
