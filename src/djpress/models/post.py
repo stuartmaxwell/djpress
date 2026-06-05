@@ -9,7 +9,8 @@ from django.conf import settings
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import Case, IntegerField, Max, Q, Value, When
+from django.db.models import Case, Count, IntegerField, Max, Q, Value, When
+from django.db.models.functions import TruncDay, TruncMonth, TruncYear
 from django.db.transaction import on_commit
 from django.utils import timezone
 from django.utils.text import slugify
@@ -547,6 +548,39 @@ class PostsManager(models.Manager):
         return self.filter(_date__year=year, _date__month=month, _date__day=day).aggregate(
             latest=Max("updated_at"),
         )["latest"]
+
+    def get_archive_periods(self, period_type: str = "monthly", order: str = "DESC") -> list[dict]:
+        """Return distinct archive periods with published post counts.
+
+        The Django `Trunc` functions normalise dates to the start of that specific period.
+
+        Args:
+            period_type: "yearly", "monthly", or "daily".
+            order: "ASC" or "DESC".
+
+        Returns:
+            list[dict]: A list of dicts, each with keys:
+                - 'period': datetime.date representing the start of the period
+                - 'count': int, number of posts in that period
+        """
+        if period_type == "yearly":
+            trunc_func = TruncYear("_date")
+        elif period_type == "daily":
+            trunc_func = TruncDay("_date")
+        else:
+            trunc_func = TruncMonth("_date")
+
+        # Reverse the order with a minus sign.
+        order_prefix = "" if order.upper() == "ASC" else "-"
+
+        return list(
+            self.get_published_posts()
+            .filter(_date__isnull=False)
+            .annotate(period=trunc_func)  # add the period field with the trunc function
+            .values("period")  # group by period
+            .annotate(count=Count("id"))  # count the posts in each group
+            .order_by(f"{order_prefix}period")  # order_prefix will either be blank or a minus sign
+        )
 
 
 class Post(models.Model):

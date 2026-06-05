@@ -254,6 +254,48 @@ just a single template tag.
 </div>
 ```
 
+### get_archives
+
+Returns date-based archives from the database. This retrieves all years, months, or days that have published posts, along with post counts for each period.
+
+**Note**: specifying `type_` as a keyword argument is optional; it can also be provided as a positional argument.
+All other arguments **must** be provided as keyword arguments.
+
+**Parameters:**
+
+- `type_` (str): The archive frequency type. Accepted values are `"yearly"`, `"monthly"`, and `"daily"`.
+  Default is `"monthly"`, and this can be provided as a positional argument.
+- `limit` (int|None): Limit the number of archive periods returned. Default is `None` (unlimited).
+- `order` (str): Sort order for the periods. Accepted values are `"ASC"` and `"DESC"`. Default is `"DESC"`.
+
+**Returns:** list of dicts. Each dictionary contains:
+- `date` (datetime.date): The date representing the start of the period.
+- `url` (str): The URL of the archive page.
+- `count` (int): The number of posts published in that period.
+- `label` (str): A formatted string representation of the period (e.g., `"2026"`, `"June 2026"`, or `"June 4, 2026"`).
+
+#### get_archives Example
+
+```django
+{% get_archives type_="monthly" as archives %}
+<ul>
+  {% for archive in archives %}
+    <li>
+      <a href="{{ archive.url }}">{{ archive.label }}</a> ({{ archive.count }})
+    </li>
+  {% endfor %}
+</ul>
+```
+
+Note that the following all return the same output, since the `type_` argument can be provided as a positional argument
+and if defaults to `"monthly"`:
+
+```django
+{% get_archives type_="monthly" as archives %}
+{% get_archives "monthly" as archives %}
+{% get_archives as archives %}
+```
+
 ### get_post_title
 
 Returns the title of a post from the current context.
@@ -916,6 +958,81 @@ With CSS classes, and extra parameters:
     <a href="/contact/" class="nav-link">Contact me</a>
   </li>
 </ul>
+```
+
+### site_archives
+
+Get a list of all date-based archives formatted in HTML.
+
+**Returns:** date-based archives as HTML which has been marked as safe.
+
+#### site_archives Parameters
+
+- `type_` (str): The archive frequency type. Accepted values are `"yearly"`, `"monthly"`, and `"daily"`. Default is `"monthly"`.
+- `outer_tag` (str): the outer tag that this should be wrapped in. Accepted options are `"ul"`, `"ol"`, `"div"`, `"span"`. If `"ul"` or `"ol"` is used, then the inner items will be wrapped with `"li"` tags. Default is: `"ul"`.
+- `limit` (int|None): Limit the number of archive periods returned. Default is `None` (unlimited).
+- `order` (str): Sort order for the periods. Accepted values are `"ASC"` and `"DESC"`. Default is `"DESC"`.
+- `show_post_count` (bool): Whether to display the post counts in parentheses next to the links. Default is `False`.
+- `outer_class` (str): the CSS classes to apply to the outer tag. Default: `""`.
+- `li_class` (str): the CSS classes to apply to the list item tags (only relevant if outer tag is `"ul"` or `"ol"`). Default: `""`.
+- `link_class` (str): the CSS classes to apply to the link tags. Default: `""`.
+- `separator` (str): the separator to use between archives. Only relevant when not using `"ul"` or `"ol"` as the outer tag. Default: `", "`.
+- `pre_text` (str): the text to prepend to the list of archives. Default: `""`.
+- `post_text` (str): the text to append to the list of archives. Default: `""`.
+
+**Note**: specifying `type_` as a keyword argument is optional; it can also be provided as a positional argument.
+All other arguments **must** be provided as keyword arguments.
+
+#### site_archives Examples
+
+Just the archives, with no arguments (defaults to monthly):
+
+```django
+{% site_archives %}
+```
+
+Outputs:
+
+```html
+<ul>
+  <li>
+    <a href="/2026/06/" title="View all posts from June 2026">June 2026</a>
+  </li>
+  <li>
+    <a href="/2026/05/" title="View all posts from May 2026">May 2026</a>
+  </li>
+</ul>
+```
+
+Show monthly archives with post counts wrapped in an ordered list with custom CSS classes:
+
+```django
+{% site_archives outer_tag="ol" show_post_count=True outer_class="archive-list" li_class="archive-item" link_class="archive-link" %}
+```
+
+Outputs:
+
+```html
+<ol class="archive-list">
+  <li class="archive-item">
+    <a href="/2026/06/" title="View all posts from June 2026" class="archive-link">June 2026</a> (3)
+  </li>
+  <li class="archive-item">
+    <a href="/2026/05/" title="View all posts from May 2026" class="archive-link">May 2026</a> (1)
+  </li>
+</ol>
+```
+
+Wrapped in a `span` tag with a custom separator:
+
+```django
+{% site_archives "yearly" outer_tag="span" separator=" | " pre_text="Archives: " post_text="." %}
+```
+
+Outputs:
+
+```html
+<span>Archives: <a href="/2026/" title="View all posts from 2026">2026</a> | <a href="/2025/" title="View all posts from 2025">2025</a>.</span>
 ```
 
 ## Post Content Tags
