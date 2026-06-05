@@ -38,6 +38,7 @@
       {% site_categories %}
       <h3>Tags:</h3>
       {% tags_with_counts %}
+      {% site_archives show_post_count=True pre_text="<h3>Archives:</h3>" %}
     </nav>
     <main>
       {% if post %}
