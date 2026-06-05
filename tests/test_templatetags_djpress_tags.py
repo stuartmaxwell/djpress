@@ -7,6 +7,7 @@ from django.core.paginator import Paginator
 from django.template import Context, Template
 from django.urls import reverse
 from django.db import models
+from django.utils.safestring import mark_safe
 
 from djpress.models import Category, Post, Tag
 from djpress.templatetags import djpress_tags
@@ -1005,8 +1006,31 @@ def test_site_categories(category1, category2):
     assert category1 in categories
     assert category2 in categories
 
-    assert djpress_tags.site_categories() == categories_html(
-        categories=categories, outer_tag="ul", outer_class="", link_class="", separator=", ", pre_text="", post_text=""
+    expected_html = '<ul><li><a href="/test-url-category/test-category1/" title="View all posts in the Test Category1 category" class="p-category">Test Category1</a></li><li><a href="/test-url-category/test-category2/" title="View all posts in the Test Category2 category" class="p-category">Test Category2</a></li></ul>'
+    assert djpress_tags.site_categories() == expected_html
+
+    expected_html_pre_text = '<h2>Categories</h2><ul><li><a href="/test-url-category/test-category1/" title="View all posts in the Test Category1 category" class="p-category">Test Category1</a></li><li><a href="/test-url-category/test-category2/" title="View all posts in the Test Category2 category" class="p-category">Test Category2</a></li></ul>'
+    assert djpress_tags.site_categories(pre_text=mark_safe("<h2>Categories</h2>")) == expected_html_pre_text
+
+    expected_html_post_text = '<ul><li><a href="/test-url-category/test-category1/" title="View all posts in the Test Category1 category" class="p-category">Test Category1</a></li><li><a href="/test-url-category/test-category2/" title="View all posts in the Test Category2 category" class="p-category">Test Category2</a></li></ul><h2>Categories</h2>'
+    assert djpress_tags.site_categories(post_text=mark_safe("<h2>Categories</h2>")) == expected_html_post_text
+
+    expected_html_div = '<div><a href="/test-url-category/test-category1/" title="View all posts in the Test Category1 category" class="p-category">Test Category1</a>, <a href="/test-url-category/test-category2/" title="View all posts in the Test Category2 category" class="p-category">Test Category2</a></div>'
+    assert djpress_tags.site_categories(outer_tag="div") == expected_html_div
+
+    expected_html_div_separator = '<div><a href="/test-url-category/test-category1/" title="View all posts in the Test Category1 category" class="p-category">Test Category1</a> | <a href="/test-url-category/test-category2/" title="View all posts in the Test Category2 category" class="p-category">Test Category2</a></div>'
+    assert djpress_tags.site_categories(outer_tag="div", separator=" | ") == expected_html_div_separator
+
+    expected_html_div_pre_text = '<div><h2>Categories</h2><a href="/test-url-category/test-category1/" title="View all posts in the Test Category1 category" class="p-category">Test Category1</a>, <a href="/test-url-category/test-category2/" title="View all posts in the Test Category2 category" class="p-category">Test Category2</a></div>'
+    assert (
+        djpress_tags.site_categories(outer_tag="div", pre_text=mark_safe("<h2>Categories</h2>"))
+        == expected_html_div_pre_text
+    )
+
+    expected_html_div_post_text = '<div><a href="/test-url-category/test-category1/" title="View all posts in the Test Category1 category" class="p-category">Test Category1</a>, <a href="/test-url-category/test-category2/" title="View all posts in the Test Category2 category" class="p-category">Test Category2</a><h2>Categories</h2></div>'
+    assert (
+        djpress_tags.site_categories(outer_tag="div", post_text=mark_safe("<h2>Categories</h2>"))
+        == expected_html_div_post_text
     )
 
 
@@ -1033,12 +1057,12 @@ def test_site_tags_no_tags():
 
 
 @pytest.mark.django_db
-def test_tags_with_counts(test_post1, test_post2, tag1, tag2, tag3):
+def test_site_tags_with_counts(test_post1, test_post2, tag1, tag2, tag3):
     test_post1.tags.add(tag1)
     test_post2.tags.add(tag2)
 
     # Only tags 1 and 2 have posts, tag3 is empty
-    result = djpress_tags.tags_with_counts()
+    result = djpress_tags.site_tags(show_post_count=True)
 
     # Should only show tags with published posts
     assert tag1.title in result
@@ -2348,12 +2372,12 @@ def test_post_tags(test_post1, tag1):
 
 
 @pytest.mark.django_db
-def test_tags_with_counts_outer_div(test_post1, test_post2, tag1, tag2):
-    """Test tags_with_counts with div as outer tag."""
+def test_site_tags_with_counts_outer_div(test_post1, test_post2, tag1, tag2):
+    """Test site_tags with counts with div as outer tag."""
     test_post1.tags.add(tag1)
     test_post2.tags.add(tag2)
 
-    result = djpress_tags.tags_with_counts(outer_tag="div", outer_class="tag-list")
+    result = djpress_tags.site_tags(outer_tag="div", outer_class="tag-list", show_post_count=True)
 
     assert '<div class="tag-list">' in result
     assert tag1.title in result
@@ -2362,23 +2386,23 @@ def test_tags_with_counts_outer_div(test_post1, test_post2, tag1, tag2):
 
 
 @pytest.mark.django_db
-def test_tags_with_counts_incorrect_outer_div(test_post1, test_post2, tag1, tag2):
-    """Test tags_with_counts with incorrect outer tag."""
+def test_site_tags_with_counts_incorrect_outer_div(test_post1, test_post2, tag1, tag2):
+    """Test site_tags with counts with incorrect outer tag."""
     test_post1.tags.add(tag1)
     test_post2.tags.add(tag2)
 
-    result = djpress_tags.tags_with_counts(outer_tag="main", outer_class="tag-list")
+    result = djpress_tags.site_tags(outer_tag="main", outer_class="tag-list", show_post_count=True)
 
     assert result == ""
 
 
 @pytest.mark.django_db
-def test_tags_with_counts_outer_span(test_post1, test_post2, tag1, tag2):
-    """Test tags_with_counts with span as outer tag."""
+def test_site_tags_with_counts_outer_span(test_post1, test_post2, tag1, tag2):
+    """Test site_tags with counts with span as outer tag."""
     test_post1.tags.add(tag1)
     test_post2.tags.add(tag2)
 
-    result = djpress_tags.tags_with_counts(outer_tag="span", outer_class="tag-list")
+    result = djpress_tags.site_tags(outer_tag="span", outer_class="tag-list", show_post_count=True)
 
     assert '<span class="tag-list">' in result
     assert tag1.title in result
@@ -2387,14 +2411,14 @@ def test_tags_with_counts_outer_span(test_post1, test_post2, tag1, tag2):
 
 
 @pytest.mark.django_db
-def test_tags_with_counts_empty():
-    """Test tags_with_counts when there are no tags with published posts."""
-    result = djpress_tags.tags_with_counts()
+def test_site_tags_with_counts_empty():
+    """Test site_tags with counts when there are no tags with published posts."""
+    result = djpress_tags.site_tags(show_post_count=True)
     assert result == ""
 
 
 @pytest.mark.django_db
-def test_tags_with_counts_xss(test_post1):
+def test_site_tags_with_counts_xss(test_post1):
     """Make sure user-generated content is escaped."""
     bad_string = '<script>alert("evil")</script>'
     escaped_string = "&lt;script&gt;alert(&quot;evil&quot;)&lt;/script&gt;"
@@ -2402,8 +2426,8 @@ def test_tags_with_counts_xss(test_post1):
     tag = Tag.objects.create(slug="evil", title=bad_string)
     test_post1.tags.add(tag)
 
-    assert bad_string not in djpress_tags.tags_with_counts()
-    assert escaped_string in djpress_tags.tags_with_counts()
+    assert bad_string not in djpress_tags.site_tags(show_post_count=True)
+    assert escaped_string in djpress_tags.site_tags(show_post_count=True)
 
 
 @pytest.mark.django_db
@@ -2831,6 +2855,14 @@ def test_site_archives(user, settings):
         f'<ul><li><a href="/{prefix}/2024/06/" title="View all posts from June 2024">June 2024</a> (1)</li></ul>'
     )
     assert djpress_tags.site_archives(show_post_count=True) == expected_html_with_count
+
+    expected_html_with_pre_text = f'<h2>Archives:</h2><ul><li><a href="/{prefix}/2024/06/" title="View all posts from June 2024">June 2024</a></li></ul>'
+    # Note that when used in a template, pre_text is marked as safe, so we need to do that here.
+    assert djpress_tags.site_archives(pre_text=mark_safe("<h2>Archives:</h2>")) == expected_html_with_pre_text
+
+    expected_html_with_post_text = f'<ul><li><a href="/{prefix}/2024/06/" title="View all posts from June 2024">June 2024</a></li></ul><div>Archives:</div>'
+    # Note that when used in a template, post_text is marked as safe, so we need to do that here.
+    assert djpress_tags.site_archives(post_text=mark_safe("<div>Archives:</div>")) == expected_html_with_post_text
 
     # Test site_archives when get_archives returns empty
     settings.DJPRESS_SETTINGS["ARCHIVE_ENABLED"] = False

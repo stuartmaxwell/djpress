@@ -209,13 +209,11 @@ def test_tags_html(settings, tag1, tag2, tag3):
     tags = Tag.objects.get_tags()
     assert list(tags) == [tag1, tag2, tag3]
 
-    # Test case - ul with options: pre_text, post_text, and spearator are ignored
+    # Test case - ul with spearator is ignored
     outer = "ul"
     outer_class = "tags"
     link_class = "tag"
     separator = " * "
-    pre_text = "this will be ignored"
-    post_text = "this will be ignored"
     expected_output = (
         '<ul class="tags">'
         f'<li><a href="/{settings.DJPRESS_SETTINGS["TAG_PREFIX"]}/{tag1.slug}/" title="View all posts tagged with {tag1.title}" class="p-category {link_class}">{tag1.title}</a></li>'
@@ -230,8 +228,8 @@ def test_tags_html(settings, tag1, tag2, tag3):
             outer_class=outer_class,
             link_class=link_class,
             separator=separator,
-            pre_text=pre_text,
-            post_text=post_text,
+            pre_text="",
+            post_text="",
         )
         == expected_output
     )
@@ -399,6 +397,84 @@ def test_tags_html(settings, tag1, tag2, tag3):
         == expected_output
     )
 
+    # Test case: show_post_count=True with ul
+    outer = "ul"
+    outer_class = "tags"
+    link_class = "tag"
+    # Annotate tags with some artificial post counts to test getattr(tag, "num_posts", 0)
+    for i, t in enumerate(tags):
+        t.num_posts = i + 1
+    expected_output = (
+        '<ul class="tags">'
+        f'<li><a href="/{settings.DJPRESS_SETTINGS["TAG_PREFIX"]}/{tag1.slug}/" title="View all posts tagged with {tag1.title}" class="{link_class}">{tag1.title}</a> (1)</li>'
+        f'<li><a href="/{settings.DJPRESS_SETTINGS["TAG_PREFIX"]}/{tag2.slug}/" title="View all posts tagged with {tag2.title}" class="{link_class}">{tag2.title}</a> (2)</li>'
+        f'<li><a href="/{settings.DJPRESS_SETTINGS["TAG_PREFIX"]}/{tag3.slug}/" title="View all posts tagged with {tag3.title}" class="{link_class}">{tag3.title}</a> (3)</li>'
+        "</ul>"
+    )
+    assert (
+        tags_html(
+            tags,
+            outer_tag=outer,
+            outer_class=outer_class,
+            link_class=link_class,
+            separator=", ",
+            pre_text="",
+            post_text="",
+            show_post_count=True,
+        )
+        == expected_output
+    )
+
+    # Test case: show_post_count=True with ul
+    # Annotate tags with some artificial post counts to test getattr(tag, "num_posts", 0)
+    for i, t in enumerate(tags):
+        t.num_posts = i + 1
+    expected_output = (
+        'pre_text<ul class="tags">'
+        f'<li><a href="/{settings.DJPRESS_SETTINGS["TAG_PREFIX"]}/{tag1.slug}/" title="View all posts tagged with {tag1.title}" class="{link_class}">{tag1.title}</a> (1)</li>'
+        f'<li><a href="/{settings.DJPRESS_SETTINGS["TAG_PREFIX"]}/{tag2.slug}/" title="View all posts tagged with {tag2.title}" class="{link_class}">{tag2.title}</a> (2)</li>'
+        f'<li><a href="/{settings.DJPRESS_SETTINGS["TAG_PREFIX"]}/{tag3.slug}/" title="View all posts tagged with {tag3.title}" class="{link_class}">{tag3.title}</a> (3)</li>'
+        "</ul>post_text"
+    )
+    assert (
+        tags_html(
+            tags,
+            outer_tag="ul",
+            outer_class="tags",
+            link_class="tag",
+            separator=", ",
+            pre_text="pre_text",
+            post_text="post_text",
+            show_post_count=True,
+        )
+        == expected_output
+    )
+
+    # Test case: show_post_count=True with span
+    outer = "span"
+    outer_class = "tags"
+    link_class = "tag"
+    expected_output = (
+        '<span class="tags">'
+        f'<a href="/{settings.DJPRESS_SETTINGS["TAG_PREFIX"]}/{tag1.slug}/" title="View all posts tagged with {tag1.title}" class="{link_class}">{tag1.title}</a> (1), '
+        f'<a href="/{settings.DJPRESS_SETTINGS["TAG_PREFIX"]}/{tag2.slug}/" title="View all posts tagged with {tag2.title}" class="{link_class}">{tag2.title}</a> (2), '
+        f'<a href="/{settings.DJPRESS_SETTINGS["TAG_PREFIX"]}/{tag3.slug}/" title="View all posts tagged with {tag3.title}" class="{link_class}">{tag3.title}</a> (3)'
+        "</span>"
+    )
+    assert (
+        tags_html(
+            tags,
+            outer_tag=outer,
+            outer_class=outer_class,
+            link_class=link_class,
+            separator=", ",
+            pre_text="",
+            post_text="",
+            show_post_count=True,
+        )
+        == expected_output
+    )
+
 
 def test_tags_html_no_tags():
     tags = Tag.objects.none()
@@ -532,7 +608,7 @@ def test_archives_html():
         {"url": "/2026/05/", "label": "May 2026", "count": 1},
     ]
 
-    # Test case 1: default options (ul, no counts, no classes)
+    # Test case: default options (ul, no counts, no classes)
     expected_output = (
         "<ul>"
         '<li><a href="/2026/06/" title="View all posts from June 2026">June 2026</a></li>'
@@ -541,7 +617,7 @@ def test_archives_html():
     )
     assert archives_html(archives) == expected_output
 
-    # Test case 2: showing post counts in list
+    # Test case: showing post counts in list
     expected_output_counts = (
         "<ul>"
         '<li><a href="/2026/06/" title="View all posts from June 2026">June 2026</a> (3)</li>'
@@ -550,7 +626,7 @@ def test_archives_html():
     )
     assert archives_html(archives, show_post_count=True) == expected_output_counts
 
-    # Test case 3: ol tag with classes
+    # Test case: ol tag with classes
     expected_output_ol = (
         '<ol class="outer-c">'
         '<li class="li-c"><a href="/2026/06/" title="View all posts from June 2026" class="link-c">June 2026</a></li>'
@@ -568,7 +644,7 @@ def test_archives_html():
         == expected_output_ol
     )
 
-    # Test case 4: div with custom separator, pre_text, post_text
+    # Test case: div with custom separator, pre_text, post_text
     expected_output_div = (
         "Pre-text"
         '<div class="outer-c">'
@@ -591,10 +667,32 @@ def test_archives_html():
         == expected_output_div
     )
 
-    # Test case 5: empty list
+    # Test case: ul with custom separator, pre_text, post_text
+    expected_output_ul_pre_post_text = (
+        "Pre-text"
+        '<ul class="outer-c">'
+        '<li><a href="/2026/06/" title="View all posts from June 2026" class="link-c">June 2026</a> (3)</li>'
+        '<li><a href="/2026/05/" title="View all posts from May 2026" class="link-c">May 2026</a> (1)</li>'
+        "</ul>"
+        "Post-text"
+    )
+    assert (
+        archives_html(
+            archives,
+            outer_class="outer-c",
+            link_class="link-c",
+            separator=" | ",
+            show_post_count=True,
+            pre_text="Pre-text",
+            post_text="Post-text",
+        )
+        == expected_output_ul_pre_post_text
+    )
+
+    # Test case: empty list
     assert archives_html([]) == ""
 
-    # Test case 6: invalid tag defaults to ul
+    # Test case: invalid tag defaults to ul
     expected_invalid = (
         "<ul>"
         '<li><a href="/2026/06/" title="View all posts from June 2026">June 2026</a></li>'

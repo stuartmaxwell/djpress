@@ -541,6 +541,7 @@ def site_tags(
     separator: str = ", ",
     pre_text: str = "",
     post_text: str = "",
+    show_post_count: bool = False,
 ) -> str:
     """Return the tags of the blog.
 
@@ -551,11 +552,16 @@ def site_tags(
         separator: The separator between tags.
         pre_text: The text to prepend to the tags.
         post_text: The text to append to the tags.
+        show_post_count: Whether to display post counts.
 
     Returns:
         str: The tags of the blog.
     """
-    tags = Tag.objects.get_tags().order_by("title")
+    if show_post_count:
+        tags = Tag.objects.get_tags_with_counts(published_only=True).order_by("title")
+    else:
+        tags = Tag.objects.get_tags().order_by("title")
+
     if not tags:
         return ""
 
@@ -569,50 +575,9 @@ def site_tags(
             separator=separator,
             pre_text=pre_text,
             post_text=post_text,
+            show_post_count=show_post_count,
         ),
     )
-
-
-@register.simple_tag
-def tags_with_counts(
-    outer_tag: str = "ul",
-    *,
-    outer_class: str = "",
-    link_class: str = "",
-) -> str:
-    """Return the tags of the blog with post counts.
-
-    Each tag shows the tag name followed by the number of posts in parentheses.
-    Only tags that have published posts are included.
-
-    Args:
-        outer_tag: The outer HTML tag for the tags: "ul", "div", or "span".
-        outer_class: The CSS class(es) for the outer tag.
-        link_class: The CSS class(es) for the link.
-
-    Returns:
-        str: The tags of the blog with post counts.
-    """
-    tags = Tag.objects.get_tags_with_published_posts().order_by("title")
-
-    if not tags:
-        return ""
-
-    if outer_tag not in ["ul", "div", "span"]:
-        return ""
-
-    if outer_tag == "ul":
-        items_html = format_html_join(
-            "",
-            "<li>{} ({})</li>",
-            ((helpers.get_tag_link(tag, link_class), tag.posts.count()) for tag in tags),
-        )
-        return helpers.wrap_in_tag(items_html, "ul", outer_class)
-
-    # For div or span, we join with a comma and space
-    items = [format_html("{} ({})", helpers.get_tag_link(tag, link_class), tag.posts.count()) for tag in tags]
-    joined_items = mark_safe(", ".join(items))
-    return helpers.wrap_in_tag(joined_items, outer_tag, outer_class)
 
 
 @register.simple_tag

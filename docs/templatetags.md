@@ -725,27 +725,23 @@ Get a list of all tags wrapped in HTML that can be configured with optional argu
 
 **Returns:** all tags as HTML which has been marked as safe.
 
-> **Related Topics:** See [tags.md](tags.md) for more information about tags and [url_structure.md](url_structure.md)
-for tag URL patterns.
+> **Related Topics:** See [tags.md](tags.md) for more information about tags and [url_structure.md](url_structure.md) for tag URL patterns.
 
 #### site_tags Parameters
 
-- `outer_tag` (str): the outer tag that this should be wrapped in. Accepted options are "ul", "div", "span". If "ul" is used, then the inner items will be wrapped with "li" tags.
-Default is: "ul".
+- `outer_tag` (str): the outer tag that this should be wrapped in. Accepted options are "ul", "ol", "div", "span". If "ul" or "ol" is used, then the inner items will be wrapped with "li" tags. Default is: "ul".
 - `outer_class` (str): the CSS classes to apply to the outer tag. Default: "".
 - `link_class` (str): the CSS classes to apply to the link tag. Default: "".
-- `separator` (str): the separator to use between categories. Only relevant when not using "ul" as the outer tag.
-Default: ", ".
-- `pre_text` (str): the text to prepend to the list of categories. Only relevant when not using "ul" as the outer tag.
-Default: "".
-- `post_text` (str): the text to append to the list of categories. Only relevant when not using "ul" as the outer tag.
-Default: "".
+- `separator` (str): the separator to use between tags. Only relevant when not using "ul" or "ol" as the outer tag. Default: ", ".
+- `pre_text` (str): the text to prepend to the list of tags. Default: "".
+- `post_text` (str): the text to append to the list of tags. Default: "".
+- `show_post_count` (bool): whether to display the post counts in parentheses next to the links. Default: False.
 
 **Note:** `outer_tag` can be passed as a positional argument, but the other parameters must be passed as keyword arguments.
 
 #### site_tags Examples
 
-Just the tags, with no arguments.
+Just the tags, with no arguments:
 
 ```django
 {% site_tags %}
@@ -762,6 +758,25 @@ Outputs a list of all tags:
     <a href="/tag/django/" title="View all posts tagged with Django">Django</a>
   </li>
 </ul>
+```
+
+Show tags with post counts, wrapping them in an ordered list with custom CSS classes:
+
+```django
+{% site_tags "ol" show_post_count=True outer_class="tag-list" link_class="tag-link" %}
+```
+
+Outputs:
+
+```html
+<ol class="tag-list">
+  <li>
+    <a href="/tag/python/" title="View all posts tagged with Python" class="tag-link">Python</a> (5)
+  </li>
+  <li>
+    <a href="/tag/django/" title="View all posts tagged with Django" class="tag-link">Django</a> (3)
+  </li>
+</ol>
 ```
 
 Wrapped in a `div` tag:
@@ -790,55 +805,6 @@ Wrapped in a `span` tag with all optional parameters:
 </span>
 ```
 
-### tags_with_counts
-
-Get a list of all tags with post counts wrapped in HTML that can be configured with optional arguments.
-
-**Returns:** all tags with post counts as HTML which has been marked as safe.
-
-#### tags_with_counts Parameters
-
-- `outer_tag` (str): the outer tags that this should be wrapped in.  Optional, default is: "ul".
-- `outer_class` (str): the CSS classes to apply to the outer tag. Optional, default: "".
-- `link_class` (str): the CSS classes to apply to the link tag. Optional, default: "".
-
-**Note:** `outer_tag` can be passed as a positional argument, but the other parameters must be passed as keyword arguments.
-
-#### tags_with_counts Examples
-
-Just the tag, with no arguments.
-
-```django
-{% tags_with_counts %}
-```
-
-Outputs a list of all tags with post counts:
-
-```html
-<ul>
-  <li>
-    <a href="/tag/python/" title="View all posts tagged with Python">Python</a> (5)
-  </li>
-  <li>
-    <a href="/tag/django/" title="View all posts tagged with Django">Django</a> (3)
-  </li>
-</ul>
-```
-
-Wrapped in a `div` tag with classes added.
-
-```django
-{% tags_with_counts outer_tag="div" outer_class="tag-cloud" link_class="tag" %}
-```
-
-Outputs a comma-separated list of tags with post counts, wrapped in a `div` tag.
-
-```html
-<div class="tag-cloud">
-  <a href="/tag/python/" title="View all posts tagged with Python" class="tag">Python</a> (5),
-  <a href="/tag/django/" title="View all posts tagged with Django" class="tag">Django</a> (3)
-</div>
-```
 
 ### site_pages
 
