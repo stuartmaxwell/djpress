@@ -197,8 +197,14 @@ keys in the database are safely ignored.
 
 To avoid executing a database query on every setting retrieval, DJ Press utilises Django's default caching framework.
 
-All database settings are retrieved in a single query and cached under the key `"djpress:settings"`. This cache is
-automatically invalidated and refreshed whenever a setting is created, saved, or deleted.
+All database settings are retrieved in a single query and cached globally under the key `"djpress:settings"`. In addition, to prevent redundant cache backend calls (network roundtrips), settings are cached in-memory for the lifetime of each HTTP request. The cache is automatically invalidated and refreshed whenever a setting is created, saved, or deleted.
+
+> [!IMPORTANT]
+> **Multi-Process Environments & Cache Requirements**
+> If your site runs on a multi-process server (such as multiple Gunicorn/uWSGI workers, or multiple containers) and you enable dynamic database settings, you **must** configure a shared caching backend (like **Redis**, **Memcached**, or Django's built-in **Database Cache**).
+>
+> If you do not configure a shared cache, Django will fall back to using `LocMemCache` (local memory cache). Because `LocMemCache` is isolated to the memory of each individual worker process, setting updates made on one worker process will not propagate to the other processes until they are restarted.
+
 
 ### Configuring Settings in Django Admin
 

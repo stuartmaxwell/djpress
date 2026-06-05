@@ -2,9 +2,11 @@
 
 from django.apps import AppConfig
 from django.core.cache import cache
+from django.core.signals import request_started
 from django.db.models.signals import post_delete, post_migrate, post_save
 from django.dispatch import receiver
 
+from djpress.conf import settings as djpress_settings
 from djpress.models.category import (
     CATEGORY_CACHE_KEY,
     Category,
@@ -71,3 +73,10 @@ def invalidate_setting_cache(**_) -> None:  # noqa: ANN003
     We invalidate the cache when a setting is saved or deleted.
     """
     cache.delete(SETTING_CACHE_KEY)
+    djpress_settings.clear_request_cache()
+
+
+@receiver(request_started)
+def clear_settings_request_cache(**_) -> None:  # noqa: ANN003
+    """Clear the local request-bound settings cache at the start of each request."""
+    djpress_settings.clear_request_cache()

@@ -2,8 +2,10 @@ import pytest
 from unittest.mock import patch
 
 from django.conf import settings as django_settings
-from django.core.exceptions import ImproperlyConfigured
+from django.core.cache import cache
 from django.core.checks import Error
+from django.core.exceptions import ImproperlyConfigured
+from django.core.signals import request_started
 
 from djpress.conf import settings as djpress_settings
 from djpress.conf import check_djpress_settings
@@ -215,6 +217,8 @@ def test_dynamic_settings_disabled_by_default():
 @pytest.mark.django_db
 def test_dynamic_settings_precedence(settings):
     """Test that DB settings take precedence over Django settings when enabled."""
+    djpress_settings.clear_request_cache()
+
     # Enable database settings lookups
     settings.DJPRESS_SETTINGS = {
         "DATABASE_SETTINGS_ENABLED": True,
@@ -265,6 +269,7 @@ def test_dynamic_settings_lockout_prevention():
 @pytest.mark.django_db
 def test_dynamic_settings_unrecognized_keys(settings):
     """Test that unrecognized settings are saved without error but ignored."""
+    djpress_settings.clear_request_cache()
     settings.DJPRESS_SETTINGS = {
         "DATABASE_SETTINGS_ENABLED": True,
     }
@@ -282,6 +287,7 @@ def test_dynamic_settings_unrecognized_keys(settings):
 @pytest.mark.django_db
 def test_dynamic_settings_caching_and_invalidation(settings):
     """Test that dynamic settings cache is correctly invalidated on save/delete."""
+    djpress_settings.clear_request_cache()
     settings.DJPRESS_SETTINGS = {
         "DATABASE_SETTINGS_ENABLED": True,
         "SITE_TITLE": "Django Title",
@@ -364,6 +370,7 @@ def test_dynamic_settings_db_exception_graceful_fallback(settings):
 
     # Clear cache first to force a database query attempt
     cache.delete("djpress:settings")
+    djpress_settings.clear_request_cache()
 
     with patch.object(Setting.objects, "all", side_effect=Exception("DB Connection Error")):
         # Querying settings should not raise an exception, and should return the default value
@@ -425,3 +432,78 @@ def test_dynamic_settings_during_bootstrap(settings):
     with patch("django.apps.apps.ready", False):
         # Even though DATABASE_SETTINGS_ENABLED is True, it should return default/overridden setting without DB lookup
         assert djpress_settings.SITE_TITLE == "My DJ Press Blog"
+
+
+@pytest.mark.django_db
+def test_dynamic_settings_request_caching(settings):
+    """Test that dynamic settings are cached in-memory per-request/thread to avoid multiple cache calls."""
+    settings.DJPRESS_SETTINGS = {
+        "DATABASE_SETTINGS_ENABLED": True,
+    }
+
+    # Clear both caches first
+    cache.delete("djpress:settings")
+    djpress_settings.clear_request_cache()
+
+    # Spy on cache.get
+    with patch.object(cache, "get", wraps=cache.get) as mock_get:
+        # Access SITE_TITLE multiple times
+        val1 = djpress_settings.SITE_TITLE
+        val2 = djpress_settings.SITE_TITLE
+        val3 = djpress_settings.SITE_TITLE
+
+        assert val1 == "My DJ Press Blog"
+        assert val2 == "My DJ Press Blog"
+        assert val3 == "My DJ Press Blog"
+
+        # cache.get should be called exactly once for the setting cache key!
+        setting_cache_calls = [
+            call for call in mock_get.call_args_list if len(call[0]) > 0 and call[0][0] == "djpress:settings"
+        ]
+        assert len(setting_cache_calls) == 1
+
+
+@pytest.mark.django_db
+def test_dynamic_settings_request_started_signal_clears_cache(settings):
+    """Test that the request_started signal successfully invalidates the thread-local cache."""
+    settings.DJPRESS_SETTINGS = {
+        "DATABASE_SETTINGS_ENABLED": True,
+    }
+
+    # 1. Create the setting first
+    Setting.objects.create(key="SITE_TITLE", value="My DJ Press Blog")
+
+    # Clear both caches first to ensure a clean state
+    cache.delete("djpress:settings")
+    djpress_settings.clear_request_cache()
+
+    # 2. First access (populates cache)
+    assert djpress_settings.SITE_TITLE == "My DJ Press Blog"
+
+    # 3. Modify database setting directly using queryset update (bypassing model signals)
+    Setting.objects.filter(key="SITE_TITLE").update(value="New DB Title")
+    # Since cache is not invalidated, querying SITE_TITLE still returns the old cached value
+    assert djpress_settings.SITE_TITLE == "My DJ Press Blog"
+
+    # 4. Invalidate global cache and fire the request_started signal
+    cache.delete("djpress:settings")
+    request_started.send(sender=None)
+
+    # 5. Querying now should see the new DB value because thread-local cache was cleared!
+    assert djpress_settings.SITE_TITLE == "New DB Title"
+
+
+@pytest.mark.django_db
+def test_dynamic_settings_cache_hit_without_local_cache(settings):
+    """Test that if global cache is populated but local thread cache is empty, we hit global cache."""
+    settings.DJPRESS_SETTINGS = {
+        "DATABASE_SETTINGS_ENABLED": True,
+    }
+
+    # Populate global cache
+    cache.set("djpress:settings", {"SITE_TITLE": "Global Cache Title"}, timeout=None)
+    # Clear local cache
+    djpress_settings.clear_request_cache()
+
+    # Query setting: local cache is empty, so it retrieves from global cache and returns
+    assert djpress_settings.SITE_TITLE == "Global Cache Title"
