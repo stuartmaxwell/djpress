@@ -35,8 +35,7 @@
         {% endfor %}
       </ul>
       {% site_categories pre_text="<h3>Categories:</h3>" %}
-      <h3>Tags:</h3>
-      {% tags_with_counts %}
+      {% site_tags show_post_count=True pre_text="<h3>Tags:</h3>" %}
       {% site_archives show_post_count=True pre_text="<h3>Archives:</h3>" %}
     </nav>
     <main>
