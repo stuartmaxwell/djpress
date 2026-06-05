@@ -1,6 +1,7 @@
 """Configuration settings for DJ Press."""
 
 import logging
+import threading
 
 from django.conf import settings as django_settings
 from django.core.cache import cache
@@ -16,6 +17,15 @@ SettingValueType = str | int | bool | list | dict | None
 
 class DJPressSettings:
     """Class to manage DJPress settings."""
+
+    def __init__(self) -> None:
+        """Initialize the settings manager."""
+        self._local = threading.local()
+
+    def clear_request_cache(self) -> None:
+        """Clear the in-memory request-bound setting cache."""
+        if hasattr(self._local, "db_settings"):
+            delattr(self._local, "db_settings")
 
     def database_settings_enabled(self) -> bool:
         """Determine if database settings lookups are enabled."""
@@ -41,21 +51,24 @@ class DJPressSettings:
         if not apps.ready:
             return {}
 
-        settings_dict = cache.get(SETTING_CACHE_KEY)
+        # Cache settings dict on the thread-local storage to avoid redundant cache backend queries
+        if not hasattr(self._local, "db_settings"):
+            settings_dict = cache.get(SETTING_CACHE_KEY)
 
-        if settings_dict is None:
-            try:
-                from djpress.models.setting import Setting  # noqa: PLC0415 # Circular import
+            if settings_dict is None:
+                try:
+                    from djpress.models.setting import Setting  # noqa: PLC0415 # Circular import
 
-                settings_dict = {setting.key: setting.value for setting in Setting.objects.all()}
-                cache.set(SETTING_CACHE_KEY, settings_dict, timeout=None)
+                    settings_dict = {setting.key: setting.value for setting in Setting.objects.all()}
+                    cache.set(SETTING_CACHE_KEY, settings_dict, timeout=None)
 
-            except Exception as e:  # noqa: BLE001
-                logger.warning(f"Error getting settings from database: {e}")
-                # During migrations, bootstrap, or before table is created, return empty dict
-                return {}
+                except Exception as e:  # noqa: BLE001
+                    logger.warning(f"Error getting settings from database: {e}")
+                    # During migrations, bootstrap, or before table is created, return empty dict
+                    return {}
+            self._local.db_settings = settings_dict
 
-        return settings_dict
+        return self._local.db_settings
 
     def __getattr__(self, key: str) -> SettingValueType:
         """Retrieve the setting in order of precedence.
