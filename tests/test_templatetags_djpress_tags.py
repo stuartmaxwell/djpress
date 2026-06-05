@@ -7,6 +7,7 @@ from django.core.paginator import Paginator
 from django.template import Context, Template
 from django.urls import reverse
 from django.db import models
+from django.utils.safestring import mark_safe
 
 from djpress.models import Category, Post, Tag
 from djpress.templatetags import djpress_tags
@@ -2831,6 +2832,14 @@ def test_site_archives(user, settings):
         f'<ul><li><a href="/{prefix}/2024/06/" title="View all posts from June 2024">June 2024</a> (1)</li></ul>'
     )
     assert djpress_tags.site_archives(show_post_count=True) == expected_html_with_count
+
+    expected_html_with_pre_text = f'<h2>Archives:</h2><ul><li><a href="/{prefix}/2024/06/" title="View all posts from June 2024">June 2024</a></li></ul>'
+    # Note that when used in a template, pre_text is marked as safe, so we need to do that here.
+    assert djpress_tags.site_archives(pre_text=mark_safe("<h2>Archives:</h2>")) == expected_html_with_pre_text
+
+    expected_html_with_post_text = f'<ul><li><a href="/{prefix}/2024/06/" title="View all posts from June 2024">June 2024</a></li></ul><div>Archives:</div>'
+    # Note that when used in a template, post_text is marked as safe, so we need to do that here.
+    assert djpress_tags.site_archives(post_text=mark_safe("<div>Archives:</div>")) == expected_html_with_post_text
 
     # Test site_archives when get_archives returns empty
     settings.DJPRESS_SETTINGS["ARCHIVE_ENABLED"] = False
