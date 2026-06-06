@@ -642,7 +642,6 @@ class Post(models.Model):
 
         indexes = [
             models.Index(fields=["title"], name="djpress_post_title_idx"),
-            models.Index(fields=["content"], name="djpress_post_content_idx"),
         ]
 
     def __str__(self) -> str:
