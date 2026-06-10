@@ -7,7 +7,9 @@ This guide explains how to use existing themes, customise them, or create your o
 
 ### Template Files
 
-Template files must be placed in: `./templates/djpress/{{ your_theme_name }}/`
+By default, template files must be placed in: `./templates/djpress/{{ your_theme_name }}/`
+
+This path prefix can be customized using the `TEMPLATE_PREFIX` setting (which defaults to `"djpress/"`). For example, if `TEMPLATE_PREFIX` is set to `"my-blog/"`, template files should be placed in `./templates/my-blog/{{ your_theme_name }}/`.
 
 At minimum, a theme needs an `index.html` template. If this is the only template you provide, it will be used for all
 views. For more specialised layouts, you can create these additional templates:
@@ -53,7 +55,7 @@ DJPRESS_SETTINGS = {
 }
 ```
 
-The theme name must match the directory name under `templates/djpress/` and `static/djpress/`.
+The theme name must match the directory name under the template prefix folder (defined by `TEMPLATE_PREFIX`, e.g. `templates/djpress/`) and the static folder `static/djpress/`.
 
 ## Creating a Custom Theme
 
