@@ -128,34 +128,35 @@ def get_templates(view_name: str) -> list[str]:
         list[str]: The list of template names.
     """
     theme = djpress_settings.THEME
+    prefix = djpress_settings.TEMPLATE_PREFIX
 
     template = ""
 
     if view_name == "index":
-        template = f"djpress/{theme}/home.html"
+        template = f"{prefix}{theme}/home.html"
 
     if view_name == "archive_posts":
-        template = f"djpress/{theme}/archives.html"
+        template = f"{prefix}{theme}/archives.html"
 
     if view_name == "category_posts":
-        template = f"djpress/{theme}/category.html"
+        template = f"{prefix}{theme}/category.html"
 
     if view_name == "tag_posts":
-        template = f"djpress/{theme}/tag.html"
+        template = f"{prefix}{theme}/tag.html"
 
     if view_name == "author_posts":
-        template = f"djpress/{theme}/author.html"
+        template = f"{prefix}{theme}/author.html"
 
     if view_name == "single_post":
-        template = f"djpress/{theme}/single.html"
+        template = f"{prefix}{theme}/single.html"
 
     if view_name == "single_page":
-        template = f"djpress/{theme}/page.html"
+        template = f"{prefix}{theme}/page.html"
 
     if view_name == "search":
-        template = f"djpress/{theme}/search.html"
+        template = f"{prefix}{theme}/search.html"
 
-    default_template = f"djpress/{theme}/index.html"
+    default_template = f"{prefix}{theme}/index.html"
 
     return [template, default_template] if template else [default_template]
 

@@ -273,3 +273,32 @@ def test_get_template_name_testing_theme(settings):
     # Test case 7 - template for archive_posts view when archives.html exists
     template_name = get_template_name("archive_posts")
     assert template_name == "djpress/testing/archives.html"
+
+
+def test_get_templates_custom_prefix(settings):
+    """Verify that get_templates respects custom and empty TEMPLATE_PREFIX settings."""
+    settings.DJPRESS_SETTINGS["THEME"] = "test-theme"
+
+    # Test with a custom prefix ending with a slash
+    settings.DJPRESS_SETTINGS["TEMPLATE_PREFIX"] = "custom_templates/"
+    templates = get_templates("index")
+    assert templates == [
+        "custom_templates/test-theme/home.html",
+        "custom_templates/test-theme/index.html",
+    ]
+
+    # Test with a custom prefix not ending with a slash
+    settings.DJPRESS_SETTINGS["TEMPLATE_PREFIX"] = "my-prefix-"
+    templates = get_templates("index")
+    assert templates == [
+        "my-prefix-test-theme/home.html",
+        "my-prefix-test-theme/index.html",
+    ]
+
+    # Test with empty prefix
+    settings.DJPRESS_SETTINGS["TEMPLATE_PREFIX"] = ""
+    templates = get_templates("index")
+    assert templates == [
+        "test-theme/home.html",
+        "test-theme/index.html",
+    ]

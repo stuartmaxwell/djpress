@@ -33,6 +33,7 @@ DJPRESS_SETTINGS = {
     "SITE_TITLE": ("My DJ Press Blog", str),
     "TAG_ENABLED": (True, bool),
     "TAG_PREFIX": ("tag", str),
+    "TEMPLATE_PREFIX": ("djpress/", str),
     "THEME": ("default", str),
     "THEME_SETTINGS": ({}, dict),
     "TRUNCATE_TAG": ("<!--more-->", str),

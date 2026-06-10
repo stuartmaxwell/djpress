@@ -82,6 +82,7 @@ Settings are grouped by functionality:
 | Setting          | Type | Default   | Description                                                                     |
 |------------------|------|-----------|---------------------------------------------------------------------------------|
 | `THEME`          | str  | `default` | Which theme to use. See the [themes](themes.md) page for more details.          |
+| `TEMPLATE_PREFIX` | str  | `djpress/` | Directory prefix path for templates.                                            |
 | `THEME_SETTINGS` | dict | `{}`      | Optional theme settings. Refer to the specific theme documentation for details. |
 
 ### Example Configurations
