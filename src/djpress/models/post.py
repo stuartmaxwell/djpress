@@ -41,7 +41,19 @@ class PageNode(TypedDict):
     children: list["PageNode"]
 
 
-class AdminManager(models.Manager):
+class AdminQuerySet(models.QuerySet):
+    """QuerySet with custom bulk soft-delete and restore methods."""
+
+    def soft_delete(self) -> int:
+        """Soft-delete all posts/pages in the queryset."""
+        return self.update(deleted_at=timezone.now())
+
+    def restore(self) -> int:
+        """Restore all soft-deleted posts/pages in the queryset."""
+        return self.update(deleted_at=None)
+
+
+class AdminManager(models.Manager.from_queryset(AdminQuerySet)):
     """Manager that returns all posts/pages - used only by admin."""
 
     def get_queryset(self) -> models.QuerySet:
@@ -576,7 +588,7 @@ class PostsManager(models.Manager):
         return list(
             self.get_published_posts()
             .filter(_date__isnull=False)
-            .annotate(period=trunc_func)  # add the period field with the trunc function
+            .annotate(period=trunc_func)  # add the period field with the trunc functiont
             .values("period")  # group by period
             .annotate(count=Count("id"))  # count the posts in each group
             .order_by(f"{order_prefix}period")  # order_prefix will either be blank or a minus sign
@@ -764,6 +776,16 @@ class Post(models.Model):
                 msg = "Circular reference detected in page hierarchy."
                 raise ValidationError(msg)
             ancestor = ancestor.parent
+
+    def soft_delete(self) -> None:
+        """Soft-delete this post/page."""
+        self.deleted_at = timezone.now()
+        self.save(update_fields=["deleted_at"])
+
+    def restore(self) -> None:
+        """Restore this soft-deleted post/page."""
+        self.deleted_at = None
+        self.save(update_fields=["deleted_at"])
 
     @property
     def children(self) -> models.QuerySet:
