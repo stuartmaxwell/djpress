@@ -1887,3 +1887,57 @@ def test_admin_manager_bulk_soft_delete_and_restore(test_post1, test_post2):
     test_post2.refresh_from_db()
     assert test_post1.deleted_at is None
     assert test_post2.deleted_at is None
+
+
+@pytest.mark.django_db
+def test_post_permission_helper_methods(test_post1):
+    """Test the permission helper methods for various user groups/roles."""
+    from django.contrib.auth import get_user_model
+    from django.contrib.auth.models import Group
+
+    User = get_user_model()
+
+    # Create users for each role
+    admin_user = User.objects.create_user(username="admin_test", password="pass")
+    admin_user.groups.add(Group.objects.get(name="djpress_admin"))
+
+    editor_user = User.objects.create_user(username="editor_test", password="pass")
+    editor_user.groups.add(Group.objects.get(name="djpress_editor"))
+
+    author_user = User.objects.create_user(username="author_test", password="pass")
+    author_user.groups.add(Group.objects.get(name="djpress_author"))
+
+    other_author = User.objects.create_user(username="other_author_test", password="pass")
+    other_author.groups.add(Group.objects.get(name="djpress_author"))
+
+    contributor_user = User.objects.create_user(username="contrib_test", password="pass")
+    contributor_user.groups.add(Group.objects.get(name="djpress_contributor"))
+
+    superuser = User.objects.create_superuser(username="super_test", password="pass")
+
+    # Set post author to author_user
+    test_post1.author = author_user
+    test_post1.save()
+
+    # Test can_soft_delete and can_restore
+    assert test_post1.can_soft_delete(superuser) is True
+    assert test_post1.can_soft_delete(admin_user) is True
+    assert test_post1.can_soft_delete(editor_user) is True
+    assert test_post1.can_soft_delete(author_user) is True
+    assert test_post1.can_soft_delete(other_author) is False
+    assert test_post1.can_soft_delete(contributor_user) is False
+
+    assert test_post1.can_restore(superuser) is True
+    assert test_post1.can_restore(admin_user) is True
+    assert test_post1.can_restore(editor_user) is True
+    assert test_post1.can_restore(author_user) is True
+    assert test_post1.can_restore(other_author) is False
+    assert test_post1.can_restore(contributor_user) is False
+
+    # Test can_hard_delete
+    assert test_post1.can_hard_delete(superuser) is True
+    assert test_post1.can_hard_delete(admin_user) is True
+    assert test_post1.can_hard_delete(editor_user) is False
+    assert test_post1.can_hard_delete(author_user) is False
+    assert test_post1.can_hard_delete(other_author) is False
+    assert test_post1.can_hard_delete(contributor_user) is False

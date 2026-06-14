@@ -774,6 +774,24 @@ class Post(models.Model):
         self.deleted_at = None
         self.save(update_fields=["deleted_at"])
 
+    def can_soft_delete(self, user: "AbstractBaseUser") -> bool:
+        """Return True if the user has permission to soft-delete this post/page."""
+        if user.is_superuser or user.groups.filter(name="djpress_admin").exists():
+            return True
+        if user.groups.filter(name="djpress_editor").exists():
+            return True
+        if user.groups.filter(name="djpress_author").exists():
+            return self.author == user
+        return False
+
+    def can_restore(self, user: "AbstractBaseUser") -> bool:
+        """Return True if the user has permission to restore this post/page."""
+        return self.can_soft_delete(user)
+
+    def can_hard_delete(self, user: "AbstractBaseUser") -> bool:
+        """Return True if the user has permission to permanently delete this post/page."""
+        return user.is_superuser or user.groups.filter(name="djpress_admin").exists()
+
     @property
     def children(self) -> models.QuerySet:
         """Return only published children pages."""
