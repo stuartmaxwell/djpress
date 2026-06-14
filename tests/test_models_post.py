@@ -1797,3 +1797,93 @@ def test_page_delete_behavior_parent_child(user):
 
     # The parent field should now be set to None (on_delete=models.SET_NULL)
     assert child.parent is None
+
+
+@pytest.mark.django_db
+def test_page_soft_delete_behavior_parent_child(user):
+    """Test that when a parent page is soft-deleted, its child's parent field is set to NULL."""
+    parent = Post.objects.create(
+        title="Parent Page",
+        slug="parent-page",
+        content="Parent content",
+        author=user,
+        post_type="page",
+        status="published",
+    )
+    child = Post.objects.create(
+        title="Child Page",
+        slug="child-page",
+        content="Child content",
+        author=user,
+        post_type="page",
+        status="published",
+        parent=parent,
+    )
+
+    assert child.parent == parent
+
+    # Delete the parent page
+    parent.soft_delete()
+
+    # Refresh child from database
+    child.refresh_from_db()
+
+    # The parent field should still be set, but now both pages are unpublished.
+    assert child.parent == parent
+    assert not child.is_published
+    assert not child.parent.is_published
+
+    # Now hard-delete the parent page
+    parent.delete()
+
+    # Refresh child from database
+    child.refresh_from_db()
+
+    # The parent field is None and the page is published.
+    assert child.parent is None
+    assert child.is_published
+
+
+@pytest.mark.django_db
+def test_post_soft_delete_and_restore(test_post1):
+    """Test that calling soft_delete() and restore() on a Post instance works correctly."""
+    assert test_post1.deleted_at is None
+    assert not test_post1.is_deleted
+
+    # Soft delete the post
+    test_post1.soft_delete()
+    assert test_post1.deleted_at is not None
+    assert test_post1.is_deleted
+
+    # Restore the post
+    test_post1.restore()
+    assert test_post1.deleted_at is None
+    assert not test_post1.is_deleted
+
+
+@pytest.mark.django_db
+def test_admin_manager_bulk_soft_delete_and_restore(test_post1, test_post2):
+    """Test that AdminManager bulk soft_delete and restore methods work correctly."""
+    # Ensure they start as active
+    assert test_post1.deleted_at is None
+    assert test_post2.deleted_at is None
+
+    # Bulk soft delete via AdminManager
+    count = Post.admin_objects.filter(id__in=[test_post1.id, test_post2.id]).soft_delete()
+    assert count == 2
+
+    # Verify fields changed in database
+    test_post1.refresh_from_db()
+    test_post2.refresh_from_db()
+    assert test_post1.deleted_at is not None
+    assert test_post2.deleted_at is not None
+
+    # Bulk restore via AdminManager
+    count = Post.admin_objects.filter(id__in=[test_post1.id, test_post2.id]).restore()
+    assert count == 2
+
+    # Verify fields changed in database
+    test_post1.refresh_from_db()
+    test_post2.refresh_from_db()
+    assert test_post1.deleted_at is None
+    assert test_post2.deleted_at is None

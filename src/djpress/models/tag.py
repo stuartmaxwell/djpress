@@ -8,6 +8,7 @@ from django.db.models import Count, Max, Q
 from django.utils import timezone
 from django.utils.text import slugify
 
+from djpress import models as djpress_models
 from djpress.conf import settings as djpress_settings
 
 TAG_CACHE_KEY = "tags"
@@ -95,6 +96,7 @@ class TagManager(models.Manager):
                     _posts__post_type="post",
                     _posts__status="published",
                     _posts__published_at__lte=timezone.now(),
+                    _posts__deleted_at__isnull=True,
                 ),
             )
         )
@@ -157,11 +159,7 @@ class Tag(models.Model):
 
         Note: this mirrors the queryset in PostsManager.
         """
-        return self._posts.filter(
-            post_type="post",
-            status="published",
-            published_at__lte=timezone.now(),
-        ).order_by("-published_at")
+        return djpress_models.Post.post_objects.filter(tags=self).order_by("-published_at")
 
     @property
     def has_posts(self) -> bool:

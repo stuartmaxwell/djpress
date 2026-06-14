@@ -61,19 +61,24 @@ class AdminManager(models.Manager.from_queryset(AdminQuerySet)):
         return super().get_queryset()
 
 
-class PostsAndPagesManager(models.Manager):
+class PostQuerySet(models.QuerySet):
+    """QuerySet for posts and pages, with custom published filter."""
+
+    def published(self) -> models.QuerySet:
+        """Filter to only active, published posts and pages."""
+        return self.filter(
+            status="published",
+            published_at__lte=timezone.now(),
+            deleted_at__isnull=True,
+        )
+
+
+class PostsAndPagesManager(models.Manager.from_queryset(PostQuerySet)):
     """Default manager that only returns published content."""
 
     def get_queryset(self) -> models.QuerySet:
         """Return only published posts and pages."""
-        return (
-            super()
-            .get_queryset()
-            .filter(
-                status="published",
-                published_at__lte=timezone.now(),
-            )
-        )
+        return super().get_queryset().published()
 
     def search(self, query: str = "") -> models.QuerySet:
         """Search interface.
@@ -157,21 +162,12 @@ class PostsAndPagesManager(models.Manager):
         return qs.order_by("-score", "post_type", "-updated_at")
 
 
-class PagesManager(models.Manager):
+class PagesManager(models.Manager.from_queryset(PostQuerySet)):
     """Page custom manager."""
 
     def get_queryset(self) -> models.QuerySet:
         """Return the queryset for pages."""
-        return (
-            super()
-            .get_queryset()
-            .filter(
-                post_type="page",
-                status="published",
-                published_at__lte=timezone.now(),
-            )
-            .order_by("menu_order", "title")
-        )
+        return super().get_queryset().published().filter(post_type="page").order_by("menu_order", "title")
 
     def get_published_pages(self) -> models.QuerySet:
         """Return all published pages.
@@ -294,7 +290,7 @@ class PagesManager(models.Manager):
         return root_pages
 
 
-class PostsManager(models.Manager):
+class PostsManager(models.Manager.from_queryset(PostQuerySet)):
     """Post custom manager."""
 
     def get_queryset(self) -> models.QuerySet:
@@ -303,16 +299,7 @@ class PostsManager(models.Manager):
         Note: this queryset is mirrored in both the Tag and Category models. If this logic changes, it should be
         reflected in those models as well.
         """
-        return (
-            super()
-            .get_queryset()
-            .filter(
-                post_type="post",
-                status="published",
-                published_at__lte=timezone.now(),
-            )
-            .order_by("-published_at")
-        )
+        return super().get_queryset().published().filter(post_type="post").order_by("-published_at")
 
     def get_published_posts(self) -> models.QuerySet:
         """Returns all published posts.
@@ -880,6 +867,10 @@ class Post(models.Model):
         Returns:
             bool: Whether the post is published.
         """
+        # If the post/page is soft-deleted, it is not published
+        if self.deleted_at is not None:
+            return False
+
         # If the post or page status is not published or the date is in the future, return False
         if not (self.status == "published" and self.published_at <= timezone.now()):
             return False
