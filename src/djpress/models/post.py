@@ -625,6 +625,13 @@ class Post(models.Model):
         related_name="_children",  # Danger! This returns all children of a parent, published or not.
         limit_choices_to={"post_type": "page"},
     )
+    deleted_at = models.DateTimeField(
+        "Deleted At",
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="Timestamp when this post/page was soft-deleted.",
+    )
     # Type hint for Django's reverse relationship
     if TYPE_CHECKING:
         _children: models.Manager["Post"]
@@ -916,3 +923,8 @@ class Post(models.Model):
             timezone.datetime: The post date in the local timezone.
         """
         return timezone.localtime(self.published_at)
+
+    @property
+    def is_deleted(self) -> bool:
+        """Return whether the post or page has been soft-deleted."""
+        return self.deleted_at is not None
