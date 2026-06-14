@@ -1764,3 +1764,36 @@ def test_get_archive_periods(user):
     assert daily_desc[1]["period"] == datetime.date(2024, 6, 4)
     assert daily_desc[2]["period"] == datetime.date(2024, 5, 15)
     assert daily_desc[3]["period"] == datetime.date(2023, 1, 1)
+
+
+@pytest.mark.django_db
+def test_page_delete_behavior_parent_child(user):
+    """Test that when a parent page is deleted, its child's parent field is set to NULL."""
+    parent = Post.objects.create(
+        title="Parent Page",
+        slug="parent-page",
+        content="Parent content",
+        author=user,
+        post_type="page",
+        status="published",
+    )
+    child = Post.objects.create(
+        title="Child Page",
+        slug="child-page",
+        content="Child content",
+        author=user,
+        post_type="page",
+        status="published",
+        parent=parent,
+    )
+
+    assert child.parent == parent
+
+    # Delete the parent page
+    parent.delete()
+
+    # Refresh child from database
+    child.refresh_from_db()
+
+    # The parent field should now be set to None (on_delete=models.SET_NULL)
+    assert child.parent is None
