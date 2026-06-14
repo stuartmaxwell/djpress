@@ -1,12 +1,16 @@
 """Media file model for DJ Press."""
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
 from djpress.conf import settings as djpress_settings
+
+if TYPE_CHECKING:
+    from django.contrib.auth.models import AbstractBaseUser
 
 
 def upload_to_path(_instance: "Media", filename: str) -> str:
@@ -105,6 +109,9 @@ class Media(models.Model):
         verbose_name = "Media"
         verbose_name_plural = "Media"
         ordering = ["-uploaded_at"]
+        permissions = [
+            ("change_other_media", "Can change other users' media"),
+        ]
 
     def __str__(self) -> str:
         """Return a string representation of the media file.
@@ -152,3 +159,19 @@ class Media(models.Model):
             return f'![{self.alt_text}]({self.url} "{self.title}")'
 
         return f"[{self.title}]({self.url})"
+
+    def can_change(self, user: "AbstractBaseUser") -> bool:
+        """Return True if the user has permission to edit/change this media.
+
+        A user can change if:
+        1. They have the database permission 'djpress.change_media'.
+        2. They are either a superuser, have the permission to change others' media ('djpress.change_other_media'),
+           or they uploaded the media.
+        """
+        if not user.has_perm("djpress.change_media"):
+            return False
+
+        if user.is_superuser or user.has_perm("djpress.change_other_media"):
+            return True
+
+        return self.uploaded_by == user

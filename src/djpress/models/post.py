@@ -644,6 +644,10 @@ class Post(models.Model):
 
         permissions = [
             ("can_publish_post", "Can publish post"),
+            ("change_other_post", "Can change other users' posts"),
+            ("can_soft_delete_post", "Can soft-delete post"),
+            ("can_restore_post", "Can restore post"),
+            ("can_hard_delete_post", "Can hard-delete post"),
         ]
 
         indexes = [
@@ -774,23 +778,69 @@ class Post(models.Model):
         self.deleted_at = None
         self.save(update_fields=["deleted_at"])
 
+    def can_change(self, user: "AbstractBaseUser") -> bool:
+        """Return True if the user has permission to edit/change this post/page.
+
+        A user can change if:
+        1. They have the database permission 'djpress.change_post'.
+        2. They are either a superuser, have the permission to change others' posts ('djpress.change_other_post'),
+           or they are the author of the post.
+        """
+        if not user.has_perm("djpress.change_post"):
+            return False
+
+        if user.is_superuser or user.has_perm("djpress.change_other_post"):
+            return True
+
+        return self.author == user
+
+    def can_publish(self, user: "AbstractBaseUser") -> bool:
+        """Return True if the user has permission to publish/unpublish this post/page.
+
+        A user can publish if:
+        1. They have the global 'djpress.can_publish_post' database permission.
+        2. They have the permission to edit/change this specific post/page.
+        """
+        return user.has_perm("djpress.can_publish_post") and self.can_change(user)
+
     def can_soft_delete(self, user: "AbstractBaseUser") -> bool:
-        """Return True if the user has permission to soft-delete this post/page."""
-        if user.is_superuser or user.groups.filter(name="djpress_admin").exists():
+        """Return True if the user has permission to soft-delete this post/page.
+
+        A user can soft-delete if:
+        1. They have the database permission 'djpress.can_soft_delete_post'.
+        2. They are either a superuser, have the permission to change others' posts,
+           or they are the author of the post.
+        """
+        if not user.has_perm("djpress.can_soft_delete_post"):
+            return False
+
+        if user.is_superuser or user.has_perm("djpress.change_other_post"):
             return True
-        if user.groups.filter(name="djpress_editor").exists():
-            return True
-        if user.groups.filter(name="djpress_author").exists():
-            return self.author == user
-        return False
+
+        return self.author == user
 
     def can_restore(self, user: "AbstractBaseUser") -> bool:
-        """Return True if the user has permission to restore this post/page."""
-        return self.can_soft_delete(user)
+        """Return True if the user has permission to restore this post/page.
+
+        A user can restore if:
+        1. They have the database permission 'djpress.can_restore_post'.
+        2. They are either a superuser, have the permission to change others' posts,
+           or they are the author of the post.
+        """
+        if not user.has_perm("djpress.can_restore_post"):
+            return False
+
+        if user.is_superuser or user.has_perm("djpress.change_other_post"):
+            return True
+
+        return self.author == user
 
     def can_hard_delete(self, user: "AbstractBaseUser") -> bool:
-        """Return True if the user has permission to permanently delete this post/page."""
-        return user.is_superuser or user.groups.filter(name="djpress_admin").exists()
+        """Return True if the user has permission to permanently delete this post/page.
+
+        A user can hard-delete if they have 'djpress.can_hard_delete_post' or are a superuser.
+        """
+        return user.is_superuser or user.has_perm("djpress.can_hard_delete_post")
 
     @property
     def children(self) -> models.QuerySet:

@@ -1914,6 +1914,7 @@ def test_post_permission_helper_methods(test_post1):
     contributor_user.groups.add(Group.objects.get(name="djpress_contributor"))
 
     superuser = User.objects.create_superuser(username="super_test", password="pass")
+    regular_user = User.objects.create_user(username="regular_test", password="pass")
 
     # Set post author to author_user
     test_post1.author = author_user
@@ -1926,6 +1927,7 @@ def test_post_permission_helper_methods(test_post1):
     assert test_post1.can_soft_delete(author_user) is True
     assert test_post1.can_soft_delete(other_author) is False
     assert test_post1.can_soft_delete(contributor_user) is False
+    assert test_post1.can_soft_delete(regular_user) is False
 
     assert test_post1.can_restore(superuser) is True
     assert test_post1.can_restore(admin_user) is True
@@ -1933,6 +1935,7 @@ def test_post_permission_helper_methods(test_post1):
     assert test_post1.can_restore(author_user) is True
     assert test_post1.can_restore(other_author) is False
     assert test_post1.can_restore(contributor_user) is False
+    assert test_post1.can_restore(regular_user) is False
 
     # Test can_hard_delete
     assert test_post1.can_hard_delete(superuser) is True
@@ -1941,3 +1944,44 @@ def test_post_permission_helper_methods(test_post1):
     assert test_post1.can_hard_delete(author_user) is False
     assert test_post1.can_hard_delete(other_author) is False
     assert test_post1.can_hard_delete(contributor_user) is False
+    assert test_post1.can_hard_delete(regular_user) is False
+
+    # Test can_change
+    assert test_post1.can_change(superuser) is True
+    assert test_post1.can_change(admin_user) is True
+    assert test_post1.can_change(editor_user) is True
+    assert test_post1.can_change(author_user) is True
+    assert test_post1.can_change(other_author) is False
+    assert test_post1.can_change(contributor_user) is False
+    assert test_post1.can_change(regular_user) is False
+
+    # Set post author to contributor_user and test can_change
+    test_post1.author = contributor_user
+    test_post1.save()
+
+    assert test_post1.can_change(superuser) is True
+    assert test_post1.can_change(admin_user) is True
+    assert test_post1.can_change(editor_user) is True
+    assert test_post1.can_change(contributor_user) is True
+    assert test_post1.can_change(author_user) is False
+    assert test_post1.can_change(regular_user) is False
+
+    # Test can_publish (currently author is contributor_user)
+    assert test_post1.can_publish(superuser) is True
+    assert test_post1.can_publish(admin_user) is True
+    assert test_post1.can_publish(editor_user) is True
+    assert test_post1.can_publish(contributor_user) is False  # Contributor lacks can_publish_post permission
+    assert test_post1.can_publish(author_user) is False  # Author doesn't own this post
+    assert test_post1.can_publish(regular_user) is False
+
+    # Re-set post author to author_user and test can_publish
+    test_post1.author = author_user
+    test_post1.save()
+
+    assert test_post1.can_publish(superuser) is True
+    assert test_post1.can_publish(admin_user) is True
+    assert test_post1.can_publish(editor_user) is True
+    assert test_post1.can_publish(author_user) is True  # Author owns this post and has can_publish_post permission
+    assert test_post1.can_publish(other_author) is False
+    assert test_post1.can_publish(contributor_user) is False
+    assert test_post1.can_publish(regular_user) is False
