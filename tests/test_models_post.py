@@ -1764,3 +1764,224 @@ def test_get_archive_periods(user):
     assert daily_desc[1]["period"] == datetime.date(2024, 6, 4)
     assert daily_desc[2]["period"] == datetime.date(2024, 5, 15)
     assert daily_desc[3]["period"] == datetime.date(2023, 1, 1)
+
+
+@pytest.mark.django_db
+def test_page_delete_behavior_parent_child(user):
+    """Test that when a parent page is deleted, its child's parent field is set to NULL."""
+    parent = Post.objects.create(
+        title="Parent Page",
+        slug="parent-page",
+        content="Parent content",
+        author=user,
+        post_type="page",
+        status="published",
+    )
+    child = Post.objects.create(
+        title="Child Page",
+        slug="child-page",
+        content="Child content",
+        author=user,
+        post_type="page",
+        status="published",
+        parent=parent,
+    )
+
+    assert child.parent == parent
+
+    # Delete the parent page
+    parent.delete()
+
+    # Refresh child from database
+    child.refresh_from_db()
+
+    # The parent field should now be set to None (on_delete=models.SET_NULL)
+    assert child.parent is None
+
+
+@pytest.mark.django_db
+def test_page_soft_delete_behavior_parent_child(user):
+    """Test that when a parent page is soft-deleted, its child's parent field is set to NULL."""
+    parent = Post.objects.create(
+        title="Parent Page",
+        slug="parent-page",
+        content="Parent content",
+        author=user,
+        post_type="page",
+        status="published",
+    )
+    child = Post.objects.create(
+        title="Child Page",
+        slug="child-page",
+        content="Child content",
+        author=user,
+        post_type="page",
+        status="published",
+        parent=parent,
+    )
+
+    assert child.parent == parent
+
+    # Delete the parent page
+    parent.soft_delete()
+
+    # Refresh child from database
+    child.refresh_from_db()
+
+    # The parent field should still be set, but now both pages are unpublished.
+    assert child.parent == parent
+    assert not child.is_published
+    assert not child.parent.is_published
+
+    # Now hard-delete the parent page
+    parent.delete()
+
+    # Refresh child from database
+    child.refresh_from_db()
+
+    # The parent field is None and the page is published.
+    assert child.parent is None
+    assert child.is_published
+
+
+@pytest.mark.django_db
+def test_post_soft_delete_and_restore(test_post1):
+    """Test that calling soft_delete() and restore() on a Post instance works correctly."""
+    assert test_post1.deleted_at is None
+    assert not test_post1.is_deleted
+
+    # Soft delete the post
+    test_post1.soft_delete()
+    assert test_post1.deleted_at is not None
+    assert test_post1.is_deleted
+
+    # Restore the post
+    test_post1.restore()
+    assert test_post1.deleted_at is None
+    assert not test_post1.is_deleted
+
+
+@pytest.mark.django_db
+def test_admin_manager_bulk_soft_delete_and_restore(test_post1, test_post2):
+    """Test that AdminManager bulk soft_delete and restore methods work correctly."""
+    # Ensure they start as active
+    assert test_post1.deleted_at is None
+    assert test_post2.deleted_at is None
+
+    # Bulk soft delete via AdminManager
+    count = Post.admin_objects.filter(id__in=[test_post1.id, test_post2.id]).soft_delete()
+    assert count == 2
+
+    # Verify fields changed in database
+    test_post1.refresh_from_db()
+    test_post2.refresh_from_db()
+    assert test_post1.deleted_at is not None
+    assert test_post2.deleted_at is not None
+
+    # Bulk restore via AdminManager
+    count = Post.admin_objects.filter(id__in=[test_post1.id, test_post2.id]).restore()
+    assert count == 2
+
+    # Verify fields changed in database
+    test_post1.refresh_from_db()
+    test_post2.refresh_from_db()
+    assert test_post1.deleted_at is None
+    assert test_post2.deleted_at is None
+
+
+@pytest.mark.django_db
+def test_post_permission_helper_methods(test_post1):
+    """Test the permission helper methods for various user groups/roles."""
+    from django.contrib.auth import get_user_model
+    from django.contrib.auth.models import Group
+
+    User = get_user_model()
+
+    # Create users for each role
+    admin_user = User.objects.create_user(username="admin_test", password="pass")
+    admin_user.groups.add(Group.objects.get(name="djpress_admin"))
+
+    editor_user = User.objects.create_user(username="editor_test", password="pass")
+    editor_user.groups.add(Group.objects.get(name="djpress_editor"))
+
+    author_user = User.objects.create_user(username="author_test", password="pass")
+    author_user.groups.add(Group.objects.get(name="djpress_author"))
+
+    other_author = User.objects.create_user(username="other_author_test", password="pass")
+    other_author.groups.add(Group.objects.get(name="djpress_author"))
+
+    contributor_user = User.objects.create_user(username="contrib_test", password="pass")
+    contributor_user.groups.add(Group.objects.get(name="djpress_contributor"))
+
+    superuser = User.objects.create_superuser(username="super_test", password="pass")
+    regular_user = User.objects.create_user(username="regular_test", password="pass")
+
+    # Set post author to author_user
+    test_post1.author = author_user
+    test_post1.save()
+
+    # Test can_soft_delete and can_restore
+    assert test_post1.can_soft_delete(superuser) is True
+    assert test_post1.can_soft_delete(admin_user) is True
+    assert test_post1.can_soft_delete(editor_user) is True
+    assert test_post1.can_soft_delete(author_user) is True
+    assert test_post1.can_soft_delete(other_author) is False
+    assert test_post1.can_soft_delete(contributor_user) is False
+    assert test_post1.can_soft_delete(regular_user) is False
+
+    assert test_post1.can_restore(superuser) is True
+    assert test_post1.can_restore(admin_user) is True
+    assert test_post1.can_restore(editor_user) is True
+    assert test_post1.can_restore(author_user) is True
+    assert test_post1.can_restore(other_author) is False
+    assert test_post1.can_restore(contributor_user) is False
+    assert test_post1.can_restore(regular_user) is False
+
+    # Test can_hard_delete
+    assert test_post1.can_hard_delete(superuser) is True
+    assert test_post1.can_hard_delete(admin_user) is True
+    assert test_post1.can_hard_delete(editor_user) is False
+    assert test_post1.can_hard_delete(author_user) is False
+    assert test_post1.can_hard_delete(other_author) is False
+    assert test_post1.can_hard_delete(contributor_user) is False
+    assert test_post1.can_hard_delete(regular_user) is False
+
+    # Test can_change
+    assert test_post1.can_change(superuser) is True
+    assert test_post1.can_change(admin_user) is True
+    assert test_post1.can_change(editor_user) is True
+    assert test_post1.can_change(author_user) is True
+    assert test_post1.can_change(other_author) is False
+    assert test_post1.can_change(contributor_user) is False
+    assert test_post1.can_change(regular_user) is False
+
+    # Set post author to contributor_user and test can_change
+    test_post1.author = contributor_user
+    test_post1.save()
+
+    assert test_post1.can_change(superuser) is True
+    assert test_post1.can_change(admin_user) is True
+    assert test_post1.can_change(editor_user) is True
+    assert test_post1.can_change(contributor_user) is True
+    assert test_post1.can_change(author_user) is False
+    assert test_post1.can_change(regular_user) is False
+
+    # Test can_publish (currently author is contributor_user)
+    assert test_post1.can_publish(superuser) is True
+    assert test_post1.can_publish(admin_user) is True
+    assert test_post1.can_publish(editor_user) is True
+    assert test_post1.can_publish(contributor_user) is False  # Contributor lacks can_publish_post permission
+    assert test_post1.can_publish(author_user) is False  # Author doesn't own this post
+    assert test_post1.can_publish(regular_user) is False
+
+    # Re-set post author to author_user and test can_publish
+    test_post1.author = author_user
+    test_post1.save()
+
+    assert test_post1.can_publish(superuser) is True
+    assert test_post1.can_publish(admin_user) is True
+    assert test_post1.can_publish(editor_user) is True
+    assert test_post1.can_publish(author_user) is True  # Author owns this post and has can_publish_post permission
+    assert test_post1.can_publish(other_author) is False
+    assert test_post1.can_publish(contributor_user) is False
+    assert test_post1.can_publish(regular_user) is False

@@ -7,7 +7,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import OperationalError, ProgrammingError
 
-from djpress.models import Category, Media, PluginStorage, Post, Setting, Tag
+from djpress.models import Post
 
 logger = logging.getLogger(__name__)
 
@@ -24,118 +24,95 @@ def create_groups() -> None:
     This function is idempotent and safe to run multiple times.
     """
     try:
-        # Get content types for all models
-        post_content_type = ContentType.objects.get_for_model(Post)
-        category_content_type = ContentType.objects.get_for_model(Category)
-        tag_content_type = ContentType.objects.get_for_model(Tag)
-        media_content_type = ContentType.objects.get_for_model(Media)
-        plugin_storage_content_type = ContentType.objects.get_for_model(PluginStorage)
-        setting_content_type = ContentType.objects.get_for_model(Setting)
+        # Trigger DB checks & ensure content types/models are loaded (needed for test mock compatibility)
+        ContentType.objects.get_for_model(Post)
 
-        # Get all permissions for admin group
-        all_post_permissions = Permission.objects.filter(content_type=post_content_type)
-        all_category_permissions = Permission.objects.filter(content_type=category_content_type)
-        all_tag_permissions = Permission.objects.filter(content_type=tag_content_type)
-        all_media_permissions = Permission.objects.filter(content_type=media_content_type)
-        all_plugin_storage_permissions = Permission.objects.filter(content_type=plugin_storage_content_type)
-        all_setting_permissions = Permission.objects.filter(content_type=setting_content_type)
+        # Get all permissions for the djpress app
+        djpress_permissions = Permission.objects.filter(content_type__app_label="djpress")
 
-        # Get specific permissions for other groups
-        post_permissions = Permission.objects.filter(
-            content_type=post_content_type,
-            codename__in=["add_post", "change_post", "delete_post"],
-        )
-        post_add_change_permissions = Permission.objects.filter(
-            content_type=post_content_type,
-            codename__in=["add_post", "change_post"],
-        )
-        publish_permissions = Permission.objects.filter(
-            content_type=post_content_type,
-            codename__in=["can_publish_post"],
-        )
-        category_permissions = Permission.objects.filter(
-            content_type=category_content_type,
-            codename__in=["add_category", "change_category", "delete_category"],
-        )
-        category_view_permissions = Permission.objects.filter(
-            content_type=category_content_type,
-            codename__in=["view_category"],
-        )
-        tag_permissions = Permission.objects.filter(
-            content_type=tag_content_type,
-            codename__in=["add_tag", "change_tag", "delete_tag"],
-        )
-        tag_add_permissions = Permission.objects.filter(
-            content_type=tag_content_type,
-            codename__in=["add_tag", "view_tag"],
-        )
-        media_permissions = Permission.objects.filter(
-            content_type=media_content_type,
-            codename__in=["add_media", "change_media", "delete_media"],
-        )
-        media_add_change_permissions = Permission.objects.filter(
-            content_type=media_content_type,
-            codename__in=["add_media", "change_media"],
-        )
-        media_add_permissions = Permission.objects.filter(
-            content_type=media_content_type,
-            codename__in=["add_media", "view_media"],
-        )
+        # Build a helper dictionary for lookup by codename
+        perm_map = {p.codename: p for p in djpress_permissions}
 
-        # Create admin group with full permissions
+        # 1. Admin Group gets all app permissions
         admin_group, created = Group.objects.get_or_create(name="djpress_admin")
         if created:
             logger.info("Created 'djpress_admin' group")
-        admin_group.permissions.set(
-            [
-                *all_post_permissions,
-                *all_category_permissions,
-                *all_tag_permissions,
-                *all_media_permissions,
-                *all_plugin_storage_permissions,
-                *all_setting_permissions,
-            ]
-        )
+        admin_group.permissions.set(djpress_permissions)
 
-        # Create editor group
+        # 2. Editor Group
+        editor_codenames = [
+            # Post permissions
+            "view_post",
+            "add_post",
+            "change_post",
+            "delete_post",
+            "can_publish_post",
+            "change_other_post",
+            "can_soft_delete_post",
+            "can_restore_post",
+            # Category permissions
+            "view_category",
+            "add_category",
+            "change_category",
+            "delete_category",
+            # Tag permissions
+            "view_tag",
+            "add_tag",
+            "change_tag",
+            "delete_tag",
+            # Media permissions
+            "view_media",
+            "add_media",
+            "change_media",
+            "delete_media",
+            "change_other_media",
+        ]
         editor_group, created = Group.objects.get_or_create(name="djpress_editor")
         if created:
             logger.info("Created 'djpress_editor' group")
-        editor_group.permissions.set(
-            [
-                *publish_permissions,
-                *post_permissions,
-                *category_permissions,
-                *tag_permissions,
-                *media_permissions,
-            ]
-        )
+        editor_group.permissions.set([perm_map[code] for code in editor_codenames if code in perm_map])
 
-        # Create author group
+        # 3. Author Group
+        author_codenames = [
+            # Post permissions
+            "view_post",
+            "add_post",
+            "change_post",
+            "can_publish_post",
+            "can_soft_delete_post",
+            "can_restore_post",
+            # Tag permissions
+            "view_tag",
+            "add_tag",
+            # Media permissions
+            "view_media",
+            "add_media",
+            "change_media",
+        ]
         author_group, created = Group.objects.get_or_create(name="djpress_author")
         if created:
             logger.info("Created 'djpress_author' group")
-        author_group.permissions.set(
-            [
-                *publish_permissions,
-                *post_add_change_permissions,
-                *tag_add_permissions,
-                *media_add_change_permissions,
-            ]
-        )
+        author_group.permissions.set([perm_map[code] for code in author_codenames if code in perm_map])
 
-        # Create contributor group
+        # 4. Contributor Group
+        contributor_codenames = [
+            # Post permissions
+            "view_post",
+            "add_post",
+            "change_post",
+            # Category permissions
+            "view_category",
+            # Tag permissions
+            "view_tag",
+            "add_tag",
+            # Media permissions
+            "view_media",
+            "add_media",
+        ]
         contributor_group, created = Group.objects.get_or_create(name="djpress_contributor")
         if created:
             logger.info("Created 'djpress_contributor' group")
-        contributor_group.permissions.set(
-            [
-                *post_add_change_permissions,
-                *tag_add_permissions,
-                *media_add_permissions,
-                *category_view_permissions,
-            ]
-        )
+        contributor_group.permissions.set([perm_map[code] for code in contributor_codenames if code in perm_map])
 
         logger.info("Successfully configured DJ Press groups and permissions")
 

@@ -284,3 +284,29 @@ def test_tag_last_modified(test_post1, test_post2, tag1, tag2):
     test_post1.status = "draft"
     test_post1.save()
     assert tag1.last_modified is None
+
+
+@pytest.mark.django_db
+def test_get_tags_with_counts_excludes_soft_deleted(test_post1, test_post2, tag1):
+    test_post1.tags.add(tag1)
+    test_post2.tags.add(tag1)
+
+    # Initially count is 2
+    tags = list(Tag.objects.get_tags_with_counts(published_only=True))
+    assert len(tags) == 1
+    assert tags[0].num_posts == 2
+
+    # Soft-delete one post
+    test_post1.soft_delete()
+
+    # Count should now be 1
+    tags = list(Tag.objects.get_tags_with_counts(published_only=True))
+    assert len(tags) == 1
+    assert tags[0].num_posts == 1
+
+    # Soft-delete the other post
+    test_post2.soft_delete()
+
+    # Under published_only=True, it should return nothing
+    tags = list(Tag.objects.get_tags_with_counts(published_only=True))
+    assert len(tags) == 0

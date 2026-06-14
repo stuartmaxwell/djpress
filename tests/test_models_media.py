@@ -103,3 +103,59 @@ def test_markdown_url(test_media_file_1, test_media_image_1):
         test_media_image_1.markdown_url
         == f'![{test_media_image_1.alt_text}]({test_media_image_1.file.url} "{test_media_image_1.title}")'
     )
+
+
+@pytest.mark.django_db
+def test_media_permission_helper_methods(test_media_file_1):
+    """Test the permission helper methods for various user groups/roles on Media."""
+    from django.contrib.auth import get_user_model
+    from django.contrib.auth.models import Group
+    from djpress.permissions import create_groups
+
+    # Ensure groups are created
+    create_groups()
+
+    User = get_user_model()
+
+    # Create users for each role
+    admin_user = User.objects.create_user(username="admin_test_media", password="pass")
+    admin_user.groups.add(Group.objects.get(name="djpress_admin"))
+
+    editor_user = User.objects.create_user(username="editor_test_media", password="pass")
+    editor_user.groups.add(Group.objects.get(name="djpress_editor"))
+
+    author_user = User.objects.create_user(username="author_test_media", password="pass")
+    author_user.groups.add(Group.objects.get(name="djpress_author"))
+
+    other_author = User.objects.create_user(username="other_author_test_media", password="pass")
+    other_author.groups.add(Group.objects.get(name="djpress_author"))
+
+    contributor_user = User.objects.create_user(username="contrib_test_media", password="pass")
+    contributor_user.groups.add(Group.objects.get(name="djpress_contributor"))
+
+    other_contributor = User.objects.create_user(username="other_contrib_test_media", password="pass")
+    other_contributor.groups.add(Group.objects.get(name="djpress_contributor"))
+
+    superuser = User.objects.create_superuser(username="super_test_media", password="pass")
+
+    # Set media uploaded_by to author_user
+    test_media_file_1.uploaded_by = author_user
+    test_media_file_1.save()
+
+    # Test can_change
+    assert test_media_file_1.can_change(superuser) is True
+    assert test_media_file_1.can_change(admin_user) is True
+    assert test_media_file_1.can_change(editor_user) is True
+    assert test_media_file_1.can_change(author_user) is True
+    assert test_media_file_1.can_change(other_author) is False
+    assert test_media_file_1.can_change(contributor_user) is False
+
+    # Set media uploaded_by to contributor_user
+    test_media_file_1.uploaded_by = contributor_user
+    test_media_file_1.save()
+
+    assert test_media_file_1.can_change(superuser) is True
+    assert test_media_file_1.can_change(admin_user) is True
+    assert test_media_file_1.can_change(editor_user) is True
+    assert test_media_file_1.can_change(contributor_user) is False
+    assert test_media_file_1.can_change(other_contributor) is False

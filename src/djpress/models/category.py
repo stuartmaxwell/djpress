@@ -8,6 +8,7 @@ from django.db.models import Max
 from django.utils import timezone
 from django.utils.text import slugify
 
+from djpress import models as djpress_models
 from djpress.conf import settings as djpress_settings
 
 CATEGORY_CACHE_KEY = "categories"
@@ -119,11 +120,7 @@ class Category(models.Model):
 
         Note: this mirrors the queryset in PostsManager.
         """
-        return self._posts.filter(
-            post_type="post",
-            status="published",
-            published_at__lte=timezone.now(),
-        ).order_by("-published_at")
+        return djpress_models.Post.post_objects.filter(categories=self).order_by("-published_at")
 
     @property
     def has_posts(self) -> bool:

@@ -142,17 +142,7 @@ class MediaAdmin(admin.ModelAdmin):
     def has_change_permission(self, request: HttpRequest, obj: Media | None = None) -> bool:
         """Limit the change permission based on user role.
 
-        Database-level `change` permissions are assigned in `permissions.py`.
-        Superusers, Admins, Editors, can change any media.
-        Contributors cannot change any media.
-        Authors can change their own media
-
-        Args:
-            request: The request object.
-            obj: The post object.
-
-        Returns:
-            A boolean indicating if the user has change permission.
+        Delegates instance-level permission checking to the Media model's can_change method.
         """
         # First check if they have basic change permission (this catches contributors too)
         if not super().has_change_permission(request, obj):
@@ -171,7 +161,7 @@ class MediaAdmin(admin.ModelAdmin):
             return False
 
         # Others (i.e. authors) can only change their own media
-        return obj.uploaded_by == request.user
+        return obj.can_change(request.user)
 
     def has_delete_permission(self, request: HttpRequest, obj: Media | None = None) -> bool:
         """Limit the delete permission based on user role.
@@ -290,12 +280,12 @@ class PostAdmin(admin.ModelAdmin):
 
         super().save_model(request, obj, form, change)  # pragma: no cover
 
-    def get_readonly_fields(self, request: HttpRequest, _: Post | None = None):  # noqa: ANN201
+    def get_readonly_fields(self, request: HttpRequest, obj: Post | None = None):  # noqa: ANN201
         """Limit the readonly fields based on user role.
 
         Args:
             request: The request object.
-            _: The post object.
+            obj: The post object.
 
         Returns:
             A tuple of readonly fields.
@@ -312,7 +302,8 @@ class PostAdmin(admin.ModelAdmin):
         readonly = [*self.readonly_fields, "author"]
 
         # Restrict status field if user can't publish
-        if not request.user.has_perm("djpress.can_publish_post"):
+        can_publish = obj.can_publish(request.user) if obj else request.user.has_perm("djpress.can_publish_post")
+        if not can_publish:
             readonly.append("status")
 
         return readonly
@@ -345,16 +336,7 @@ class PostAdmin(admin.ModelAdmin):
     def has_change_permission(self, request: HttpRequest, obj: Post | None = None) -> bool:
         """Limit the change permission based on user role.
 
-        Database-level `delete` permissions are assigned in `permissions.py`.
-        Superusers, Admins, Editors, can change any post.
-        Other users can only change their own posts.
-
-        Args:
-            request: The request object.
-            obj: The post object.
-
-        Returns:
-            A boolean indicating if the user has change permission.
+        Delegates instance-level permission checking to the Post model's can_change method.
         """
         # First check if they have basic change permission
         if not super().has_change_permission(request, obj):
@@ -373,7 +355,7 @@ class PostAdmin(admin.ModelAdmin):
             return False
 
         # Others can only change their own posts
-        return obj.author == request.user
+        return obj.can_change(request.user)
 
     def has_delete_permission(self, request: HttpRequest, obj: Post | None = None) -> bool:
         """Limit the delete permission based on user role.

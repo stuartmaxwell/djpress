@@ -41,7 +41,19 @@ class PageNode(TypedDict):
     children: list["PageNode"]
 
 
-class AdminManager(models.Manager):
+class AdminQuerySet(models.QuerySet):
+    """QuerySet with custom bulk soft-delete and restore methods."""
+
+    def soft_delete(self) -> int:
+        """Soft-delete all posts/pages in the queryset."""
+        return self.update(deleted_at=timezone.now())
+
+    def restore(self) -> int:
+        """Restore all soft-deleted posts/pages in the queryset."""
+        return self.update(deleted_at=None)
+
+
+class AdminManager(models.Manager.from_queryset(AdminQuerySet)):
     """Manager that returns all posts/pages - used only by admin."""
 
     def get_queryset(self) -> models.QuerySet:
@@ -49,19 +61,24 @@ class AdminManager(models.Manager):
         return super().get_queryset()
 
 
-class PostsAndPagesManager(models.Manager):
+class PostQuerySet(models.QuerySet):
+    """QuerySet for posts and pages, with custom published filter."""
+
+    def published(self) -> models.QuerySet:
+        """Filter to only active, published posts and pages."""
+        return self.filter(
+            status="published",
+            published_at__lte=timezone.now(),
+            deleted_at__isnull=True,
+        )
+
+
+class PostsAndPagesManager(models.Manager.from_queryset(PostQuerySet)):
     """Default manager that only returns published content."""
 
     def get_queryset(self) -> models.QuerySet:
         """Return only published posts and pages."""
-        return (
-            super()
-            .get_queryset()
-            .filter(
-                status="published",
-                published_at__lte=timezone.now(),
-            )
-        )
+        return super().get_queryset().published()
 
     def search(self, query: str = "") -> models.QuerySet:
         """Search interface.
@@ -145,21 +162,12 @@ class PostsAndPagesManager(models.Manager):
         return qs.order_by("-score", "post_type", "-updated_at")
 
 
-class PagesManager(models.Manager):
+class PagesManager(models.Manager.from_queryset(PostQuerySet)):
     """Page custom manager."""
 
     def get_queryset(self) -> models.QuerySet:
         """Return the queryset for pages."""
-        return (
-            super()
-            .get_queryset()
-            .filter(
-                post_type="page",
-                status="published",
-                published_at__lte=timezone.now(),
-            )
-            .order_by("menu_order", "title")
-        )
+        return super().get_queryset().published().filter(post_type="page").order_by("menu_order", "title")
 
     def get_published_pages(self) -> models.QuerySet:
         """Return all published pages.
@@ -282,7 +290,7 @@ class PagesManager(models.Manager):
         return root_pages
 
 
-class PostsManager(models.Manager):
+class PostsManager(models.Manager.from_queryset(PostQuerySet)):
     """Post custom manager."""
 
     def get_queryset(self) -> models.QuerySet:
@@ -291,16 +299,7 @@ class PostsManager(models.Manager):
         Note: this queryset is mirrored in both the Tag and Category models. If this logic changes, it should be
         reflected in those models as well.
         """
-        return (
-            super()
-            .get_queryset()
-            .filter(
-                post_type="post",
-                status="published",
-                published_at__lte=timezone.now(),
-            )
-            .order_by("-published_at")
-        )
+        return super().get_queryset().published().filter(post_type="post").order_by("-published_at")
 
     def get_published_posts(self) -> models.QuerySet:
         """Returns all published posts.
@@ -576,7 +575,7 @@ class PostsManager(models.Manager):
         return list(
             self.get_published_posts()
             .filter(_date__isnull=False)
-            .annotate(period=trunc_func)  # add the period field with the trunc function
+            .annotate(period=trunc_func)  # add the period field with the trunc functiont
             .values("period")  # group by period
             .annotate(count=Count("id"))  # count the posts in each group
             .order_by(f"{order_prefix}period")  # order_prefix will either be blank or a minus sign
@@ -625,6 +624,13 @@ class Post(models.Model):
         related_name="_children",  # Danger! This returns all children of a parent, published or not.
         limit_choices_to={"post_type": "page"},
     )
+    deleted_at = models.DateTimeField(
+        "Deleted At",
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="Timestamp when this post/page was soft-deleted.",
+    )
     # Type hint for Django's reverse relationship
     if TYPE_CHECKING:
         _children: models.Manager["Post"]
@@ -638,6 +644,10 @@ class Post(models.Model):
 
         permissions = [
             ("can_publish_post", "Can publish post"),
+            ("change_other_post", "Can change other users' posts"),
+            ("can_soft_delete_post", "Can soft-delete post"),
+            ("can_restore_post", "Can restore post"),
+            ("can_hard_delete_post", "Can hard-delete post"),
         ]
 
         indexes = [
@@ -758,6 +768,80 @@ class Post(models.Model):
                 raise ValidationError(msg)
             ancestor = ancestor.parent
 
+    def soft_delete(self) -> None:
+        """Soft-delete this post/page."""
+        self.deleted_at = timezone.now()
+        self.save(update_fields=["deleted_at"])
+
+    def restore(self) -> None:
+        """Restore this soft-deleted post/page."""
+        self.deleted_at = None
+        self.save(update_fields=["deleted_at"])
+
+    def can_change(self, user: "AbstractBaseUser") -> bool:
+        """Return True if the user has permission to edit/change this post/page.
+
+        A user can change if:
+        1. They have the database permission 'djpress.change_post'.
+        2. They are either a superuser, have the permission to change others' posts ('djpress.change_other_post'),
+           or they are the author of the post.
+        """
+        if not user.has_perm("djpress.change_post"):
+            return False
+
+        if user.is_superuser or user.has_perm("djpress.change_other_post"):
+            return True
+
+        return self.author == user
+
+    def can_publish(self, user: "AbstractBaseUser") -> bool:
+        """Return True if the user has permission to publish/unpublish this post/page.
+
+        A user can publish if:
+        1. They have the global 'djpress.can_publish_post' database permission.
+        2. They have the permission to edit/change this specific post/page.
+        """
+        return user.has_perm("djpress.can_publish_post") and self.can_change(user)
+
+    def can_soft_delete(self, user: "AbstractBaseUser") -> bool:
+        """Return True if the user has permission to soft-delete this post/page.
+
+        A user can soft-delete if:
+        1. They have the database permission 'djpress.can_soft_delete_post'.
+        2. They are either a superuser, have the permission to change others' posts,
+           or they are the author of the post.
+        """
+        if not user.has_perm("djpress.can_soft_delete_post"):
+            return False
+
+        if user.is_superuser or user.has_perm("djpress.change_other_post"):
+            return True
+
+        return self.author == user
+
+    def can_restore(self, user: "AbstractBaseUser") -> bool:
+        """Return True if the user has permission to restore this post/page.
+
+        A user can restore if:
+        1. They have the database permission 'djpress.can_restore_post'.
+        2. They are either a superuser, have the permission to change others' posts,
+           or they are the author of the post.
+        """
+        if not user.has_perm("djpress.can_restore_post"):
+            return False
+
+        if user.is_superuser or user.has_perm("djpress.change_other_post"):
+            return True
+
+        return self.author == user
+
+    def can_hard_delete(self, user: "AbstractBaseUser") -> bool:
+        """Return True if the user has permission to permanently delete this post/page.
+
+        A user can hard-delete if they have 'djpress.can_hard_delete_post' or are a superuser.
+        """
+        return user.is_superuser or user.has_perm("djpress.can_hard_delete_post")
+
     @property
     def children(self) -> models.QuerySet:
         """Return only published children pages."""
@@ -851,6 +935,10 @@ class Post(models.Model):
         Returns:
             bool: Whether the post is published.
         """
+        # If the post/page is soft-deleted, it is not published
+        if self.deleted_at is not None:
+            return False
+
         # If the post or page status is not published or the date is in the future, return False
         if not (self.status == "published" and self.published_at <= timezone.now()):
             return False
@@ -916,3 +1004,8 @@ class Post(models.Model):
             timezone.datetime: The post date in the local timezone.
         """
         return timezone.localtime(self.published_at)
+
+    @property
+    def is_deleted(self) -> bool:
+        """Return whether the post or page has been soft-deleted."""
+        return self.deleted_at is not None
