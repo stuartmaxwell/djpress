@@ -749,3 +749,35 @@ def test_plugin_config_property_alias():
     plugin = DJPressPlugin({"hello": "world"})
     assert plugin.config == {"hello": "world"}
     assert plugin.config is plugin.settings
+
+
+class CustomTestRegistry(PluginRegistry):
+    """A custom PluginRegistry class for testing purposes."""
+
+    def __init__(self):
+        super().__init__()
+        self.custom_initialized = True
+
+
+def test_lazy_registry_custom_class(settings):
+    """Test that setting PLUGIN_REGISTRY_CLASS loads the custom class."""
+    settings.DJPRESS_SETTINGS["PLUGIN_REGISTRY_CLASS"] = "tests.test_plugins.CustomTestRegistry"
+
+    from djpress.plugins.plugin_registry import _get_plugin_registry
+
+    custom_registry = _get_plugin_registry()
+    assert isinstance(custom_registry, CustomTestRegistry)
+    assert getattr(custom_registry, "custom_initialized", False) is True
+
+
+def test_lazy_registry_custom_class_fallback_on_error(settings, caplog):
+    """Test that setting PLUGIN_REGISTRY_CLASS to an invalid path falls back to the default class."""
+    caplog.set_level("WARNING")
+    settings.DJPRESS_SETTINGS["PLUGIN_REGISTRY_CLASS"] = "invalid.module.Path"
+
+    from djpress.plugins.plugin_registry import _get_plugin_registry
+
+    fallback_registry = _get_plugin_registry()
+    assert isinstance(fallback_registry, PluginRegistry)
+    assert not isinstance(fallback_registry, CustomTestRegistry)
+    assert "Could not load custom plugin registry class" in caplog.text

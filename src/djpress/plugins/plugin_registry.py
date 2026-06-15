@@ -2,9 +2,10 @@
 
 import logging
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from django.core.exceptions import ImproperlyConfigured
+from django.utils.functional import SimpleLazyObject
 from django.utils.module_loading import import_string
 
 from djpress.conf import settings as djpress_settings
@@ -253,5 +254,21 @@ class PluginRegistry:
             return plugin
 
 
-# Instantiate the global plugin registry
-registry = PluginRegistry()
+def _get_plugin_registry() -> PluginRegistry:
+    """Dynamically load and instantiate the plugin registry class defined in settings."""
+    class_path = getattr(djpress_settings, "PLUGIN_REGISTRY_CLASS", "djpress.plugins.plugin_registry.PluginRegistry")
+    if class_path == "djpress.plugins.plugin_registry.PluginRegistry":
+        return PluginRegistry()
+    try:
+        registry_class = import_string(class_path)
+        return registry_class()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            f"Could not load custom plugin registry class '{class_path}': {exc}. "
+            "Falling back to default PluginRegistry."
+        )
+        return PluginRegistry()
+
+
+# Instantiate the global plugin registry dynamically using SimpleLazyObject
+registry: PluginRegistry = cast("PluginRegistry", SimpleLazyObject(_get_plugin_registry))
