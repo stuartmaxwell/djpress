@@ -2,9 +2,10 @@
 
 import logging
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from django.core.exceptions import ImproperlyConfigured
+from django.utils.functional import SimpleLazyObject
 from django.utils.module_loading import import_string
 
 from djpress.conf import settings as djpress_settings
@@ -78,50 +79,65 @@ class PluginRegistry:
 
         # Try to import each plugin and register its hooks.
         for plugin_path in plugin_names:
-            try:
-                # Get the plugin class.
-                plugin_class = self._import_plugin_class(plugin_path)
-                # Load the plugin
-                plugin = self._instantiate_plugin(plugin_class, plugin_settings)
-                # Get the hooks - this should be a list of (hook, method_name) tuples.
-                hooks = plugin.hooks
-                # And loop through the hooks to try  register them.
-                try:
-                    for hook, method_name in hooks:
-                        callback = getattr(plugin, method_name)
-                        self.register_hook(hook, callback)
-
-                    # If we get to this point the plugin has been successfully loaded.
-                    self.plugins.append(plugin)
-                except TypeError as exc:
-                    logger.warning(
-                        f"Plugin '{plugin_path}' has a non-iterable 'hooks' attribute: {exc}. "
-                        "Skipping hook registration.",
-                    )
-
-            except Exception as exc:  # noqa: BLE001, PERF203
-                msg = f"Failed to load plugin: '{plugin_path}' {exc}"
-                self.plugin_errors.append(msg)
-                logger.warning(msg)
+            self._load_single_plugin(plugin_path)
         self._loaded = True
 
-    def register_hook(self, hook: "_Hook", callback: Callable[..., Any]) -> None:
+    def _load_single_plugin(self, plugin_path: str) -> None:
+        """Import, instantiate, and register hooks for a single plugin."""
+        try:
+            # Get the plugin class.
+            plugin_class = self._import_plugin_class(plugin_path)
+            # Load the plugin
+            plugin = self._instantiate_plugin(plugin_class)
+
+            # Register hooks atomically
+            self._register_plugin_hooks(plugin, plugin_path)
+        except Exception as exc:  # noqa: BLE001
+            msg = f"Failed to load plugin: '{plugin_path}' {exc}"
+            self.plugin_errors.append(msg)
+            logger.warning(msg)
+
+    def _register_plugin_hooks(self, plugin: "DJPressPlugin", plugin_path: str) -> None:
+        """Register all hooks for a plugin, rolling back if any registration fails."""
+        registered_callbacks = []
+        try:
+            # Get the hooks - this should be a list of (hook, method_name) tuples.
+            hooks = plugin.hooks
+            for hook, method_name in hooks:
+                callback = getattr(plugin, method_name)
+                if not self.register_hook(hook, callback):
+                    msg = f"Callback signature validation failed for hook '{hook.name}'."
+                    raise ValueError(msg)  # noqa: TRY301
+                registered_callbacks.append((hook, callback))
+
+            # If we get to this point the plugin has been successfully loaded.
+            self.plugins.append(plugin)
+        except TypeError as exc:
+            msg = f"Plugin '{plugin_path}' has a non-iterable 'hooks' attribute: {exc}. Skipping hook registration."
+            self.plugin_errors.append(msg)
+            logger.warning(msg)
+        except Exception:
+            # Roll back successfully registered hooks for this plugin
+            for hook, callback in registered_callbacks:
+                self.hooks[hook].remove(callback)
+            raise
+
+    def register_hook(self, hook: "_Hook", callback: Callable[..., Any]) -> bool:
         """Register a callback function for a specific hook.
 
         Args:
             hook: The _Hook object.
             callback: The function to call when the hook is triggered.
 
-        Raises:
-            TypeError: If the hook is not a _Hook object.
-            TypeError: If the callback does not match the expected protocol.
+        Returns:
+            bool: True if registration was successful, False otherwise.
         """
         # If the hook doesn't have the required attribute typer, log a warning and exit.
         if not isinstance(hook.protocol, object) or not isinstance(hook.name, str):
             msg = f"Invalid hook: '{hook!r}'. Must be a _Hook object."
             self.plugin_errors.append(msg)
             logger.warning(msg)
-            return
+            return False
 
         # Validate the callback against the hook's protocol.
         is_valid, error = _validate_hook_callback(hook, callback)
@@ -129,7 +145,7 @@ class PluginRegistry:
             msg = f"Invalid callback signature for hook '{hook.name}': {error}"
             self.plugin_errors.append(msg)
             logger.warning(msg)
-            return
+            return False
 
         # If this hook has had no callbacks registered yet, initialize an empty list.
         if hook not in self.hooks:
@@ -137,6 +153,7 @@ class PluginRegistry:
 
         # Register the callback for the hooks.
         self.hooks[hook].append(callback)
+        return True
 
     def run_hook(self, hook: "_Hook", value: object | None = None) -> object:
         """Run all callbacks for a given hook.
@@ -172,6 +189,11 @@ class PluginRegistry:
 
         # Loop through the callbacks, updating the value.
         for callback in callbacks:
+            # Check if the plugin associated with the callback is enabled
+            plugin_instance = getattr(callback, "__self__", None)
+            if plugin_instance is not None and not plugin_instance.settings.get("enabled", False):
+                continue
+
             value = handler(callback, value)
 
         return value
@@ -188,10 +210,11 @@ class PluginRegistry:
         Raises:
             ImproperlyConfigured: If plugin cannot be loaded from either location.
         """
+        first_exc = None
         try:
             return import_string(plugin_path)
-        except ImportError:
-            pass
+        except ImportError as exc:
+            first_exc = exc
 
         try:
             return import_string(f"{plugin_path}.plugin.Plugin")
@@ -203,18 +226,16 @@ class PluginRegistry:
             )
             self.plugin_errors.append(msg)
             logger.warning(msg)
-            raise ImproperlyConfigured(msg) from exc
+            raise ImproperlyConfigured(msg) from (first_exc or exc)
 
     def _instantiate_plugin(
         self,
         plugin_class: type,
-        plugin_settings: dict,
     ) -> "DJPressPlugin":
         """Create and set up a plugin instance.
 
         Args:
             plugin_class: The plugin class to instantiate.
-            plugin_settings: Dictionary of settings for all plugins.
 
         Returns:
             An initialized plugin instance.
@@ -224,11 +245,8 @@ class PluginRegistry:
         """
         try:
             # If there's no name, this will raise an error.
-            plugin_name = plugin_class.name
-            # Get the plugin's settings from the plugin_settimgs or an empty dict.
-            this_plugin_settings = plugin_settings.get(plugin_name, {})
-            # Instantiate the plugin with its settingr, if available.
-            plugin = plugin_class(settings=this_plugin_settings)
+            _ = plugin_class.name
+            plugin = plugin_class()
         except Exception as exc:
             msg = f"Error initializing plugin '{plugin_class}': {exc!s}"
             raise ImproperlyConfigured(msg) from exc
@@ -236,5 +254,21 @@ class PluginRegistry:
             return plugin
 
 
-# Instantiate the global plugin registry
-registry = PluginRegistry()
+def _get_plugin_registry() -> PluginRegistry:
+    """Dynamically load and instantiate the plugin registry class defined in settings."""
+    class_path = getattr(djpress_settings, "PLUGIN_REGISTRY_CLASS", "djpress.plugins.plugin_registry.PluginRegistry")
+    if class_path == "djpress.plugins.plugin_registry.PluginRegistry":
+        return PluginRegistry()
+    try:
+        registry_class = import_string(class_path)
+        return registry_class()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            f"Could not load custom plugin registry class '{class_path}': {exc}. "
+            "Falling back to default PluginRegistry."
+        )
+        return PluginRegistry()
+
+
+# Instantiate the global plugin registry dynamically using SimpleLazyObject
+registry: PluginRegistry = cast("PluginRegistry", SimpleLazyObject(_get_plugin_registry))

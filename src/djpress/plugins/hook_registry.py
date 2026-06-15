@@ -55,7 +55,7 @@ def _validate_hook_callback(hook: _Hook, callback: Callable[..., Any]) -> tuple[
 
     Args:
         hook: The _Hook object representing the hook point.
-        callback: The callback function or method to validate.
+        callback: The callback function, method, or callable object to validate.
 
     Returns:
         Tuple[bool, str]: (is_valid, error_message)
@@ -64,28 +64,45 @@ def _validate_hook_callback(hook: _Hook, callback: Callable[..., Any]) -> tuple[
     if protocol is None:
         return False, f"No protocol defined for hook {hook.name}"
 
+    if not callable(callback):
+        return False, "Callback is not callable."
+
     try:
         protocol_sig = inspect.signature(protocol.__call__)
         protocol_params = list(protocol_sig.parameters.values())[1:]  # skip self for protocol
 
-        # For functions and methods, self is already bound (not present in signature)
-        if inspect.isfunction(callback) or inspect.ismethod(callback):
-            callback_sig = inspect.signature(callback)
-            callback_params = list(callback_sig.parameters.values())
-        else:
-            return False, "Callback is expected to be a method or function."
+        callback_sig = inspect.signature(callback)
+        callback_params = list(callback_sig.parameters.values())
 
-        if len(protocol_params) != len(callback_params):
-            return False, f"Expected {len(protocol_params)} parameters, got {len(callback_params)}"
+        # Check parameter counts (allowing callbacks to have optional params with default values)
+        required_params = [p for p in callback_params if p.default is inspect.Parameter.empty]
 
-        # Parameter type hint validation
+        if len(required_params) > len(protocol_params):
+            return (
+                False,
+                f"Callback requires {len(required_params)} parameters, but hook only provides {len(protocol_params)}",
+            )
+
+        # Parameter validation
         for p_param, c_param in zip(protocol_params, callback_params, strict=False):
             p_type = p_param.annotation
             c_type = c_param.annotation
 
-            if p_type != c_type:
+            # Allow the callback to omit annotations (empty) or use Any
+            if c_type is inspect.Parameter.empty or c_type is Any:
+                continue
+
+            # Standardise types to strings for comparison to handle forward references
+            p_type_str = p_type if isinstance(p_type, str) else getattr(p_type, "__name__", str(p_type))
+            c_type_str = c_type if isinstance(c_type, str) else getattr(c_type, "__name__", str(c_type))
+
+            # Treat "object" as compatible with anything
+            if c_type_str == "object":
+                continue
+
+            if p_type_str != c_type_str:
                 return False, (
-                    f"Parameter type mismatch: expected {p_type}, got {c_type} "
+                    f"Parameter type mismatch: expected {p_type_str}, got {c_type_str} "
                     f"for parameter '{c_param.name}' in hook '{hook.name}'"
                 )
 

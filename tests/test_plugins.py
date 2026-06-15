@@ -48,8 +48,8 @@ class PostSaveNotificationPlugin(DJPressPlugin):
         (POST_SAVE_POST, "send_notification"),
     ]
 
-    def __init__(self, settings: dict):
-        super().__init__(settings)
+    def __init__(self) -> None:
+        super().__init__()
         self.notification_sent = False
         self.saved_post_slug = ""
 
@@ -73,9 +73,9 @@ class FaultyPlugin(DJPressPlugin):
 
     name = "Faulty Plugin"
 
-    def __init__(self, settings: dict):
+    def __init__(self) -> None:
         # This will raise an exception
-        super().__init__(settings)
+        super().__init__()
         raise RuntimeError("I am a faulty plugin!")
 
 
@@ -137,14 +137,14 @@ def test_validate_hook_callback():
     is_valid, msg = _validate_hook_callback(PRE_RENDER_CONTENT, invalid_too_many_args)
     print(msg)
     assert is_valid is False
-    assert "Expected 1 parameters, got 2" in msg
+    assert "Callback requires 2 parameters, but hook only provides 1" in msg
 
     is_valid, msg = _validate_hook_callback(DJPRESS_HEADER, invalid_no_args)
     assert is_valid is True
 
     is_valid, msg = _validate_hook_callback(DJPRESS_HEADER, valid_content_transformer)
     assert is_valid is False
-    assert "Expected 0 parameters, got 1" in msg
+    assert "Callback requires 1 parameters, but hook only provides 0" in msg
 
     is_valid, msg = _validate_hook_callback(hook_no_protocol, valid_content_transformer)
     assert is_valid is False
@@ -152,7 +152,7 @@ def test_validate_hook_callback():
 
     is_valid, msg = _validate_hook_callback(PRE_RENDER_CONTENT, None)  # type: ignore
     assert is_valid is False
-    assert "Callback is expected to be a method or function" in msg
+    assert "Callback is not callable" in msg
 
     is_valid, msg = _validate_hook_callback(PRE_RENDER_CONTENT, invalid_content_transformer)
     assert is_valid is False
@@ -182,6 +182,7 @@ def test_load_plugins_not_exist(registry, settings, caplog):
     """Test successful loading of plugins with valid hooks."""
     caplog.set_level("WARNING")
     settings.DJPRESS_SETTINGS["PLUGINS"] = ["do_not_exist"]
+    settings.DJPRESS_SETTINGS["PLUGIN_SETTINGS"] = {}
 
     assert registry.load_plugins() is None
     assert "Could not load plugin: 'do_not_exist'" in caplog.text
@@ -478,6 +479,8 @@ def test_error_run_content_provider(registry, caplog):
 def test_success_run_object_provider(registry, object_provider_plugin, test_post1):
     """Test running a object provider hook."""
     registry.register_hook(POST_SAVE_POST, object_provider_plugin.do_nothing)
+    assert POST_SAVE_POST in registry.hooks
+    assert not registry.plugin_errors
 
     result = registry.run_hook(POST_SAVE_POST, test_post1)
     assert result == test_post1
@@ -510,7 +513,7 @@ def test_plugin_storage_interface():
     class TestPlugin(DJPressPlugin):
         name = "test_plugin"
 
-    plugin = TestPlugin({})
+    plugin = TestPlugin()
 
     # Test get_data with no storage
     assert plugin.get_data() == {}
@@ -600,3 +603,315 @@ def test_search_provider_returns_queryset(registry, caplog, test_post1):
     result = registry.run_hook(SEARCH_CONTENT, "test")
     assert result.count() == 1
     assert "not attempting to search again" in caplog.text
+
+
+def test_validate_hook_callback_with_class_annotation():
+    """Test validation when the callback uses the actual class type instead of string representation."""
+
+    def callback_with_class(post: Post) -> Post:
+        return post
+
+    is_valid, msg = _validate_hook_callback(POST_SAVE_POST, callback_with_class)
+    assert is_valid is True
+    assert msg == ""
+
+
+def test_validate_hook_callback_with_callable_object():
+    """Test validation when the callback is a callable class instance."""
+
+    class ContentFilter:
+        def __call__(self, content: str) -> str:
+            return content
+
+    is_valid, msg = _validate_hook_callback(PRE_RENDER_CONTENT, ContentFilter())
+    assert is_valid is True
+    assert msg == ""
+
+
+def test_validate_hook_callback_with_optional_params():
+    """Test validation when the callback has optional parameters with defaults."""
+
+    def callback_with_defaults(content: str, format_type: str = "html") -> str:
+        return content
+
+    is_valid, msg = _validate_hook_callback(PRE_RENDER_CONTENT, callback_with_defaults)
+    assert is_valid is True
+    assert msg == ""
+
+
+def test_validate_hook_callback_with_object_annotation():
+    """Test validation when the callback accepts any object (type hint 'object')."""
+
+    def callback_with_object(post: object) -> None:
+        pass
+
+    is_valid, msg = _validate_hook_callback(POST_SAVE_POST, callback_with_object)
+    assert is_valid is True
+    assert msg == ""
+
+
+def test_import_plugin_class_chains_exceptions(registry):
+    """Test that _import_plugin_class chains the original exception when loading fails."""
+    with pytest.raises(ImproperlyConfigured) as exc_info:
+        registry._import_plugin_class("non_existent_module")
+
+    assert exc_info.value.__cause__ is not None
+    assert isinstance(exc_info.value.__cause__, ImportError)
+    assert "non_existent_module" in str(exc_info.value.__cause__)
+
+
+def test_load_plugins_atomic_rollback(registry, settings, caplog, tmp_path):
+    """Test that if a plugin has multiple hooks and one fails with AttributeError, all are rolled back."""
+    caplog.set_level("WARNING")
+
+    # Create a temporary plugin package
+    plugin_dir = tmp_path / "test_load_plugins_atomic_rollback"
+    plugin_dir.mkdir()
+    (plugin_dir / "__init__.py").write_text("")
+    (plugin_dir / "plugin.py").write_text("""
+from djpress.plugins import DJPressPlugin
+from djpress.plugins.hook_registry import (
+    PRE_RENDER_CONTENT,
+    POST_RENDER_CONTENT,
+)
+class TestPlugin(DJPressPlugin):
+    name = "test_plugin_atomic"
+    hooks = [
+        (PRE_RENDER_CONTENT, "add_prefix"),
+        (POST_RENDER_CONTENT, "add_suffix"),  # This method is missing!
+    ]
+
+    def add_prefix(self, content: str) -> str:
+        return f"prefixed_{content}"
+""")
+
+    # Add to Python path and try to import
+    import sys
+
+    sys.path.insert(0, str(tmp_path))
+
+    settings.DJPRESS_SETTINGS["PLUGINS"] = ["test_load_plugins_atomic_rollback.plugin.TestPlugin"]
+
+    registry.load_plugins()
+
+    assert registry._loaded is True
+    assert len(registry.plugins) == 0
+    # The first hook (PRE_RENDER_CONTENT) should NOT be registered
+    assert PRE_RENDER_CONTENT not in registry.hooks or not registry.hooks[PRE_RENDER_CONTENT]
+    assert "Failed to load plugin" in caplog.text
+
+
+def test_load_plugins_atomic_rollback_validation(registry, settings, caplog, tmp_path):
+    """Test that if a plugin has multiple hooks and one fails validation, all are rolled back."""
+    caplog.set_level("WARNING")
+
+    # Create a temporary plugin package
+    plugin_dir = tmp_path / "test_load_plugins_atomic_rollback_validation"
+    plugin_dir.mkdir()
+    (plugin_dir / "__init__.py").write_text("")
+    (plugin_dir / "plugin.py").write_text("""
+from djpress.plugins import DJPressPlugin
+from djpress.plugins.hook_registry import (
+    PRE_RENDER_CONTENT,
+    POST_RENDER_CONTENT,
+)
+class TestPlugin(DJPressPlugin):
+    name = "test_plugin_atomic_val"
+    hooks = [
+        (PRE_RENDER_CONTENT, "add_prefix"),
+        (POST_RENDER_CONTENT, "add_suffix_invalid"),  # This method has invalid signature!
+    ]
+
+    def add_prefix(self, content: str) -> str:
+        return f"prefixed_{content}"
+
+    def add_suffix_invalid(self, content: str, extra: int) -> str:
+        return f"{content}_suffixed"
+""")
+
+    # Add to Python path and try to import
+    import sys
+
+    sys.path.insert(0, str(tmp_path))
+
+    settings.DJPRESS_SETTINGS["PLUGINS"] = ["test_load_plugins_atomic_rollback_validation.plugin.TestPlugin"]
+
+    registry.load_plugins()
+
+    assert registry._loaded is True
+    assert len(registry.plugins) == 0
+    # The first hook (PRE_RENDER_CONTENT) should NOT be registered
+    assert PRE_RENDER_CONTENT not in registry.hooks or not registry.hooks[PRE_RENDER_CONTENT]
+    assert "Failed to load plugin" in caplog.text
+
+
+def test_plugin_config_property_alias(settings):
+    """Test that the plugin.config property is an alias for plugin.settings."""
+    settings.DJPRESS_SETTINGS["PLUGIN_SETTINGS"] = {"alias_plugin": {"hello": "world"}}
+    plugin = DJPressPlugin()
+    plugin.name = "alias_plugin"
+    assert plugin.config == {"hello": "world"}
+    assert plugin.config is plugin.settings
+
+
+class CustomTestRegistry(PluginRegistry):
+    """A custom PluginRegistry class for testing purposes."""
+
+    def __init__(self):
+        super().__init__()
+        self.custom_initialized = True
+
+
+def test_lazy_registry_custom_class(settings):
+    """Test that setting PLUGIN_REGISTRY_CLASS loads the custom class."""
+    settings.DJPRESS_SETTINGS["PLUGIN_REGISTRY_CLASS"] = "tests.test_plugins.CustomTestRegistry"
+
+    from djpress.plugins.plugin_registry import _get_plugin_registry
+
+    custom_registry = _get_plugin_registry()
+    assert isinstance(custom_registry, CustomTestRegistry)
+    assert getattr(custom_registry, "custom_initialized", False) is True
+
+
+def test_lazy_registry_custom_class_fallback_on_error(settings, caplog):
+    """Test that setting PLUGIN_REGISTRY_CLASS to an invalid path falls back to the default class."""
+    caplog.set_level("WARNING")
+    settings.DJPRESS_SETTINGS["PLUGIN_REGISTRY_CLASS"] = "invalid.module.Path"
+
+    from djpress.plugins.plugin_registry import _get_plugin_registry
+
+    fallback_registry = _get_plugin_registry()
+    assert isinstance(fallback_registry, PluginRegistry)
+    assert not isinstance(fallback_registry, CustomTestRegistry)
+    assert "Could not load custom plugin registry class" in caplog.text
+
+
+def test_dynamic_plugin_settings(settings):
+    """Test that plugin settings are retrieved dynamically."""
+    settings.DJPRESS_SETTINGS["PLUGIN_SETTINGS"] = {"dynamic_plugin": {"key": "value"}}
+
+    plugin = DJPressPlugin()
+    plugin.name = "dynamic_plugin"
+    assert plugin.settings == {"key": "value"}
+
+    # Dynamic settings change
+    settings.DJPRESS_SETTINGS["PLUGIN_SETTINGS"]["dynamic_plugin"]["key"] = "new_value"
+    assert plugin.settings == {"key": "new_value"}
+
+    # Dynamic settings change of whole dictionary
+    settings.DJPRESS_SETTINGS["PLUGIN_SETTINGS"] = {"dynamic_plugin": {"another_key": "another_value"}}
+    assert plugin.settings == {"another_key": "another_value"}
+
+    # Fallback to empty dict if PLUGIN_SETTINGS does not exist or is not a dict
+    del settings.DJPRESS_SETTINGS["PLUGIN_SETTINGS"]
+    assert plugin.settings == {}
+
+    settings.DJPRESS_SETTINGS["PLUGIN_SETTINGS"] = "not_a_dict"
+    assert plugin.settings == {}
+
+
+def test_broken_plugin_constructor_raises_error(registry):
+    """Test that a plugin expecting arguments in __init__ fails to instantiate with ImproperlyConfigured."""
+
+    class BrokenPlugin(DJPressPlugin):
+        name = "broken_plugin"
+
+        def __init__(self, required_arg):
+            super().__init__()
+            self.required_arg = required_arg
+
+    with pytest.raises(ImproperlyConfigured) as exc_info:
+        registry._instantiate_plugin(BrokenPlugin)
+    assert "Error initializing plugin" in str(exc_info.value)
+
+
+def test_dynamic_plugin_settings_non_dict_fallback():
+    """Test that dynamic settings lookup returns empty dict if PLUGIN_SETTINGS is not a dict."""
+    plugin = DJPressPlugin()
+    plugin.name = "dynamic_plugin"
+    with patch("djpress.plugins.base_plugin.djpress_settings") as mock_settings:
+        mock_settings.PLUGIN_SETTINGS = "not_a_dict_raw"
+        assert plugin.settings == {}
+
+
+@pytest.mark.django_db
+def test_plugin_dynamic_enabling_and_disabling(registry, settings):
+    """Test dynamic enabling and disabling of plugins with defaults, file settings, and DB settings."""
+    from djpress.models.setting import Setting
+    from djpress.conf import settings as djpress_settings
+
+    # Plugin A: default is disabled
+    class PluginA(DJPressPlugin):
+        name = "plugin_a"
+        hooks = [(PRE_RENDER_CONTENT, "add_prefix")]
+
+        def add_prefix(self, content: str) -> str:
+            return f"A_{content}"
+
+    # Plugin B: default is disabled
+    class PluginB(DJPressPlugin):
+        name = "plugin_b"
+        hooks = [(PRE_RENDER_CONTENT, "add_prefix")]
+
+        def add_prefix(self, content: str) -> str:
+            return f"B_{content}"
+
+    # Instantiate plugins
+    plugin_a = PluginA()
+    plugin_b = PluginB()
+
+    # Register hooks
+    registry.register_hook(PRE_RENDER_CONTENT, plugin_a.add_prefix)
+    registry.register_hook(PRE_RENDER_CONTENT, plugin_b.add_prefix)
+
+    # 1. Test Default Fallback
+    # Both plugins are disabled by default.
+    # So run_hook should execute neither hook and return the original string.
+    res1 = registry.run_hook(PRE_RENDER_CONTENT, "test")
+    assert res1 == "test"
+
+    # 2. Test File-based settings overrides
+    # Enable Plugin A, Disable Plugin B in file settings.
+    settings.DJPRESS_SETTINGS["PLUGIN_SETTINGS"] = {
+        "plugin_a": {"enabled": True},
+        "plugin_b": {"enabled": False},
+    }
+
+    # Verify: Plugin A should run, Plugin B should be skipped.
+    res2 = registry.run_hook(PRE_RENDER_CONTENT, "test")
+    assert res2 == "A_test"
+
+    # 3. Test Database-backed settings overrides
+    # Enable database settings lookups in django settings.
+    settings.DJPRESS_SETTINGS = {
+        "DATABASE_SETTINGS_ENABLED": True,
+    }
+    djpress_settings.clear_request_cache()
+
+    # In database, enable Plugin B and disable Plugin A.
+    Setting.objects.create(
+        key="PLUGIN_SETTINGS",
+        value={
+            "plugin_a": {"enabled": False},
+            "plugin_b": {"enabled": True},
+        },
+    )
+    djpress_settings.clear_request_cache()
+
+    # Verify: Plugin B should run, Plugin A should be skipped.
+    res3 = registry.run_hook(PRE_RENDER_CONTENT, "test")
+    assert res3 == "B_test"
+
+    # 4. Test Dynamic Runtime Updates (Toggling settings dynamically)
+    # Update the database setting to enable both Plugin A and Plugin B
+    db_setting = Setting.objects.get(key="PLUGIN_SETTINGS")
+    db_setting.value = {
+        "plugin_a": {"enabled": True},
+        "plugin_b": {"enabled": True},
+    }
+    db_setting.save()
+    djpress_settings.clear_request_cache()
+
+    # Verify: both Plugin A and Plugin B run in a waterfall chain (A then B).
+    res4 = registry.run_hook(PRE_RENDER_CONTENT, "test")
+    assert res4 == "B_A_test"

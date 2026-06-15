@@ -100,6 +100,11 @@ DJPRESS_SETTINGS = {
     "PLUGINS": [
         "djpress_example_plugin",
     ],
+    "PLUGIN_SETTINGS": {
+        "djpress_example_plugin": {
+            "enabled": True,
+        },
+    },
     "DATABASE_SETTINGS_ENABLED": True,
 }
 

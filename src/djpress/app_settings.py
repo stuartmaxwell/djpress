@@ -19,6 +19,7 @@ DJPRESS_SETTINGS = {
     "MEDIA_UPLOAD_PATH": ("djpress/{{ year }}/{{ month }}/{{ day }}", str),
     "MICROFORMATS_ENABLED": (True, bool),
     "PLUGINS": ([], list),
+    "PLUGIN_REGISTRY_CLASS": ("djpress.plugins.plugin_registry.PluginRegistry", str),
     "PLUGIN_SETTINGS": ({}, dict),
     "POST_PREFIX": ("{{ year }}/{{ month }}/{{ day }}", str),
     "POST_READ_MORE_TEXT": ("Read more...", str),

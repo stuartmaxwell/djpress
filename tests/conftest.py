@@ -251,7 +251,7 @@ def bad_plugin_registry(registry):
             registry.register_hook("foobar", lambda x: x)
 
     # Manually create and setup the plugin
-    plugin = BadPlugin({})
+    plugin = BadPlugin()
     plugin.setup(registry)
 
     return registry
@@ -274,7 +274,7 @@ def content_transformer_plugin():
         def add_suffix(self, content: str) -> str:
             return f"{content}_suffixed"
 
-    return ContentTransformerPlugin({})
+    return ContentTransformerPlugin()
 
 
 @pytest.fixture
@@ -294,7 +294,7 @@ def content_provider_plugin():
         def add_suffix(self) -> str:
             return "footer"
 
-    return ContentProviderPlugin({})
+    return ContentProviderPlugin()
 
 
 @pytest.fixture
@@ -310,7 +310,7 @@ def object_provider_plugin():
         def do_nothing(self, object):
             return None
 
-    return ObjectProviderPlugin({})
+    return ObjectProviderPlugin()
 
 
 @pytest.fixture
@@ -371,3 +371,26 @@ def test_media_image_1(user):
     if media.file and os.path.isfile(media.file.path):
         os.unlink(media.file.path)
     media.delete()
+
+
+@pytest.fixture(autouse=True)
+def enable_test_plugins(settings, reset_djpress_settings):
+    """Automatically enable all test plugins in PLUGIN_SETTINGS for the duration of every test."""
+    settings.DJPRESS_SETTINGS.setdefault("PLUGIN_SETTINGS", {})
+    test_plugin_names = [
+        "content_modifier",
+        "content_provider",
+        "object_provider",
+        "Header/Footer Plugin",
+        "Post-Save Notifier",
+        "Configurable Plugin",
+        "Faulty Plugin",
+        "Bad Hooks Plugin",
+        "bad_plugin",
+        "test_plugin",
+        "alias_plugin",
+    ]
+    for name in test_plugin_names:
+        settings.DJPRESS_SETTINGS["PLUGIN_SETTINGS"].setdefault(name, {})
+        if isinstance(settings.DJPRESS_SETTINGS["PLUGIN_SETTINGS"][name], dict):
+            settings.DJPRESS_SETTINGS["PLUGIN_SETTINGS"][name]["enabled"] = True
