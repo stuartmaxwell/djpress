@@ -137,14 +137,14 @@ def test_validate_hook_callback():
     is_valid, msg = _validate_hook_callback(PRE_RENDER_CONTENT, invalid_too_many_args)
     print(msg)
     assert is_valid is False
-    assert "Expected 1 parameters, got 2" in msg
+    assert "Callback requires 2 parameters, but hook only provides 1" in msg
 
     is_valid, msg = _validate_hook_callback(DJPRESS_HEADER, invalid_no_args)
     assert is_valid is True
 
     is_valid, msg = _validate_hook_callback(DJPRESS_HEADER, valid_content_transformer)
     assert is_valid is False
-    assert "Expected 0 parameters, got 1" in msg
+    assert "Callback requires 1 parameters, but hook only provides 0" in msg
 
     is_valid, msg = _validate_hook_callback(hook_no_protocol, valid_content_transformer)
     assert is_valid is False
@@ -152,7 +152,7 @@ def test_validate_hook_callback():
 
     is_valid, msg = _validate_hook_callback(PRE_RENDER_CONTENT, None)  # type: ignore
     assert is_valid is False
-    assert "Callback is expected to be a method or function" in msg
+    assert "Callback is not callable" in msg
 
     is_valid, msg = _validate_hook_callback(PRE_RENDER_CONTENT, invalid_content_transformer)
     assert is_valid is False
@@ -478,6 +478,8 @@ def test_error_run_content_provider(registry, caplog):
 def test_success_run_object_provider(registry, object_provider_plugin, test_post1):
     """Test running a object provider hook."""
     registry.register_hook(POST_SAVE_POST, object_provider_plugin.do_nothing)
+    assert POST_SAVE_POST in registry.hooks
+    assert not registry.plugin_errors
 
     result = registry.run_hook(POST_SAVE_POST, test_post1)
     assert result == test_post1
@@ -600,3 +602,48 @@ def test_search_provider_returns_queryset(registry, caplog, test_post1):
     result = registry.run_hook(SEARCH_CONTENT, "test")
     assert result.count() == 1
     assert "not attempting to search again" in caplog.text
+
+
+def test_validate_hook_callback_with_class_annotation():
+    """Test validation when the callback uses the actual class type instead of string representation."""
+
+    def callback_with_class(post: Post) -> Post:
+        return post
+
+    is_valid, msg = _validate_hook_callback(POST_SAVE_POST, callback_with_class)
+    assert is_valid is True
+    assert msg == ""
+
+
+def test_validate_hook_callback_with_callable_object():
+    """Test validation when the callback is a callable class instance."""
+
+    class ContentFilter:
+        def __call__(self, content: str) -> str:
+            return content
+
+    is_valid, msg = _validate_hook_callback(PRE_RENDER_CONTENT, ContentFilter())
+    assert is_valid is True
+    assert msg == ""
+
+
+def test_validate_hook_callback_with_optional_params():
+    """Test validation when the callback has optional parameters with defaults."""
+
+    def callback_with_defaults(content: str, format_type: str = "html") -> str:
+        return content
+
+    is_valid, msg = _validate_hook_callback(PRE_RENDER_CONTENT, callback_with_defaults)
+    assert is_valid is True
+    assert msg == ""
+
+
+def test_validate_hook_callback_with_object_annotation():
+    """Test validation when the callback accepts any object (type hint 'object')."""
+
+    def callback_with_object(post: object) -> None:
+        pass
+
+    is_valid, msg = _validate_hook_callback(POST_SAVE_POST, callback_with_object)
+    assert is_valid is True
+    assert msg == ""
