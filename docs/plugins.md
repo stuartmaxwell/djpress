@@ -30,7 +30,7 @@ In `plugin.py`, create a class called `Plugin` that inherits from `DJPressPlugin
 
 ```python
 from djpress.plugins import DJPressPlugin
-from djpress.plugin.hook_registry import PRE_RENDER_CONTENT, POST_RENDER_CONTENT, POST_SAVE_POST, SEARCH_CONTENT
+from djpress.plugins.hook_registry import PRE_RENDER_CONTENT, POST_RENDER_CONTENT, POST_SAVE_POST, SEARCH_CONTENT
 
 class Plugin(DJPressPlugin):
     name = "djpress_my_plugin"  # Required - use same name as package
@@ -59,7 +59,7 @@ class Plugin(DJPressPlugin):
                 return content
 
             # Example: Add a header to all content
-            prefix = self.config.get("prefix_text", "")
+            prefix = self.settings.get("prefix_text", "")
             if prefix:
                 content = f"{prefix}\n\n{content}"
 
@@ -81,7 +81,7 @@ class Plugin(DJPressPlugin):
         """
         try:
             # Example: Add a footer to all content
-            suffix = self.config.get("suffix_text", "")
+            suffix = self.settings.get("suffix_text", "")
             if suffix and html_content:
                 html_content = f"{html_content}<div class='plugin-footer'>{suffix}</div>"
             return html_content
@@ -109,7 +109,7 @@ class Plugin(DJPressPlugin):
                 self.save_data(data)
 
             # Example: Could send an email, ping a webhook, etc.
-            if self.config.get("send_notifications"):
+            if self.settings.get("send_notifications"):
                 self._send_notification(post)
         except Exception as e:
             import logging
@@ -194,7 +194,7 @@ The hook is added to the list as a tuple with the first element being the hook, 
 name of the callable.
 
 ```python
-from djpress.plugin.hook_registry import PRE_RENDER_CONTENT
+from djpress.plugins.hook_registry import PRE_RENDER_CONTENT
 
 # Define a hooks list of tuples:
     hooks = [(PRE_RENDER_CONTENT, "modify_content")]
@@ -254,14 +254,14 @@ DJPRESS_SETTINGS = {
 }
 ```
 
-Access settings in your plugin using `self.config`:
+Access settings in your plugin using `self.settings`:
 
 ```python
 # Get with default value if setting doesn't exist
-prefix = self.config.get("prefix_text", "Default prefix")
+prefix = self.settings.get("prefix_text", "Default prefix")
 
 # Check if a setting exists
-if "send_notifications" in self.config:
+if "send_notifications" in self.settings:
     # Do something
 ```
 
