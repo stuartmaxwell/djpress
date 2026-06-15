@@ -189,6 +189,11 @@ class PluginRegistry:
 
         # Loop through the callbacks, updating the value.
         for callback in callbacks:
+            # Check if the plugin associated with the callback is enabled
+            plugin_instance = getattr(callback, "__self__", None)
+            if plugin_instance is not None and not plugin_instance.settings.get("enabled", False):
+                continue
+
             value = handler(callback, value)
 
         return value

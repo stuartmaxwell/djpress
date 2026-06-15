@@ -371,3 +371,26 @@ def test_media_image_1(user):
     if media.file and os.path.isfile(media.file.path):
         os.unlink(media.file.path)
     media.delete()
+
+
+@pytest.fixture(autouse=True)
+def enable_test_plugins(settings, reset_djpress_settings):
+    """Automatically enable all test plugins in PLUGIN_SETTINGS for the duration of every test."""
+    settings.DJPRESS_SETTINGS.setdefault("PLUGIN_SETTINGS", {})
+    test_plugin_names = [
+        "content_modifier",
+        "content_provider",
+        "object_provider",
+        "Header/Footer Plugin",
+        "Post-Save Notifier",
+        "Configurable Plugin",
+        "Faulty Plugin",
+        "Bad Hooks Plugin",
+        "bad_plugin",
+        "test_plugin",
+        "alias_plugin",
+    ]
+    for name in test_plugin_names:
+        settings.DJPRESS_SETTINGS["PLUGIN_SETTINGS"].setdefault(name, {})
+        if isinstance(settings.DJPRESS_SETTINGS["PLUGIN_SETTINGS"][name], dict):
+            settings.DJPRESS_SETTINGS["PLUGIN_SETTINGS"][name]["enabled"] = True

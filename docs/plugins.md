@@ -210,7 +210,7 @@ To install a plugin, follow these steps:
 pip install djpress-my-plugin
 ```
 
-1. Add the plugin to your settings:
+2. Add the plugin to your settings:
 
 ```python
 DJPRESS_SETTINGS = {
@@ -220,13 +220,7 @@ DJPRESS_SETTINGS = {
 }
 ```
 
-1. Run migrations and restart your server:
-
-```bash
-python manage.py migrate
-```
-
-If your plugin is structured differently, specify the full path:
+**Note**: If your plugin is structured differently, specify the full path:
 
 ```python
 DJPRESS_SETTINGS = {
@@ -238,6 +232,9 @@ DJPRESS_SETTINGS = {
 
 ## Plugin Configuration
 
+> [!IMPORTANT]
+> Plugins are **disabled by default** to prevent unconfigured plugins from executing unexpectedly. You must explicitly set `"enabled": True` in the plugin's settings under `PLUGIN_SETTINGS` to activate it.
+
 Configure plugins using the `PLUGIN_SETTINGS` dictionary:
 
 ```python
@@ -245,6 +242,7 @@ DJPRESS_SETTINGS = {
     "PLUGINS": ["djpress_example_plugin"],
     "PLUGIN_SETTINGS": {
         "djpress_example_plugin": {  # Must match plugin's 'name'
+            "enabled": True,  # Required to enable the plugin
             "prefix_text": "### Featured Content",
             "suffix_text": "<em>Thanks for reading!</em>",
             "send_notifications": True,

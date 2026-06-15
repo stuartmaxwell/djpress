@@ -182,6 +182,7 @@ def test_load_plugins_not_exist(registry, settings, caplog):
     """Test successful loading of plugins with valid hooks."""
     caplog.set_level("WARNING")
     settings.DJPRESS_SETTINGS["PLUGINS"] = ["do_not_exist"]
+    settings.DJPRESS_SETTINGS["PLUGIN_SETTINGS"] = {}
 
     assert registry.load_plugins() is None
     assert "Could not load plugin: 'do_not_exist'" in caplog.text
@@ -831,3 +832,86 @@ def test_dynamic_plugin_settings_non_dict_fallback():
     with patch("djpress.plugins.base_plugin.djpress_settings") as mock_settings:
         mock_settings.PLUGIN_SETTINGS = "not_a_dict_raw"
         assert plugin.settings == {}
+
+
+@pytest.mark.django_db
+def test_plugin_dynamic_enabling_and_disabling(registry, settings):
+    """Test dynamic enabling and disabling of plugins with defaults, file settings, and DB settings."""
+    from djpress.models.setting import Setting
+    from djpress.conf import settings as djpress_settings
+
+    # Plugin A: default is disabled
+    class PluginA(DJPressPlugin):
+        name = "plugin_a"
+        hooks = [(PRE_RENDER_CONTENT, "add_prefix")]
+
+        def add_prefix(self, content: str) -> str:
+            return f"A_{content}"
+
+    # Plugin B: default is disabled
+    class PluginB(DJPressPlugin):
+        name = "plugin_b"
+        hooks = [(PRE_RENDER_CONTENT, "add_prefix")]
+
+        def add_prefix(self, content: str) -> str:
+            return f"B_{content}"
+
+    # Instantiate plugins
+    plugin_a = PluginA()
+    plugin_b = PluginB()
+
+    # Register hooks
+    registry.register_hook(PRE_RENDER_CONTENT, plugin_a.add_prefix)
+    registry.register_hook(PRE_RENDER_CONTENT, plugin_b.add_prefix)
+
+    # 1. Test Default Fallback
+    # Both plugins are disabled by default.
+    # So run_hook should execute neither hook and return the original string.
+    res1 = registry.run_hook(PRE_RENDER_CONTENT, "test")
+    assert res1 == "test"
+
+    # 2. Test File-based settings overrides
+    # Enable Plugin A, Disable Plugin B in file settings.
+    settings.DJPRESS_SETTINGS["PLUGIN_SETTINGS"] = {
+        "plugin_a": {"enabled": True},
+        "plugin_b": {"enabled": False},
+    }
+
+    # Verify: Plugin A should run, Plugin B should be skipped.
+    res2 = registry.run_hook(PRE_RENDER_CONTENT, "test")
+    assert res2 == "A_test"
+
+    # 3. Test Database-backed settings overrides
+    # Enable database settings lookups in django settings.
+    settings.DJPRESS_SETTINGS = {
+        "DATABASE_SETTINGS_ENABLED": True,
+    }
+    djpress_settings.clear_request_cache()
+
+    # In database, enable Plugin B and disable Plugin A.
+    Setting.objects.create(
+        key="PLUGIN_SETTINGS",
+        value={
+            "plugin_a": {"enabled": False},
+            "plugin_b": {"enabled": True},
+        },
+    )
+    djpress_settings.clear_request_cache()
+
+    # Verify: Plugin B should run, Plugin A should be skipped.
+    res3 = registry.run_hook(PRE_RENDER_CONTENT, "test")
+    assert res3 == "B_test"
+
+    # 4. Test Dynamic Runtime Updates (Toggling settings dynamically)
+    # Update the database setting to enable both Plugin A and Plugin B
+    db_setting = Setting.objects.get(key="PLUGIN_SETTINGS")
+    db_setting.value = {
+        "plugin_a": {"enabled": True},
+        "plugin_b": {"enabled": True},
+    }
+    db_setting.save()
+    djpress_settings.clear_request_cache()
+
+    # Verify: both Plugin A and Plugin B run in a waterfall chain (A then B).
+    res4 = registry.run_hook(PRE_RENDER_CONTENT, "test")
+    assert res4 == "B_A_test"
