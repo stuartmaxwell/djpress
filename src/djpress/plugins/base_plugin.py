@@ -2,6 +2,7 @@
 
 import logging
 
+from djpress.conf import settings as djpress_settings
 from djpress.models import PluginStorage
 from djpress.plugins.hook_registry import _Hook
 
@@ -18,15 +19,20 @@ class DJPressPlugin:
     name: str
     hooks: list[tuple[_Hook, str]] = []
 
-    def __init__(self, settings: dict) -> None:
-        """Initialize the plugin with a configuration dictionary.
+    def __init__(self) -> None:
+        """Initialize the plugin."""
 
-        If there are no settings, then an empty dict will be passed.
+    @property
+    def settings(self) -> dict:
+        """Dynamically fetch plugin configuration settings at runtime."""
+        try:
+            plugin_settings = getattr(djpress_settings, "PLUGIN_SETTINGS", {})
+        except (TypeError, AttributeError):
+            plugin_settings = {}
 
-        Args:
-            settings: A dictionary containing the settings for the plugin.
-        """
-        self.settings = settings
+        if not isinstance(plugin_settings, dict):
+            return {}
+        return plugin_settings.get(self.name, {})
 
     @property
     def config(self) -> dict:

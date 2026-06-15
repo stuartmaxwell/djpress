@@ -79,16 +79,16 @@ class PluginRegistry:
 
         # Try to import each plugin and register its hooks.
         for plugin_path in plugin_names:
-            self._load_single_plugin(plugin_path, plugin_settings)
+            self._load_single_plugin(plugin_path)
         self._loaded = True
 
-    def _load_single_plugin(self, plugin_path: str, plugin_settings: dict) -> None:
+    def _load_single_plugin(self, plugin_path: str) -> None:
         """Import, instantiate, and register hooks for a single plugin."""
         try:
             # Get the plugin class.
             plugin_class = self._import_plugin_class(plugin_path)
             # Load the plugin
-            plugin = self._instantiate_plugin(plugin_class, plugin_settings)
+            plugin = self._instantiate_plugin(plugin_class)
 
             # Register hooks atomically
             self._register_plugin_hooks(plugin, plugin_path)
@@ -226,13 +226,11 @@ class PluginRegistry:
     def _instantiate_plugin(
         self,
         plugin_class: type,
-        plugin_settings: dict,
     ) -> "DJPressPlugin":
         """Create and set up a plugin instance.
 
         Args:
             plugin_class: The plugin class to instantiate.
-            plugin_settings: Dictionary of settings for all plugins.
 
         Returns:
             An initialized plugin instance.
@@ -242,11 +240,8 @@ class PluginRegistry:
         """
         try:
             # If there's no name, this will raise an error.
-            plugin_name = plugin_class.name
-            # Get the plugin's settings from the plugin_settings or an empty dict.
-            this_plugin_settings = plugin_settings.get(plugin_name, {})
-            # Instantiate the plugin with its settings, if available.
-            plugin = plugin_class(settings=this_plugin_settings)
+            _ = plugin_class.name
+            plugin = plugin_class()
         except Exception as exc:
             msg = f"Error initializing plugin '{plugin_class}': {exc!s}"
             raise ImproperlyConfigured(msg) from exc

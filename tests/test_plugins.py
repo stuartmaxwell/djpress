@@ -48,8 +48,8 @@ class PostSaveNotificationPlugin(DJPressPlugin):
         (POST_SAVE_POST, "send_notification"),
     ]
 
-    def __init__(self, settings: dict):
-        super().__init__(settings)
+    def __init__(self) -> None:
+        super().__init__()
         self.notification_sent = False
         self.saved_post_slug = ""
 
@@ -73,9 +73,9 @@ class FaultyPlugin(DJPressPlugin):
 
     name = "Faulty Plugin"
 
-    def __init__(self, settings: dict):
+    def __init__(self) -> None:
         # This will raise an exception
-        super().__init__(settings)
+        super().__init__()
         raise RuntimeError("I am a faulty plugin!")
 
 
@@ -512,7 +512,7 @@ def test_plugin_storage_interface():
     class TestPlugin(DJPressPlugin):
         name = "test_plugin"
 
-    plugin = TestPlugin({})
+    plugin = TestPlugin()
 
     # Test get_data with no storage
     assert plugin.get_data() == {}
@@ -744,9 +744,11 @@ class TestPlugin(DJPressPlugin):
     assert "Failed to load plugin" in caplog.text
 
 
-def test_plugin_config_property_alias():
+def test_plugin_config_property_alias(settings):
     """Test that the plugin.config property is an alias for plugin.settings."""
-    plugin = DJPressPlugin({"hello": "world"})
+    settings.DJPRESS_SETTINGS["PLUGIN_SETTINGS"] = {"alias_plugin": {"hello": "world"}}
+    plugin = DJPressPlugin()
+    plugin.name = "alias_plugin"
     assert plugin.config == {"hello": "world"}
     assert plugin.config is plugin.settings
 
@@ -781,3 +783,51 @@ def test_lazy_registry_custom_class_fallback_on_error(settings, caplog):
     assert isinstance(fallback_registry, PluginRegistry)
     assert not isinstance(fallback_registry, CustomTestRegistry)
     assert "Could not load custom plugin registry class" in caplog.text
+
+
+def test_dynamic_plugin_settings(settings):
+    """Test that plugin settings are retrieved dynamically."""
+    settings.DJPRESS_SETTINGS["PLUGIN_SETTINGS"] = {"dynamic_plugin": {"key": "value"}}
+
+    plugin = DJPressPlugin()
+    plugin.name = "dynamic_plugin"
+    assert plugin.settings == {"key": "value"}
+
+    # Dynamic settings change
+    settings.DJPRESS_SETTINGS["PLUGIN_SETTINGS"]["dynamic_plugin"]["key"] = "new_value"
+    assert plugin.settings == {"key": "new_value"}
+
+    # Dynamic settings change of whole dictionary
+    settings.DJPRESS_SETTINGS["PLUGIN_SETTINGS"] = {"dynamic_plugin": {"another_key": "another_value"}}
+    assert plugin.settings == {"another_key": "another_value"}
+
+    # Fallback to empty dict if PLUGIN_SETTINGS does not exist or is not a dict
+    del settings.DJPRESS_SETTINGS["PLUGIN_SETTINGS"]
+    assert plugin.settings == {}
+
+    settings.DJPRESS_SETTINGS["PLUGIN_SETTINGS"] = "not_a_dict"
+    assert plugin.settings == {}
+
+
+def test_broken_plugin_constructor_raises_error(registry):
+    """Test that a plugin expecting arguments in __init__ fails to instantiate with ImproperlyConfigured."""
+
+    class BrokenPlugin(DJPressPlugin):
+        name = "broken_plugin"
+
+        def __init__(self, required_arg):
+            super().__init__()
+            self.required_arg = required_arg
+
+    with pytest.raises(ImproperlyConfigured) as exc_info:
+        registry._instantiate_plugin(BrokenPlugin)
+    assert "Error initializing plugin" in str(exc_info.value)
+
+
+def test_dynamic_plugin_settings_non_dict_fallback():
+    """Test that dynamic settings lookup returns empty dict if PLUGIN_SETTINGS is not a dict."""
+    plugin = DJPressPlugin()
+    plugin.name = "dynamic_plugin"
+    with patch("djpress.plugins.base_plugin.djpress_settings") as mock_settings:
+        mock_settings.PLUGIN_SETTINGS = "not_a_dict_raw"
+        assert plugin.settings == {}

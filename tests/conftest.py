@@ -251,7 +251,7 @@ def bad_plugin_registry(registry):
             registry.register_hook("foobar", lambda x: x)
 
     # Manually create and setup the plugin
-    plugin = BadPlugin({})
+    plugin = BadPlugin()
     plugin.setup(registry)
 
     return registry
@@ -274,7 +274,7 @@ def content_transformer_plugin():
         def add_suffix(self, content: str) -> str:
             return f"{content}_suffixed"
 
-    return ContentTransformerPlugin({})
+    return ContentTransformerPlugin()
 
 
 @pytest.fixture
@@ -294,7 +294,7 @@ def content_provider_plugin():
         def add_suffix(self) -> str:
             return "footer"
 
-    return ContentProviderPlugin({})
+    return ContentProviderPlugin()
 
 
 @pytest.fixture
@@ -310,7 +310,7 @@ def object_provider_plugin():
         def do_nothing(self, object):
             return None
 
-    return ObjectProviderPlugin({})
+    return ObjectProviderPlugin()
 
 
 @pytest.fixture
