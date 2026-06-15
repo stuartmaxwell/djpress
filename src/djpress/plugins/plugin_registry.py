@@ -10,6 +10,7 @@ from django.utils.module_loading import import_string
 
 from djpress.conf import settings as djpress_settings
 from djpress.plugins.hook_registry import (
+    HookType,
     _Hook,
     _validate_hook_callback,
 )
@@ -163,7 +164,7 @@ class PluginRegistry:
             value: Optional value to pass to the hook. The value is returned if received.
 
         Returns:
-            The result of the chained callbacks, or None if no value was received.
+            The result of the chained callbacks, or None if the hook is an Action or if no value was received.
 
         Raises:
             TypeError: If the hook is not a _Hook object.
@@ -187,16 +188,34 @@ class PluginRegistry:
         # Get the callbacks for the hook.
         callbacks = self.hooks[hook]
 
-        # Loop through the callbacks, updating the value.
+        if hook.hook_type == HookType.FILTER:
+            # Loop through the callbacks, updating the value.
+            for callback in callbacks:
+                # Check if the plugin associated with the callback is enabled
+                plugin_instance = getattr(callback, "__self__", None)
+
+                if plugin_instance is not None and not plugin_instance.settings.get("enabled", False):
+                    continue
+
+                value = handler(callback, value)
+
+            return value
+
+        # Action execution: run callbacks independently, isolate/catch errors per callback
         for callback in callbacks:
             # Check if the plugin associated with the callback is enabled
             plugin_instance = getattr(callback, "__self__", None)
+
             if plugin_instance is not None and not plugin_instance.settings.get("enabled", False):
                 continue
 
-            value = handler(callback, value)
+            try:
+                handler(callback, value)
 
-        return value
+            except Exception:
+                logger.exception(f"Error running action callback '{callback}' for hook '{hook.name}'.")
+
+        return None
 
     def _import_plugin_class(self, plugin_path: str) -> type:
         """Import the plugin class from either custom path or standard location.

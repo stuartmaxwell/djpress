@@ -176,18 +176,38 @@ self.save_data(data)
 
 The data must be JSON-serialisable (dictionaries, lists, strings, numbers, booleans, or None).
 
+## Plugin Hook Types
+
+DJ Press classifies hooks into two distinct types based on how they process data and handle execution:
+
+### 1. Filters (Waterfall execution)
+
+Filters are designed to transform and return data.
+
+- **Execution**: They run sequentially in a "waterfall" chain where the return value of one callback is passed as the input parameter to the next callback.
+- **Error Isolation**: If a filter callback encounters an error, the registry logs a warning, skips it, and passes the original value down to the next callback to prevent breaking the chain.
+- **Examples**: `PRE_RENDER_CONTENT`, `POST_RENDER_CONTENT`, `DJPRESS_HEADER`, `DJPRESS_FOOTER`, `SEARCH_CONTENT`.
+
+### 2. Actions (Independent execution)
+
+Actions are event listeners meant to perform side-effects (e.g. sending a notification, logging activity) without modifying any data.
+
+- **Execution**: They run independently of each other. The return value of an action callback is discarded, and the registry's hook execution returns `None`.
+- **Error Isolation**: Each callback is executed in its own isolated context. If one action callback raises an exception, it is caught and logged, allowing other registered action callbacks to run successfully.
+- **Examples**: `POST_SAVE_POST`.
+
 ## Available Hooks
 
 DJ Press provides these hooks for plugins:
 
-| Hook Name             | Description                                                                  | Arguments                 | Expected Return                    |
-|-----------------------|------------------------------------------------------------------------------|---------------------------|------------------------------------|
-| `PRE_RENDER_CONTENT`  | Called before markdown content is rendered to HTML                           | `content: str` (markdown) | Modified markdown content          |
-| `POST_RENDER_CONTENT` | Called after markdown content is rendered to HTML                            | `content: str` (HTML)     | Modified HTML content              |
-| `POST_SAVE_POST`      | Called after saving a published post                                         | `post: Post` (object)     | None (return ignored)              |
-| `SEARCH_CONTENT`      | Override default search with custom implementation                           | `query: str`              | QuerySet of Post objects, or None  |
-| `DJPRESS_HEADER`      | Used to insert HTML into the template's `<head>` tag.                        | None                      | HTML content (`str`)               |
-| `DJPRESS_FOOTER`      | Used to insert HTML into the template's footer (typically before `</body>`). | None                      | HTML content (`str`)               |
+| Hook Name             | Hook Type | Description                                                                  | Arguments                 | Expected Return                    |
+|-----------------------|-----------|------------------------------------------------------------------------------|---------------------------|------------------------------------|
+| `PRE_RENDER_CONTENT`  | Filter    | Called before markdown content is rendered to HTML                           | `content: str` (markdown) | Modified markdown content          |
+| `POST_RENDER_CONTENT` | Filter    | Called after markdown content is rendered to HTML                            | `content: str` (HTML)     | Modified HTML content              |
+| `POST_SAVE_POST`      | Action    | Called after saving a published post                                         | `post: Post` (object)     | None (return ignored)              |
+| `SEARCH_CONTENT`      | Filter    | Override default search with custom implementation                           | `query: str`              | QuerySet of Post objects, or None  |
+| `DJPRESS_HEADER`      | Filter    | Used to insert HTML into the template's `<head>` tag.                        | None                      | HTML content (`str`)               |
+| `DJPRESS_FOOTER`      | Filter    | Used to insert HTML into the template's footer (typically before `</body>`). | None                      | HTML content (`str`)               |
 
 Hooks are imported from the `hook_registry` module, and then assigned to a list called `hooks` in the `Plugin` class.
 The hook is added to the list as a tuple with the first element being the hook, and the second element being the string

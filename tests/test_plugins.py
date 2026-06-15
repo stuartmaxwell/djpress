@@ -483,14 +483,14 @@ def test_success_run_object_provider(registry, object_provider_plugin, test_post
     assert not registry.plugin_errors
 
     result = registry.run_hook(POST_SAVE_POST, test_post1)
-    assert result == test_post1
+    assert result is None
 
 
 @pytest.mark.django_db
 def test_error_run_object_provider(registry, test_post1, caplog):
     """Test running a failed object provider hook.
 
-    This should return the original post.
+    This should return None since it is an Action hook.
     """
     caplog.set_level(logging.WARNING)
 
@@ -500,7 +500,7 @@ def test_error_run_object_provider(registry, test_post1, caplog):
     registry.register_hook(POST_SAVE_POST, callback)
 
     result = registry.run_hook(POST_SAVE_POST, test_post1)
-    assert result == test_post1
+    assert result is None
     assert "Error running callback" in caplog.text
     assert "Callback skipped" in caplog.text
     assert "This is a test error" in caplog.text
@@ -915,3 +915,97 @@ def test_plugin_dynamic_enabling_and_disabling(registry, settings):
     # Verify: both Plugin A and Plugin B run in a waterfall chain (A then B).
     res4 = registry.run_hook(PRE_RENDER_CONTENT, "test")
     assert res4 == "B_A_test"
+
+
+@pytest.mark.django_db
+def test_action_hook_execution_isolation(registry, test_post1):
+    """Test that action hook callbacks are executed independently and errors are isolated."""
+    from djpress.plugins.hook_registry import HookType, POST_SAVE_POST
+
+    assert POST_SAVE_POST.hook_type == HookType.ACTION
+
+    execution_order = []
+
+    def callback_success_1(post):
+        execution_order.append("success_1")
+        return "some_value"
+
+    def callback_failing(post):
+        execution_order.append("failing")
+        raise ValueError("Error in action callback")
+
+    def callback_success_2(post):
+        execution_order.append("success_2")
+        return "another_value"
+
+    registry.register_hook(POST_SAVE_POST, callback_success_1)
+    registry.register_hook(POST_SAVE_POST, callback_failing)
+    registry.register_hook(POST_SAVE_POST, callback_success_2)
+
+    result = registry.run_hook(POST_SAVE_POST, test_post1)
+
+    # All three callbacks should have executed (even after failure in the second)
+    assert execution_order == ["success_1", "failing", "success_2"]
+
+    # Return value of run_hook should be None
+    assert result is None
+
+
+@pytest.mark.django_db
+def test_action_hook_disabled(registry, test_post1, settings):
+    """Test that disabled action plugin callbacks are skipped in run_hook."""
+    from djpress.plugins.hook_registry import POST_SAVE_POST
+
+    class DummyActionPlugin(DJPressPlugin):
+        name = "dummy_action_plugin"
+        hooks = [(POST_SAVE_POST, "on_save")]
+
+        def __init__(self):
+            super().__init__()
+            self.called = False
+
+        def on_save(self, post):
+            self.called = True
+
+    plugin = DummyActionPlugin()
+    registry.register_hook(POST_SAVE_POST, plugin.on_save)
+
+    # By default it's disabled
+    settings.DJPRESS_SETTINGS["PLUGIN_SETTINGS"] = {"dummy_action_plugin": {"enabled": False}}
+    result = registry.run_hook(POST_SAVE_POST, test_post1)
+    assert not plugin.called
+    assert result is None
+
+    # Enable it
+    settings.DJPRESS_SETTINGS["PLUGIN_SETTINGS"] = {"dummy_action_plugin": {"enabled": True}}
+    result = registry.run_hook(POST_SAVE_POST, test_post1)
+    assert plugin.called
+    assert result is None
+
+
+def test_action_hook_handler_exception(registry, caplog):
+    """Test that run_hook catches and logs exceptions raised by the protocol handler for actions."""
+    from djpress.plugins.hook_registry import HookType, _Hook
+    import logging
+
+    caplog.set_level(logging.WARNING)
+
+    class BadProtocol:
+        @staticmethod
+        def handler(callback, value):
+            raise RuntimeError("Handler error")
+
+        def __call__(self):
+            pass
+
+    BAD_ACTION_HOOK = _Hook("bad_action_hook", BadProtocol, hook_type=HookType.ACTION)
+
+    def dummy_callback():
+        pass
+
+    registry.register_hook(BAD_ACTION_HOOK, dummy_callback)
+
+    result = registry.run_hook(BAD_ACTION_HOOK, "test")
+    assert result is None
+    assert "Error running action callback" in caplog.text
+    assert "Handler error" in caplog.text

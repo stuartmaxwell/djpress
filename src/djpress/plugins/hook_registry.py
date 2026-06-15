@@ -1,24 +1,39 @@
 """Radically simplified hook system using function introspection."""
 
 import inspect
-from collections.abc import Callable  # Modern import for Callable
+from collections.abc import Callable
+from enum import Enum, auto
 from typing import Any
 
 from djpress.plugins.protocols import ContentTransformer, PostObjectProvider, SearchProvider, SimpleContentProvider
 
 
-class _Hook:
-    """A single plugin hook definition, including name, protocol, and handler."""
+class HookType(Enum):
+    """Enumeration of hook types."""
 
-    def __init__(self, name: str, protocol: type[object]) -> None:
-        """Initialize a Hook with a name and protocol.
+    FILTER = auto()  # Modifies a value sequentially
+    ACTION = auto()  # Fires an event independently (independent execution)
+
+
+class _Hook:
+    """A single plugin hook definition, including name, protocol, handler, and hook type."""
+
+    def __init__(
+        self,
+        name: str,
+        protocol: type[object],
+        hook_type: HookType = HookType.FILTER,
+    ) -> None:
+        """Initialize a Hook with a name, protocol, and hook type.
 
         Args:
             name: The string name of the hook (for config/logging).
             protocol: The protocol class defining the hook signature.
+            hook_type: The HookType classification (FILTER or ACTION).
         """
         self.name = name
         self.protocol = protocol
+        self.hook_type = hook_type
 
     def __eq__(self, other: object) -> bool:
         """Check equality based on hook name.
@@ -116,5 +131,5 @@ PRE_RENDER_CONTENT = _Hook("pre_render_content", ContentTransformer)
 POST_RENDER_CONTENT = _Hook("post_render_content", ContentTransformer)
 DJPRESS_HEADER = _Hook("djpress_header", SimpleContentProvider)
 DJPRESS_FOOTER = _Hook("djpress_footer", SimpleContentProvider)
-POST_SAVE_POST = _Hook("post_save_post", PostObjectProvider)
+POST_SAVE_POST = _Hook("post_save_post", PostObjectProvider, hook_type=HookType.ACTION)
 SEARCH_CONTENT = _Hook("search_content", SearchProvider)
