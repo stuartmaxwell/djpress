@@ -179,6 +179,13 @@ class PluginRegistry:
     def _import_plugin_class(self, plugin_path: str) -> type:
         """Import the plugin class from either custom path or standard location.
 
+        This supports adding plugins either by short name or their full path, e.g.
+
+        ```
+        "PLUGINS": ["djpress_example_plugin"]
+        "PLUGINS": ["djpress_example_plugin.custom.MyPlugin"]
+        ```
+
         Args:
             plugin_path: Either full path to plugin class or just the package name.
 
