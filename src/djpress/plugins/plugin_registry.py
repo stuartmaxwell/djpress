@@ -242,9 +242,9 @@ class PluginRegistry:
         try:
             # If there's no name, this will raise an error.
             plugin_name = plugin_class.name
-            # Get the plugin's settings from the plugin_settimgs or an empty dict.
+            # Get the plugin's settings from the plugin_settings or an empty dict.
             this_plugin_settings = plugin_settings.get(plugin_name, {})
-            # Instantiate the plugin with its settingr, if available.
+            # Instantiate the plugin with its settings, if available.
             plugin = plugin_class(settings=this_plugin_settings)
         except Exception as exc:
             msg = f"Error initializing plugin '{plugin_class}': {exc!s}"

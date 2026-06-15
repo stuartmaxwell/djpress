@@ -28,6 +28,11 @@ class DJPressPlugin:
         """
         self.settings = settings
 
+    @property
+    def config(self) -> dict:
+        """Alias for self.settings to preserve compatibility with documentation."""
+        return self.settings
+
     def get_data(self) -> dict:
         """Get this plugin's stored data.
 
