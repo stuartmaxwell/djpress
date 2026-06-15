@@ -742,3 +742,10 @@ class TestPlugin(DJPressPlugin):
     # The first hook (PRE_RENDER_CONTENT) should NOT be registered
     assert PRE_RENDER_CONTENT not in registry.hooks or not registry.hooks[PRE_RENDER_CONTENT]
     assert "Failed to load plugin" in caplog.text
+
+
+def test_plugin_config_property_alias():
+    """Test that the plugin.config property is an alias for plugin.settings."""
+    plugin = DJPressPlugin({"hello": "world"})
+    assert plugin.config == {"hello": "world"}
+    assert plugin.config is plugin.settings
