@@ -1,7 +1,7 @@
 """Configuration settings for DJ Press."""
 
+import contextvars
 import logging
-import threading
 
 from django.conf import settings as django_settings
 from django.core.cache import cache
@@ -15,60 +15,14 @@ logger = logging.getLogger(__name__)
 SettingValueType = str | int | bool | list | dict | None
 
 
+_db_settings_ctx = contextvars.ContextVar("djpress_db_settings", default=None)
+
+
 class DJPressSettings:
     """Class to manage DJPress settings."""
 
     def __init__(self) -> None:
         """Initialize the settings manager."""
-        self._local = threading.local()
-
-    def clear_request_cache(self) -> None:
-        """Clear the in-memory request-bound setting cache."""
-        if hasattr(self._local, "db_settings"):
-            delattr(self._local, "db_settings")
-
-    def database_settings_enabled(self) -> bool:
-        """Determine if database settings lookups are enabled."""
-        # 1. Check Django settings first
-        if (
-            hasattr(django_settings, "DJPRESS_SETTINGS")
-            and "DATABASE_SETTINGS_ENABLED" in django_settings.DJPRESS_SETTINGS
-        ):
-            val = django_settings.DJPRESS_SETTINGS["DATABASE_SETTINGS_ENABLED"]
-            if not isinstance(val, bool):
-                msg = f"Expected bool for DATABASE_SETTINGS_ENABLED, got {type(val).__name__}"
-                raise TypeError(msg)
-            return val
-
-        # 2. Fall back to the app default in app_settings.py
-        return DJPRESS_SETTINGS.get("DATABASE_SETTINGS_ENABLED", (False, bool))[0]
-
-    def _get_db_settings(self) -> dict[str, SettingValueType]:
-        """Fetch settings from the database, utilizing caching to optimize performance."""
-        # Avoid database lookup during app loading
-        from django.apps import apps  # noqa: PLC0415
-
-        if not apps.ready:
-            return {}
-
-        # Cache settings dict on the thread-local storage to avoid redundant cache backend queries
-        if not hasattr(self._local, "db_settings"):
-            settings_dict = cache.get(SETTING_CACHE_KEY)
-
-            if settings_dict is None:
-                try:
-                    from djpress.models.setting import Setting  # noqa: PLC0415 # Circular import
-
-                    settings_dict = {setting.key: setting.value for setting in Setting.objects.all()}
-                    cache.set(SETTING_CACHE_KEY, settings_dict, timeout=None)
-
-                except Exception as e:  # noqa: BLE001
-                    logger.warning(f"Error getting settings from database: {e}")
-                    # During migrations, bootstrap, or before table is created, return empty dict
-                    return {}
-            self._local.db_settings = settings_dict
-
-        return self._local.db_settings
 
     def __getattr__(self, key: str) -> SettingValueType:
         """Retrieve the setting in order of precedence.
@@ -121,6 +75,61 @@ class DJPressSettings:
 
         msg = f"Setting {key} is not defined."
         raise AttributeError(msg)
+
+    def clear_request_cache(self) -> None:
+        """Clear the in-memory request-bound setting cache."""
+        _db_settings_ctx.set(None)
+
+    def database_settings_enabled(self) -> bool:
+        """Determine if database settings lookups are enabled.
+
+        1. Check if the Django settings has a `DJPRESS_SETTINGS` and `DATABASE_SETTINGS_ENABLED` key.
+        2. If it does, then return that as the result of the check
+        3. Otherwise, fall back to the app default in app_settings.py
+        """
+        # 1. Check Django settings first
+        if (
+            hasattr(django_settings, "DJPRESS_SETTINGS")
+            and "DATABASE_SETTINGS_ENABLED" in django_settings.DJPRESS_SETTINGS
+        ):
+            val = django_settings.DJPRESS_SETTINGS["DATABASE_SETTINGS_ENABLED"]
+            if not isinstance(val, bool):
+                msg = f"Expected bool for DATABASE_SETTINGS_ENABLED, got {type(val).__name__}"
+                raise TypeError(msg)
+            return val
+
+        # 2. Fall back to the app default in app_settings.py
+        return DJPRESS_SETTINGS.get("DATABASE_SETTINGS_ENABLED", (False, bool))[0]
+
+    def _get_db_settings(self) -> dict[str, SettingValueType]:
+        """Fetch settings from the database, utilizing caching to optimize performance."""
+        # Avoid database lookup during app loading
+        from django.apps import apps  # noqa: PLC0415
+
+        if not apps.ready:
+            return {}
+
+        # Cache settings dict on the context variable to avoid redundant cache backend queries
+        db_settings = _db_settings_ctx.get()
+        if db_settings is None:
+            settings_dict = cache.get(SETTING_CACHE_KEY)
+
+            if settings_dict is None:
+                try:
+                    from djpress.models.setting import Setting  # noqa: PLC0415 # Circular import
+
+                    settings_dict = {setting.key: setting.value for setting in Setting.objects.all()}
+                    cache.set(SETTING_CACHE_KEY, settings_dict, timeout=None)
+
+                except Exception as e:  # noqa: BLE001
+                    logger.warning(f"Error getting settings from database: {e}")
+                    # During migrations, bootstrap, or before table is created, return empty dict
+                    return {}
+
+            _db_settings_ctx.set(settings_dict)
+            db_settings = settings_dict
+
+        return db_settings
 
 
 # Singleton instance to use across the application
