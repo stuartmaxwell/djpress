@@ -78,50 +78,65 @@ class PluginRegistry:
 
         # Try to import each plugin and register its hooks.
         for plugin_path in plugin_names:
-            try:
-                # Get the plugin class.
-                plugin_class = self._import_plugin_class(plugin_path)
-                # Load the plugin
-                plugin = self._instantiate_plugin(plugin_class, plugin_settings)
-                # Get the hooks - this should be a list of (hook, method_name) tuples.
-                hooks = plugin.hooks
-                # And loop through the hooks to try  register them.
-                try:
-                    for hook, method_name in hooks:
-                        callback = getattr(plugin, method_name)
-                        self.register_hook(hook, callback)
-
-                    # If we get to this point the plugin has been successfully loaded.
-                    self.plugins.append(plugin)
-                except TypeError as exc:
-                    logger.warning(
-                        f"Plugin '{plugin_path}' has a non-iterable 'hooks' attribute: {exc}. "
-                        "Skipping hook registration.",
-                    )
-
-            except Exception as exc:  # noqa: BLE001, PERF203
-                msg = f"Failed to load plugin: '{plugin_path}' {exc}"
-                self.plugin_errors.append(msg)
-                logger.warning(msg)
+            self._load_single_plugin(plugin_path, plugin_settings)
         self._loaded = True
 
-    def register_hook(self, hook: "_Hook", callback: Callable[..., Any]) -> None:
+    def _load_single_plugin(self, plugin_path: str, plugin_settings: dict) -> None:
+        """Import, instantiate, and register hooks for a single plugin."""
+        try:
+            # Get the plugin class.
+            plugin_class = self._import_plugin_class(plugin_path)
+            # Load the plugin
+            plugin = self._instantiate_plugin(plugin_class, plugin_settings)
+
+            # Register hooks atomically
+            self._register_plugin_hooks(plugin, plugin_path)
+        except Exception as exc:  # noqa: BLE001
+            msg = f"Failed to load plugin: '{plugin_path}' {exc}"
+            self.plugin_errors.append(msg)
+            logger.warning(msg)
+
+    def _register_plugin_hooks(self, plugin: "DJPressPlugin", plugin_path: str) -> None:
+        """Register all hooks for a plugin, rolling back if any registration fails."""
+        registered_callbacks = []
+        try:
+            # Get the hooks - this should be a list of (hook, method_name) tuples.
+            hooks = plugin.hooks
+            for hook, method_name in hooks:
+                callback = getattr(plugin, method_name)
+                if not self.register_hook(hook, callback):
+                    msg = f"Callback signature validation failed for hook '{hook.name}'."
+                    raise ValueError(msg)  # noqa: TRY301
+                registered_callbacks.append((hook, callback))
+
+            # If we get to this point the plugin has been successfully loaded.
+            self.plugins.append(plugin)
+        except TypeError as exc:
+            msg = f"Plugin '{plugin_path}' has a non-iterable 'hooks' attribute: {exc}. Skipping hook registration."
+            self.plugin_errors.append(msg)
+            logger.warning(msg)
+        except Exception:
+            # Roll back successfully registered hooks for this plugin
+            for hook, callback in registered_callbacks:
+                self.hooks[hook].remove(callback)
+            raise
+
+    def register_hook(self, hook: "_Hook", callback: Callable[..., Any]) -> bool:
         """Register a callback function for a specific hook.
 
         Args:
             hook: The _Hook object.
             callback: The function to call when the hook is triggered.
 
-        Raises:
-            TypeError: If the hook is not a _Hook object.
-            TypeError: If the callback does not match the expected protocol.
+        Returns:
+            bool: True if registration was successful, False otherwise.
         """
         # If the hook doesn't have the required attribute typer, log a warning and exit.
         if not isinstance(hook.protocol, object) or not isinstance(hook.name, str):
             msg = f"Invalid hook: '{hook!r}'. Must be a _Hook object."
             self.plugin_errors.append(msg)
             logger.warning(msg)
-            return
+            return False
 
         # Validate the callback against the hook's protocol.
         is_valid, error = _validate_hook_callback(hook, callback)
@@ -129,7 +144,7 @@ class PluginRegistry:
             msg = f"Invalid callback signature for hook '{hook.name}': {error}"
             self.plugin_errors.append(msg)
             logger.warning(msg)
-            return
+            return False
 
         # If this hook has had no callbacks registered yet, initialize an empty list.
         if hook not in self.hooks:
@@ -137,6 +152,7 @@ class PluginRegistry:
 
         # Register the callback for the hooks.
         self.hooks[hook].append(callback)
+        return True
 
     def run_hook(self, hook: "_Hook", value: object | None = None) -> object:
         """Run all callbacks for a given hook.

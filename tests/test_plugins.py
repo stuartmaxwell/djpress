@@ -657,3 +657,88 @@ def test_import_plugin_class_chains_exceptions(registry):
     assert exc_info.value.__cause__ is not None
     assert isinstance(exc_info.value.__cause__, ImportError)
     assert "non_existent_module" in str(exc_info.value.__cause__)
+
+
+def test_load_plugins_atomic_rollback(registry, settings, caplog, tmp_path):
+    """Test that if a plugin has multiple hooks and one fails with AttributeError, all are rolled back."""
+    caplog.set_level("WARNING")
+
+    # Create a temporary plugin package
+    plugin_dir = tmp_path / "test_load_plugins_atomic_rollback"
+    plugin_dir.mkdir()
+    (plugin_dir / "__init__.py").write_text("")
+    (plugin_dir / "plugin.py").write_text("""
+from djpress.plugins import DJPressPlugin
+from djpress.plugins.hook_registry import (
+    PRE_RENDER_CONTENT,
+    POST_RENDER_CONTENT,
+)
+class TestPlugin(DJPressPlugin):
+    name = "test_plugin_atomic"
+    hooks = [
+        (PRE_RENDER_CONTENT, "add_prefix"),
+        (POST_RENDER_CONTENT, "add_suffix"),  # This method is missing!
+    ]
+
+    def add_prefix(self, content: str) -> str:
+        return f"prefixed_{content}"
+""")
+
+    # Add to Python path and try to import
+    import sys
+
+    sys.path.insert(0, str(tmp_path))
+
+    settings.DJPRESS_SETTINGS["PLUGINS"] = ["test_load_plugins_atomic_rollback.plugin.TestPlugin"]
+
+    registry.load_plugins()
+
+    assert registry._loaded is True
+    assert len(registry.plugins) == 0
+    # The first hook (PRE_RENDER_CONTENT) should NOT be registered
+    assert PRE_RENDER_CONTENT not in registry.hooks or not registry.hooks[PRE_RENDER_CONTENT]
+    assert "Failed to load plugin" in caplog.text
+
+
+def test_load_plugins_atomic_rollback_validation(registry, settings, caplog, tmp_path):
+    """Test that if a plugin has multiple hooks and one fails validation, all are rolled back."""
+    caplog.set_level("WARNING")
+
+    # Create a temporary plugin package
+    plugin_dir = tmp_path / "test_load_plugins_atomic_rollback_validation"
+    plugin_dir.mkdir()
+    (plugin_dir / "__init__.py").write_text("")
+    (plugin_dir / "plugin.py").write_text("""
+from djpress.plugins import DJPressPlugin
+from djpress.plugins.hook_registry import (
+    PRE_RENDER_CONTENT,
+    POST_RENDER_CONTENT,
+)
+class TestPlugin(DJPressPlugin):
+    name = "test_plugin_atomic_val"
+    hooks = [
+        (PRE_RENDER_CONTENT, "add_prefix"),
+        (POST_RENDER_CONTENT, "add_suffix_invalid"),  # This method has invalid signature!
+    ]
+
+    def add_prefix(self, content: str) -> str:
+        return f"prefixed_{content}"
+
+    def add_suffix_invalid(self, content: str, extra: int) -> str:
+        return f"{content}_suffixed"
+""")
+
+    # Add to Python path and try to import
+    import sys
+
+    sys.path.insert(0, str(tmp_path))
+
+    settings.DJPRESS_SETTINGS["PLUGINS"] = ["test_load_plugins_atomic_rollback_validation.plugin.TestPlugin"]
+
+    registry.load_plugins()
+
+    assert registry._loaded is True
+    assert len(registry.plugins) == 0
+    # The first hook (PRE_RENDER_CONTENT) should NOT be registered
+    assert PRE_RENDER_CONTENT not in registry.hooks or not registry.hooks[PRE_RENDER_CONTENT]
+    assert "Failed to load plugin" in caplog.text
