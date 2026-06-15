@@ -647,3 +647,13 @@ def test_validate_hook_callback_with_object_annotation():
     is_valid, msg = _validate_hook_callback(POST_SAVE_POST, callback_with_object)
     assert is_valid is True
     assert msg == ""
+
+
+def test_import_plugin_class_chains_exceptions(registry):
+    """Test that _import_plugin_class chains the original exception when loading fails."""
+    with pytest.raises(ImproperlyConfigured) as exc_info:
+        registry._import_plugin_class("non_existent_module")
+
+    assert exc_info.value.__cause__ is not None
+    assert isinstance(exc_info.value.__cause__, ImportError)
+    assert "non_existent_module" in str(exc_info.value.__cause__)
