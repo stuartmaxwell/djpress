@@ -1,11 +1,14 @@
-"""Management command to export DJ Press content to Hugo format."""
+"""Management command to export DJ Press content to Markdown flat files."""
 
+import shutil
+import tempfile
 from pathlib import Path
 from typing import Any
 
+from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError, CommandParser
 
-from djpress.models import Post
+from djpress.models import Media, Post
 
 
 class Command(BaseCommand):
@@ -19,10 +22,13 @@ class Command(BaseCommand):
     def add_arguments(self, parser: CommandParser) -> None:
         """Add command arguments."""
         parser.add_argument(
+            "-o",
+            "--output",
             "--output-dir",
+            dest="output",
             type=str,
-            default="djpress_export",
-            help="Directory to export DJ Press content (default: djpress_export)",
+            default=None,
+            help="Destination path for the export (ZIP file by default, or directory if --no-zip is set)",
         )
         parser.add_argument(
             "--posts-only",
@@ -35,15 +41,95 @@ class Command(BaseCommand):
             default=False,
             help="Export only published content (default: False)",
         )
+        parser.add_argument(
+            "--no-media",
+            action="store_true",
+            default=False,
+            help="Do not include uploaded media files in the export",
+        )
+        parser.add_argument(
+            "--no-zip",
+            action="store_true",
+            default=False,
+            help="Export as a directory instead of a ZIP archive",
+        )
 
     def handle(self, **options: Any) -> None:  # noqa: ANN401
         """Handle the export command."""
-        output_dir = Path(options["output_dir"])
-        posts_only = options["posts_only"]
-        published_only = options["published_only"]
+        output_opt = options.get("output")
+        posts_only = options.get("posts_only", False)
+        published_only = options.get("published_only", False)
+        no_media = options.get("no_media", False)
+        no_zip = options.get("no_zip", False)
 
+        include_media = not no_media
+        is_zip = not no_zip
+
+        if is_zip:
+            # Determine ZIP path
+            if output_opt:
+                zip_path = Path(output_opt)
+                if zip_path.suffix != ".zip":
+                    zip_path = zip_path.with_suffix(".zip")
+            else:
+                zip_path = Path("djpress_export.zip")
+
+            # Ensure parent directory of ZIP file exists
+            try:
+                zip_path.parent.mkdir(parents=True, exist_ok=True)
+            except OSError as e:
+                msg = f"Failed to create output directory: {e}"
+                raise CommandError(msg) from e
+
+            with tempfile.TemporaryDirectory() as temp_dir:
+                temp_path = Path(temp_dir)
+                posts_exported, pages_exported, media_exported = self._run_export(
+                    temp_path,
+                    posts_only=posts_only,
+                    published_only=published_only,
+                    include_media=include_media,
+                )
+
+                # Package the temp_dir into a zip archive
+                zip_base = zip_path.with_suffix("")
+                try:
+                    shutil.make_archive(str(zip_base), "zip", root_dir=temp_path)
+                except OSError as e:
+                    msg = f"Failed to create ZIP archive: {e}"
+                    raise CommandError(msg) from e
+
+            # Output ZIP summary
+            summary = f"Export completed!\nPosts exported: {posts_exported}\nPages exported: {pages_exported}\n"
+            if include_media:
+                summary += f"Media items exported: {media_exported}\n"
+            summary += f"Output ZIP archive: {zip_path.absolute()}"
+            self.stdout.write(self.style.SUCCESS(summary))
+        else:
+            output_dir = Path(output_opt) if output_opt else Path("djpress_export")
+            posts_exported, pages_exported, media_exported = self._run_export(
+                output_dir,
+                posts_only=posts_only,
+                published_only=published_only,
+                include_media=include_media,
+            )
+            # Output directory summary
+            summary = f"Export completed!\nPosts exported: {posts_exported}\nPages exported: {pages_exported}\n"
+            if include_media:
+                summary += f"Media items exported: {media_exported}\n"
+            summary += f"Output directory: {output_dir.absolute()}"
+            self.stdout.write(self.style.SUCCESS(summary))
+
+    def _run_export(
+        self,
+        target_dir: Path,
+        *,
+        posts_only: bool,
+        published_only: bool,
+        include_media: bool,
+    ) -> tuple[int, int, int]:
+        """Run the actual export process to target_dir."""
         # Create output directory structure
-        self._create_directory_structure(output_dir)
+        self._create_directory_structure(target_dir, include_media=include_media)
 
         # Get posts and pages to export
         if published_only:
@@ -53,34 +139,41 @@ class Command(BaseCommand):
         else:
             queryset = Post.admin_objects.all()
 
-        # Export content
         posts_exported = 0
         pages_exported = 0
+        media_exported = 0
 
+        # Export posts & pages
         for item in queryset.prefetch_related("categories", "tags", "author"):
             if item.post_type == "page":
-                self._export_page(item, output_dir)
+                self._export_page(item, target_dir)
                 pages_exported += 1
             else:
-                self._export_post(item, output_dir)
+                self._export_post(item, target_dir)
                 posts_exported += 1
 
-        # Output summary
-        self.stdout.write(
-            self.style.SUCCESS(
-                f"Export completed!\n"
-                f"Posts exported: {posts_exported}\n"
-                f"Pages exported: {pages_exported}\n"
-                f"Output directory: {output_dir.absolute()}",
-            ),
-        )
+        # Export media items if requested
+        if include_media:
+            for media in Media.objects.all():
+                if self._export_media(media, target_dir):
+                    media_exported += 1
 
-    def _create_directory_structure(self, output_dir: Path) -> None:
+        return posts_exported, pages_exported, media_exported
+
+    def _create_directory_structure(self, output_dir: Path, *, include_media: bool = False) -> None:
         """Create the Hugo directory structure."""
         try:
             # Create main directories
             (output_dir / "content" / "posts").mkdir(parents=True, exist_ok=True)
             (output_dir / "content" / "pages").mkdir(parents=True, exist_ok=True)
+
+            if include_media:
+                media_url = getattr(settings, "MEDIA_URL", "/media/")
+                media_dir_name = media_url.strip("/")
+                if media_dir_name:
+                    (output_dir / "static" / media_dir_name).mkdir(parents=True, exist_ok=True)
+                else:
+                    (output_dir / "static").mkdir(parents=True, exist_ok=True)
 
             self.stdout.write(f"Created output directory: {output_dir.absolute()}")
         except OSError as e:
@@ -181,3 +274,33 @@ class Command(BaseCommand):
             self.stdout.write(f"Exported: {filepath}")
         except OSError as e:
             self.stderr.write(f"Failed to write {filepath}: {e}")
+
+    def _export_media(self, media: Media, output_dir: Path) -> bool:
+        """Export a single media file to the static directory."""
+        if not media.file or not media.file.name:
+            self.stderr.write(f"Skipping media '{media.title}': No file associated.")
+            return False
+
+        media_url = getattr(settings, "MEDIA_URL", "/media/")
+        media_dir_name = media_url.strip("/")
+
+        # Construct target filepath: output_dir / "static" / media_dir_name / media.file.name
+        # Note: if media_dir_name is empty, we just export to output_dir / "static" / media.file.name
+        if media_dir_name:
+            filepath = output_dir / "static" / media_dir_name / media.file.name
+        else:
+            filepath = output_dir / "static" / media.file.name
+
+        try:
+            # Create parent directories
+            filepath.parent.mkdir(parents=True, exist_ok=True)
+
+            with media.file.open("rb") as src, filepath.open("wb") as dest:
+                for chunk in src.chunks():
+                    dest.write(chunk)
+        except OSError as e:
+            self.stderr.write(f"Failed to write media file {filepath}: {e}")
+            return False
+        else:
+            self.stdout.write(f"Exported media: {filepath}")
+            return True
