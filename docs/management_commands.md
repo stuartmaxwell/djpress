@@ -42,7 +42,7 @@ python manage.py shell
 
 ## djpress_export
 
-The `djpress_export` command exports your DJ Press blog content to Markdown files in a format compatible with static site generators.
+The `djpress_export` command exports your DJ Press blog content and media files to Markdown and static asset files. By default, it packages the output into a single ZIP archive to make backups and migrations easy.
 
 ### Usage
 
@@ -52,39 +52,47 @@ python manage.py djpress_export [options]
 
 ### Options
 
-- `--output-dir DIRECTORY`: Directory to export content to (default: `djpress_export`)
-- `--posts-only`: Export only posts, not pages
-- `--published-only`: Export only published content (excludes drafts and future posts)
+- `-o OUTPUT`, `--output OUTPUT`, `--output-dir OUTPUT`: Destination path for the export. Defaults to `djpress_export.zip` (or `djpress_export` directory if `--no-zip` is specified). Auto-appends `.zip` suffix for ZIP exports if missing.
+- `--posts-only`: Export only posts, not pages.
+- `--published-only`: Export only published content (excludes drafts and future posts).
+- `--no-media`: Do not include uploaded media files in the export (included by default).
+- `--no-zip`: Export directly to a flat directory structure instead of packaging into a ZIP archive.
 
 ### Examples
 
-Export all content (posts and pages, including drafts):
+Export all content (including drafts and media library) to a ZIP archive:
 
 ```bash
 python manage.py djpress_export
 ```
 
-Export only published content to a custom directory:
+Export only published content as a flat directory:
 
 ```bash
-python manage.py djpress_export --output-dir my_blog_export --published-only
+python manage.py djpress_export --no-zip --published-only
 ```
 
-Export only posts (no pages):
+Export to a custom ZIP path (auto-appends `.zip` if omitted):
 
 ```bash
-python manage.py djpress_export --posts-only
+python manage.py djpress_export -o my_backup
 ```
 
-Export only published posts to a specific directory:
+Export directly to a custom directory without ZIP packaging:
 
 ```bash
-python manage.py djpress_export --output-dir blog_backup --posts-only --published-only
+python manage.py djpress_export --no-zip -o my_blog_folder
+```
+
+Export posts only, excluding media:
+
+```bash
+python manage.py djpress_export --posts-only --no-media
 ```
 
 ### Output Structure
 
-The command creates the following directory structure:
+By default, the command creates a ZIP file containing the directory structure. When exported as a directory (using `--no-zip`), the layout matches Hugo's content and static assets organization:
 
 ```text
 output_directory/
@@ -96,6 +104,13 @@ output_directory/
 │       ├── about.md
 │       └── contact/
 │           └── _index.md
+└── static/
+    └── media/
+        └── djpress/
+            └── 2026/
+                └── 06/
+                    └── 16/
+                        └── mg4-urban-black.png
 ```
 
 ### File Naming
@@ -179,7 +194,7 @@ Learn more about our company and mission.
 Use this command when migrating from DJ Press to a static site generator:
 
 ```bash
-python manage.py djpress_export --output-dir my_blog_export --published-only
+python manage.py djpress_export -o my_blog_export --published-only --no-zip
 ```
 
 #### Content Backup
@@ -187,7 +202,7 @@ python manage.py djpress_export --output-dir my_blog_export --published-only
 Create a backup of all your content in a portable format:
 
 ```bash
-python manage.py djpress_export --output-dir backup_$(date +%Y%m%d)
+python manage.py djpress_export -o backup_$(date +%Y%m%d)
 ```
 
 #### Draft Review
@@ -195,7 +210,7 @@ python manage.py djpress_export --output-dir backup_$(date +%Y%m%d)
 Export all content including drafts for review:
 
 ```bash
-python manage.py djpress_export --output-dir review_content
+python manage.py djpress_export -o review_content --no-zip
 ```
 
 ### Static Site Generator Compatibility

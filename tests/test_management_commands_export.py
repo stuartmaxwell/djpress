@@ -11,7 +11,7 @@ from django.test import override_settings
 from django.utils import timezone
 
 from djpress.management.commands.djpress_export import Command
-from djpress.models import Category, Post, Tag
+from djpress.models import Category, Media, Post, Tag
 
 
 @pytest.fixture
@@ -118,18 +118,22 @@ class TestExportToHugoCommand:
         command.add_arguments(parser)
 
         # Verify parser.add_argument was called with correct parameters
-        assert parser.add_argument.call_count == 3
+        assert parser.add_argument.call_count == 5
 
         # Check the arguments were added
         calls = parser.add_argument.call_args_list
+        assert any("--output" in str(call) for call in calls)
         assert any("--output-dir" in str(call) for call in calls)
+        assert any("-o" in str(call) for call in calls)
         assert any("--posts-only" in str(call) for call in calls)
         assert any("--published-only" in str(call) for call in calls)
+        assert any("--no-media" in str(call) for call in calls)
+        assert any("--no-zip" in str(call) for call in calls)
 
     def test_basic_export_published_only(self, test_post1, test_page, draft_post):
         """Test basic export with published content only."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            call_command("djpress_export", output_dir=temp_dir, published_only=True)
+            call_command("djpress_export", output=temp_dir, published_only=True, no_zip=True)
 
             # Check directory structure
             content_dir = Path(temp_dir) / "content"
@@ -155,7 +159,7 @@ class TestExportToHugoCommand:
     def test_export_posts_only(self, test_post1, test_page):
         """Test export with posts-only option."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            call_command("djpress_export", output_dir=temp_dir, posts_only=True)
+            call_command("djpress_export", output=temp_dir, posts_only=True, no_zip=True)
 
             posts_dir = Path(temp_dir) / "content" / "posts"
             pages_dir = Path(temp_dir) / "content" / "pages"
@@ -170,7 +174,7 @@ class TestExportToHugoCommand:
     def test_export_all_content_including_drafts(self, test_post1, draft_post, test_page, test_page1):
         """Test export including draft content."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            call_command("djpress_export", output_dir=temp_dir, published_only=False)
+            call_command("djpress_export", output=temp_dir, published_only=False, no_zip=True)
 
             posts_dir = Path(temp_dir) / "content" / "posts"
             post_files = list(posts_dir.glob("*.md"))
@@ -368,7 +372,7 @@ class TestExportToHugoCommand:
         """Test export with custom output directory."""
         with tempfile.TemporaryDirectory() as base_temp_dir:
             custom_dir = Path(base_temp_dir) / "my_blog_export"
-            call_command("djpress_export", output_dir=str(custom_dir))
+            call_command("djpress_export", output=str(custom_dir), no_zip=True)
 
             assert custom_dir.exists()
             assert (custom_dir / "content" / "posts").exists()
@@ -378,7 +382,7 @@ class TestExportToHugoCommand:
         with tempfile.TemporaryDirectory() as temp_dir:
             # Capture command output
             with patch("sys.stdout") as mock_stdout:
-                call_command("djpress_export", output_dir=temp_dir, verbosity=1)
+                call_command("djpress_export", output=temp_dir, verbosity=1, no_zip=True)
 
                 # Get the output
                 output_calls = [call.args[0] for call in mock_stdout.write.call_args_list]
@@ -414,9 +418,10 @@ class TestExportToHugoCommand:
             # Mock stdout to verify output
             with patch.object(command, "stdout") as mock_stdout:
                 command.handle(
-                    output_dir=temp_dir,
+                    output=temp_dir,
                     posts_only=False,
                     published_only=True,
+                    no_zip=True,
                 )
 
                 # Verify directory creation message
@@ -460,7 +465,7 @@ class TestExportToHugoCommand:
     def test_export_posts_only_including_drafts(self, test_post1, draft_post, test_page):
         """Test export with posts-only option including drafts."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            call_command("djpress_export", output_dir=temp_dir, posts_only=True, published_only=False)
+            call_command("djpress_export", output=temp_dir, posts_only=True, published_only=False, no_zip=True)
 
             posts_dir = Path(temp_dir) / "content" / "posts"
             pages_dir = Path(temp_dir) / "content" / "pages"
@@ -471,3 +476,208 @@ class TestExportToHugoCommand:
 
             assert len(post_files) == 2  # published + draft posts
             assert len(page_files) == 0  # no pages
+
+    def test_export_include_media_default(self, test_post1, test_page, test_media_file_1):
+        """Test export including media items by default."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            call_command("djpress_export", output=temp_dir, no_zip=True)
+
+            # Check directory structure
+            media_dir = Path(temp_dir) / "static" / "media"
+            assert media_dir.exists()
+
+            # Verify exported media file
+            expected_file = media_dir / test_media_file_1.file.name
+            assert expected_file.exists()
+            assert expected_file.read_bytes() == b"Test file content"
+
+    def test_export_no_media(self, test_post1, test_page, test_media_file_1):
+        """Test export with --no-media option skips media items."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            call_command("djpress_export", output=temp_dir, no_zip=True, no_media=True)
+
+            # Check directory structure
+            media_dir = Path(temp_dir) / "static" / "media"
+            assert not media_dir.exists()
+
+    def test_export_zip(self, test_post1, test_page):
+        """Test exporting to a ZIP archive."""
+        import zipfile
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            zip_file_path = Path(temp_dir) / "my_export.zip"
+            call_command("djpress_export", output=str(zip_file_path))
+
+            assert zip_file_path.exists()
+            assert zipfile.is_zipfile(zip_file_path)
+
+            with zipfile.ZipFile(zip_file_path, "r") as zf:
+                namelist = zf.namelist()
+                # Check for standard content files
+                assert any(name.startswith("content/posts/") and name.endswith(".md") for name in namelist)
+                assert any(name.startswith("content/pages/") and name.endswith(".md") for name in namelist)
+
+    def test_export_zip_auto_suffix(self, test_post1):
+        """Test that output auto-suffixes with .zip if omitted for ZIP exports."""
+        import zipfile
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            zip_file_path = Path(temp_dir) / "my_backup"
+            call_command("djpress_export", output=str(zip_file_path))
+
+            expected_zip_path = Path(temp_dir) / "my_backup.zip"
+            assert expected_zip_path.exists()
+            assert zipfile.is_zipfile(expected_zip_path)
+
+    def test_export_zip_and_media(self, test_post1, test_page, test_media_file_1):
+        """Test exporting to a ZIP archive including media items."""
+        import zipfile
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            zip_file_path = Path(temp_dir) / "my_export.zip"
+            call_command("djpress_export", output=str(zip_file_path))
+
+            assert zip_file_path.exists()
+            assert zipfile.is_zipfile(zip_file_path)
+
+            with zipfile.ZipFile(zip_file_path, "r") as zf:
+                namelist = zf.namelist()
+                # Check for content and media files
+                assert any(name.startswith("content/posts/") and name.endswith(".md") for name in namelist)
+                assert any(name.startswith("static/media/") and name.endswith("test_file.txt") for name in namelist)
+
+    def test_export_zip_default_filename(self, test_post1):
+        """Test exporting to a ZIP archive without specifying output uses default filename."""
+        import zipfile
+
+        zip_file_path = Path("djpress_export.zip")
+        if zip_file_path.exists():
+            zip_file_path.unlink()
+        try:
+            call_command("djpress_export")
+            assert zip_file_path.exists()
+            assert zipfile.is_zipfile(zip_file_path)
+        finally:
+            if zip_file_path.exists():
+                zip_file_path.unlink()
+
+    def test_export_no_zip_default_dir(self, test_post1):
+        """Test exporting as directory without specifying output uses default directory."""
+        import shutil
+
+        output_dir = Path("djpress_export")
+        if output_dir.exists():
+            shutil.rmtree(output_dir)
+        try:
+            call_command("djpress_export", no_zip=True)
+            assert output_dir.exists()
+            assert (output_dir / "content" / "posts").exists()
+        finally:
+            if output_dir.exists():
+                shutil.rmtree(output_dir)
+
+    @patch("djpress.management.commands.djpress_export.Path.mkdir")
+    def test_export_zip_directory_creation_error(self, mock_mkdir):
+        """Test directory creation error handling during ZIP export."""
+        mock_mkdir.side_effect = OSError("Permission denied")
+        with pytest.raises(CommandError, match="Failed to create output directory"):
+            call_command("djpress_export", output="/fake/path/export.zip")
+
+    @patch("djpress.management.commands.djpress_export.shutil.make_archive")
+    def test_export_zip_archive_creation_error(self, mock_make_archive):
+        """Test ZIP archive packaging error handling."""
+        mock_make_archive.side_effect = OSError("Permission denied")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            zip_file = Path(temp_dir) / "export.zip"
+            with pytest.raises(CommandError, match="Failed to create ZIP archive"):
+                call_command("djpress_export", output=str(zip_file))
+
+    @override_settings(MEDIA_URL="/")
+    def test_export_media_empty_media_url(self, test_post1, test_page, test_media_file_1):
+        """Test export media when MEDIA_URL is empty or root slash."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            call_command("djpress_export", output=temp_dir, no_zip=True)
+
+            media_dir = Path(temp_dir) / "static"
+            # It should be directly under static/ since MEDIA_URL is '/'
+            expected_file = media_dir / test_media_file_1.file.name
+            assert expected_file.exists()
+
+    def test_export_media_no_file(self, user):
+        """Test exporting media when Media object has no file associated."""
+        media = Media.objects.create(
+            title="Empty Media",
+            file=None,
+            media_type="other",
+            uploaded_by=user,
+        )
+        command = Command()
+        with patch.object(command, "stderr") as mock_stderr:
+            result = command._export_media(media, Path("/fake/path"))
+            assert result is False
+            mock_stderr.write.assert_called_once()
+            assert "No file associated" in mock_stderr.write.call_args[0][0]
+
+    def test_export_media_write_error(self, test_media_file_1):
+        """Test exporting media when file writing raises OSError."""
+        command = Command()
+        with (
+            patch("builtins.open", side_effect=OSError("Permission denied")),
+            patch.object(command, "stderr") as mock_stderr,
+        ):
+            result = command._export_media(test_media_file_1, Path("/fake/path"))
+            assert result is False
+            mock_stderr.write.assert_called_once()
+            assert "Failed to write media file" in mock_stderr.write.call_args[0][0]
+
+    def test_export_zip_no_media(self, test_post1, test_page, test_media_file_1):
+        """Test exporting to a ZIP archive with no media."""
+        import zipfile
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            zip_file_path = Path(temp_dir) / "my_export.zip"
+            call_command("djpress_export", output=str(zip_file_path), no_media=True)
+
+            assert zip_file_path.exists()
+            assert zipfile.is_zipfile(zip_file_path)
+
+            with zipfile.ZipFile(zip_file_path, "r") as zf:
+                namelist = zf.namelist()
+                assert any(name.startswith("content/posts/") and name.endswith(".md") for name in namelist)
+                assert not any(name.startswith("static/media/") for name in namelist)
+
+    def test_export_media_loop_skips_failed_items(self, user):
+        """Test that the main export loop continues and skips media items that fail to export."""
+        import os
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        # Create one valid media item and one invalid media item
+        valid_file = SimpleUploadedFile(
+            name="valid.txt",
+            content=b"valid",
+            content_type="text/plain",
+        )
+        media_valid = Media.objects.create(
+            title="Valid Media",
+            file=valid_file,
+            media_type="document",
+            uploaded_by=user,
+        )
+        media_invalid = Media.objects.create(
+            title="Invalid Media",
+            file=None,
+            media_type="other",
+            uploaded_by=user,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            call_command("djpress_export", output=temp_dir, no_zip=True)
+
+            # Valid one should exist, invalid one should not cause crash
+            assert (Path(temp_dir) / "static" / "media" / media_valid.file.name).exists()
+
+        # Clean up files
+        if media_valid.file and os.path.isfile(media_valid.file.path):
+            os.unlink(media_valid.file.path)
+        media_valid.delete()
+        media_invalid.delete()
