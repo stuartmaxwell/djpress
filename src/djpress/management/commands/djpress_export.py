@@ -1,5 +1,6 @@
 """Management command to export DJ Press content to Markdown flat files."""
 
+import json
 import shutil
 import tempfile
 from pathlib import Path
@@ -7,6 +8,7 @@ from typing import Any
 
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError, CommandParser
+from django.db.models import QuerySet
 
 from djpress.models import Media, Post
 
@@ -131,19 +133,30 @@ class Command(BaseCommand):
         # Create output directory structure
         self._create_directory_structure(target_dir, include_media=include_media)
 
-        # Get posts and pages to export
-        if published_only:
-            queryset = Post.post_objects.all() if posts_only else Post.objects.all()
-        elif posts_only:
-            queryset = Post.admin_objects.filter(post_type="post")
-        else:
-            queryset = Post.admin_objects.all()
+        # Export posts & pages
+        queryset = self._get_export_queryset(posts_only=posts_only, published_only=published_only)
+        posts_exported, pages_exported = self._export_posts_and_pages(queryset, target_dir)
 
+        # Export media items if requested
+        media_exported = 0
+        if include_media:
+            media_exported = self._export_media_library(target_dir)
+
+        return posts_exported, pages_exported, media_exported
+
+    def _get_export_queryset(self, *, posts_only: bool, published_only: bool) -> QuerySet[Post]:
+        """Get the queryset of posts and pages to export."""
+        if published_only:
+            return Post.post_objects.all() if posts_only else Post.objects.all()
+        if posts_only:
+            return Post.admin_objects.filter(post_type="post")
+        return Post.admin_objects.all()
+
+    def _export_posts_and_pages(self, queryset: QuerySet[Post], target_dir: Path) -> tuple[int, int]:
+        """Export posts and pages from the queryset to the target directory."""
         posts_exported = 0
         pages_exported = 0
-        media_exported = 0
 
-        # Export posts & pages
         for item in queryset.prefetch_related("categories", "tags", "author"):
             if item.post_type == "page":
                 self._export_page(item, target_dir)
@@ -152,13 +165,43 @@ class Command(BaseCommand):
                 self._export_post(item, target_dir)
                 posts_exported += 1
 
-        # Export media items if requested
-        if include_media:
-            for media in Media.objects.all():
-                if self._export_media(media, target_dir):
-                    media_exported += 1
+        return posts_exported, pages_exported
 
-        return posts_exported, pages_exported, media_exported
+    def _export_media_library(self, target_dir: Path) -> int:
+        """Export media library files and metadata JSON to the target directory."""
+        media_exported = 0
+        metadata = {}
+
+        for media in Media.objects.select_related("uploaded_by").all():
+            if self._export_media(media, target_dir):
+                media_exported += 1
+                metadata[media.file.name] = {
+                    "title": media.title,
+                    "alt_text": media.alt_text,
+                    "description": media.description,
+                    "media_type": media.media_type,
+                    "uploaded_by": media.uploaded_by.username if media.uploaded_by else None,
+                    "uploaded_at": media.uploaded_at.isoformat() if media.uploaded_at else None,
+                    "updated_at": media.updated_at.isoformat() if media.updated_at else None,
+                }
+
+        if metadata:
+            media_url = getattr(settings, "MEDIA_URL", "/media/")
+            media_dir_name = media_url.strip("/")
+            if media_dir_name:
+                metadata_filepath = target_dir / "static" / media_dir_name / "metadata.json"
+            else:
+                metadata_filepath = target_dir / "static" / "metadata.json"
+
+            try:
+                metadata_filepath.parent.mkdir(parents=True, exist_ok=True)
+                with metadata_filepath.open("w", encoding="utf-8") as f:
+                    json.dump(metadata, f, indent=2)
+                self.stdout.write(f"Exported media metadata: {metadata_filepath}")
+            except OSError as e:
+                self.stderr.write(f"Failed to write media metadata {metadata_filepath}: {e}")
+
+        return media_exported
 
     def _create_directory_structure(self, output_dir: Path, *, include_media: bool = False) -> None:
         """Create the Hugo directory structure."""

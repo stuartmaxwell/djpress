@@ -681,3 +681,98 @@ class TestExportToHugoCommand:
             os.unlink(media_valid.file.path)
         media_valid.delete()
         media_invalid.delete()
+
+    def test_export_media_metadata_success(self, test_media_file_1, user):
+        """Test that media metadata is successfully exported to metadata.json."""
+        import json
+
+        # Let's ensure the media has all fields populated
+        test_media_file_1.title = "Test Image Title"
+        test_media_file_1.alt_text = "Alt text description"
+        test_media_file_1.description = "Longer description details"
+        test_media_file_1.media_type = "image"
+        test_media_file_1.uploaded_by = user
+        test_media_file_1.save()
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            call_command("djpress_export", output=temp_dir, no_zip=True)
+
+            metadata_file = Path(temp_dir) / "static" / "media" / "metadata.json"
+            assert metadata_file.exists()
+
+            with metadata_file.open("r", encoding="utf-8") as f:
+                metadata = json.load(f)
+
+            file_key = test_media_file_1.file.name
+            assert file_key in metadata
+
+            item = metadata[file_key]
+            assert item["title"] == "Test Image Title"
+            assert item["alt_text"] == "Alt text description"
+            assert item["description"] == "Longer description details"
+            assert item["media_type"] == "image"
+            assert item["uploaded_by"] == user.username
+            assert "uploaded_at" in item
+            assert "updated_at" in item
+
+    def test_export_media_metadata_no_uploaded_by(self, test_media_file_1):
+        """Test that media metadata handles null uploaded_by correctly."""
+        import json
+
+        test_media_file_1.uploaded_by = None
+        test_media_file_1.save()
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            call_command("djpress_export", output=temp_dir, no_zip=True)
+
+            metadata_file = Path(temp_dir) / "static" / "media" / "metadata.json"
+            assert metadata_file.exists()
+
+            with metadata_file.open("r", encoding="utf-8") as f:
+                metadata = json.load(f)
+
+            file_key = test_media_file_1.file.name
+            assert file_key in metadata
+            assert metadata[file_key]["uploaded_by"] is None
+
+    def test_export_media_metadata_write_error(self, test_media_file_1):
+        """Test error handling when writing metadata.json raises OSError."""
+        from pathlib import Path
+
+        original_open = Path.open
+
+        def mocked_open(self_path, *args, **kwargs):
+            if "metadata.json" in str(self_path):
+                raise OSError("Disk full")
+            return original_open(self_path, *args, **kwargs)
+
+        command = Command()
+        with (
+            patch("pathlib.Path.open", new=mocked_open),
+            patch.object(command, "stderr") as mock_stderr,
+        ):
+            with tempfile.TemporaryDirectory() as temp_dir:
+                posts, pages, media = command._run_export(
+                    Path(temp_dir),
+                    posts_only=False,
+                    published_only=False,
+                    include_media=True,
+                )
+                assert media > 0
+                mock_stderr.write.assert_called_once()
+                assert "Failed to write media metadata" in mock_stderr.write.call_args[0][0]
+
+    def test_export_zip_includes_metadata(self, test_post1, test_page, test_media_file_1):
+        """Test that ZIP archive contains metadata.json when media is exported."""
+        import zipfile
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            zip_file_path = Path(temp_dir) / "my_export.zip"
+            call_command("djpress_export", output=str(zip_file_path))
+
+            assert zip_file_path.exists()
+            assert zipfile.is_zipfile(zip_file_path)
+
+            with zipfile.ZipFile(zip_file_path, "r") as zf:
+                namelist = zf.namelist()
+                assert "static/media/metadata.json" in namelist
