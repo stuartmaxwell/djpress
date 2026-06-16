@@ -106,12 +106,33 @@ output_directory/
 │           └── _index.md
 └── static/
     └── media/
+        ├── metadata.json
         └── djpress/
             └── 2026/
                 └── 06/
                     └── 16/
                         └── mg4-urban-black.png
 ```
+
+#### Media Metadata (`metadata.json`)
+
+When media items are exported, a `metadata.json` file is created in the media directory (e.g. `static/media/metadata.json`). This file maps the relative media file path to its database metadata:
+
+```json
+{
+  "djpress/2026/06/16/mg4-urban-black.png": {
+    "title": "MG4 Urban",
+    "alt_text": "The new MG4 Urban EV",
+    "description": "A sleek black MG4 Urban EV parked outside.",
+    "media_type": "image",
+    "uploaded_by": "stuart",
+    "uploaded_at": "2026-06-16T15:25:47+12:00",
+    "updated_at": "2026-06-16T15:25:47+12:00"
+  }
+}
+```
+
+This ensures that media attributes like accessibility alt text, descriptions, and titles are preserved and can be parsed for re-importing or consumed by static site templates.
 
 ### File Naming
 
