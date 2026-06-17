@@ -711,6 +711,7 @@ class TestExportToHugoCommand:
             assert item["description"] == "Longer description details"
             assert item["media_type"] == "image"
             assert item["uploaded_by"] == user.username
+            assert item["url"] == test_media_file_1.file.url
             assert "uploaded_at" in item
             assert "updated_at" in item
 

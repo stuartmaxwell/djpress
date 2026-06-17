@@ -182,6 +182,7 @@ class Command(BaseCommand):
                     "uploaded_by": media.uploaded_by.username if media.uploaded_by else None,
                     "uploaded_at": media.uploaded_at.isoformat() if media.uploaded_at else None,
                     "updated_at": media.updated_at.isoformat() if media.updated_at else None,
+                    "url": media.file.url,
                 }
 
         if metadata:
