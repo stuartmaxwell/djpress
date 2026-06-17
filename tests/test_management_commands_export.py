@@ -460,11 +460,11 @@ class TestExportToHugoCommand:
 
         assert len(frontmatter["categories"]) == 2
         assert len(frontmatter["tags"]) == 3
-        assert "Category 1" in frontmatter["categories"]
-        assert "Category 2" in frontmatter["categories"]
-        assert "Tag 1" in frontmatter["tags"]
-        assert "Tag 2" in frontmatter["tags"]
-        assert "Tag 3" in frontmatter["tags"]
+        assert "cat1" in frontmatter["categories"]
+        assert "cat2" in frontmatter["categories"]
+        assert "tag1" in frontmatter["tags"]
+        assert "tag2" in frontmatter["tags"]
+        assert "tag3" in frontmatter["tags"]
 
     def test_export_posts_only_including_drafts(self, test_post1, draft_post, test_page):
         """Test export with posts-only option including drafts."""
