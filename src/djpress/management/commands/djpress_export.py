@@ -6,7 +6,6 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError, CommandParser
 from django.db.models import QuerySet
 
@@ -186,12 +185,7 @@ class Command(BaseCommand):
                 }
 
         if metadata:
-            media_url = getattr(settings, "MEDIA_URL", "/media/")
-            media_dir_name = media_url.strip("/")
-            if media_dir_name:
-                metadata_filepath = target_dir / "static" / media_dir_name / "metadata.json"
-            else:
-                metadata_filepath = target_dir / "static" / "metadata.json"
+            metadata_filepath = target_dir / "static" / "metadata.json"
 
             try:
                 metadata_filepath.parent.mkdir(parents=True, exist_ok=True)
@@ -211,12 +205,7 @@ class Command(BaseCommand):
             (output_dir / "content" / "pages").mkdir(parents=True, exist_ok=True)
 
             if include_media:
-                media_url = getattr(settings, "MEDIA_URL", "/media/")
-                media_dir_name = media_url.strip("/")
-                if media_dir_name:
-                    (output_dir / "static" / media_dir_name).mkdir(parents=True, exist_ok=True)
-                else:
-                    (output_dir / "static").mkdir(parents=True, exist_ok=True)
+                (output_dir / "static").mkdir(parents=True, exist_ok=True)
 
             self.stdout.write(f"Created output directory: {output_dir.absolute()}")
         except OSError as e:
@@ -324,15 +313,7 @@ class Command(BaseCommand):
             self.stderr.write(f"Skipping media '{media.title}': No file associated.")
             return False
 
-        media_url = getattr(settings, "MEDIA_URL", "/media/")
-        media_dir_name = media_url.strip("/")
-
-        # Construct target filepath: output_dir / "static" / media_dir_name / media.file.name
-        # Note: if media_dir_name is empty, we just export to output_dir / "static" / media.file.name
-        if media_dir_name:
-            filepath = output_dir / "static" / media_dir_name / media.file.name
-        else:
-            filepath = output_dir / "static" / media.file.name
+        filepath = output_dir / "static" / media.file.name
 
         try:
             # Create parent directories

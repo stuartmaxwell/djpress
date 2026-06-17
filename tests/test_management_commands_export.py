@@ -1,10 +1,14 @@
 """Tests for management commands."""
 
+import os
+import pytest
 import tempfile
+import zipfile
+
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-import pytest
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import override_settings
@@ -483,7 +487,7 @@ class TestExportToHugoCommand:
             call_command("djpress_export", output=temp_dir, no_zip=True)
 
             # Check directory structure
-            media_dir = Path(temp_dir) / "static" / "media"
+            media_dir = Path(temp_dir) / "static"
             assert media_dir.exists()
 
             # Verify exported media file
@@ -544,7 +548,7 @@ class TestExportToHugoCommand:
                 namelist = zf.namelist()
                 # Check for content and media files
                 assert any(name.startswith("content/posts/") and name.endswith(".md") for name in namelist)
-                assert any(name.startswith("static/media/") and name.endswith("test_file.txt") for name in namelist)
+                assert any(name.startswith("static/") and name.endswith("test_file.txt") for name in namelist)
 
     def test_export_zip_default_filename(self, test_post1):
         """Test exporting to a ZIP archive without specifying output uses default filename."""
@@ -632,8 +636,6 @@ class TestExportToHugoCommand:
 
     def test_export_zip_no_media(self, test_post1, test_page, test_media_file_1):
         """Test exporting to a ZIP archive with no media."""
-        import zipfile
-
         with tempfile.TemporaryDirectory() as temp_dir:
             zip_file_path = Path(temp_dir) / "my_export.zip"
             call_command("djpress_export", output=str(zip_file_path), no_media=True)
@@ -648,9 +650,6 @@ class TestExportToHugoCommand:
 
     def test_export_media_loop_skips_failed_items(self, user):
         """Test that the main export loop continues and skips media items that fail to export."""
-        import os
-        from django.core.files.uploadedfile import SimpleUploadedFile
-
         # Create one valid media item and one invalid media item
         valid_file = SimpleUploadedFile(
             name="valid.txt",
@@ -674,7 +673,7 @@ class TestExportToHugoCommand:
             call_command("djpress_export", output=temp_dir, no_zip=True)
 
             # Valid one should exist, invalid one should not cause crash
-            assert (Path(temp_dir) / "static" / "media" / media_valid.file.name).exists()
+            assert (Path(temp_dir) / "static" / media_valid.file.name).exists()
 
         # Clean up files
         if media_valid.file and os.path.isfile(media_valid.file.path):
@@ -697,7 +696,7 @@ class TestExportToHugoCommand:
         with tempfile.TemporaryDirectory() as temp_dir:
             call_command("djpress_export", output=temp_dir, no_zip=True)
 
-            metadata_file = Path(temp_dir) / "static" / "media" / "metadata.json"
+            metadata_file = Path(temp_dir) / "static" / "metadata.json"
             assert metadata_file.exists()
 
             with metadata_file.open("r", encoding="utf-8") as f:
@@ -725,7 +724,7 @@ class TestExportToHugoCommand:
         with tempfile.TemporaryDirectory() as temp_dir:
             call_command("djpress_export", output=temp_dir, no_zip=True)
 
-            metadata_file = Path(temp_dir) / "static" / "media" / "metadata.json"
+            metadata_file = Path(temp_dir) / "static" / "metadata.json"
             assert metadata_file.exists()
 
             with metadata_file.open("r", encoding="utf-8") as f:
@@ -775,4 +774,4 @@ class TestExportToHugoCommand:
 
             with zipfile.ZipFile(zip_file_path, "r") as zf:
                 namelist = zf.namelist()
-                assert "static/media/metadata.json" in namelist
+                assert "static/metadata.json" in namelist
