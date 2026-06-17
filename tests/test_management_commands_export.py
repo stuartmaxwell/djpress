@@ -195,12 +195,12 @@ class TestExportToHugoCommand:
         command = Command()
         frontmatter = command._generate_frontmatter(post_with_categories_and_tags)
 
-        expected_keys = {"title", "date", "lastmod", "draft", "slug", "author", "categories", "tags"}
+        expected_keys = {"title", "date", "lastmod", "status", "slug", "author", "categories", "tags"}
         assert set(frontmatter.keys()) == expected_keys
 
         assert frontmatter["title"] == post_with_categories_and_tags.title
         assert frontmatter["slug"] == post_with_categories_and_tags.slug
-        assert frontmatter["draft"] is False
+        assert frontmatter["status"] == post_with_categories_and_tags.status
         assert frontmatter["author"] == "Test User"
         assert len(frontmatter["categories"]) == 1
         assert len(frontmatter["tags"]) == 2
@@ -222,7 +222,7 @@ class TestExportToHugoCommand:
         command = Command()
         frontmatter = command._generate_frontmatter(draft_post)
 
-        assert frontmatter["draft"] is True
+        assert frontmatter["status"] == "draft"
 
     def test_frontmatter_generation_no_categories_tags(self, user):
         """Test frontmatter generation when post has no categories or tags."""

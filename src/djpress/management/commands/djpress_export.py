@@ -251,7 +251,7 @@ class Command(BaseCommand):
             - "title": content.post_title
             - "date": content.published_at.isoformat()
             - "lastmod": content.updated_at.isoformat()
-            - "draft": content.is_published is False
+            - "status": content.status
             - "slug": content.slug
             - "author": content.author.get_full_name() or content.author.username
         - Post only:
@@ -266,7 +266,7 @@ class Command(BaseCommand):
             "title": content.post_title,
             "date": content.published_at.isoformat(),
             "lastmod": content.updated_at.isoformat(),
-            "draft": content.is_published is False,
+            "status": content.status,
             "slug": content.slug,
             "author": content.author.get_full_name() or content.author.username,
         }
