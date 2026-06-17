@@ -244,7 +244,24 @@ class Command(BaseCommand):
         self._write_content_file(filepath, frontmatter, page.content)
 
     def _generate_frontmatter(self, content: Post) -> dict[str, Any]:
-        """Generate Hugo frontmatter for a post or page."""
+        """Generate frontmatter for a post or page.
+
+        Frontmatter fields:
+        - Common:
+            - "title": content.post_title
+            - "date": content.published_at.isoformat()
+            - "lastmod": content.updated_at.isoformat()
+            - "draft": content.is_published is False
+            - "slug": content.slug
+            - "author": content.author.get_full_name() or content.author.username
+        - Post only:
+            - "categories": [cat.slug for cat in content.categories.all()]
+            - "tags": [tag.slug for tag in content.tags.all()]
+        - Page only:
+            - "type": "page"
+            - "weight": content.menu_order
+            - "parent": content.parent.slug
+        """
         frontmatter = {
             "title": content.post_title,
             "date": content.published_at.isoformat(),
@@ -256,11 +273,11 @@ class Command(BaseCommand):
 
         # Add categories
         if content.categories.exists():
-            frontmatter["categories"] = [cat.title for cat in content.categories.all()]
+            frontmatter["categories"] = [cat.slug for cat in content.categories.all()]
 
         # Add tags
         if content.tags.exists():
-            frontmatter["tags"] = [tag.title for tag in content.tags.all()]
+            frontmatter["tags"] = [tag.slug for tag in content.tags.all()]
 
         # Add page-specific fields
         if content.post_type == "page":
