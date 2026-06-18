@@ -319,13 +319,13 @@ class TestExportToHugoCommand:
             assert "title: Test" in frontmatter_text
             assert "draft: false" in frontmatter_text
 
-    def test_post_with_no_title_uses_content(self, post_without_title):
-        """Test that posts without titles generate titles from content."""
+    def test_post_with_no_title_has_empty_title(self, post_without_title):
+        """Test that posts without titles generate an empty title in the front matter."""
         command = Command()
         frontmatter = command._generate_frontmatter(post_without_title)
 
         # Should generate title from markdown header
-        assert frontmatter["title"] == "Post without title..."
+        assert frontmatter["title"] == ""
 
     def test_user_without_full_name(self, user):
         """Test author handling when user has no full name."""

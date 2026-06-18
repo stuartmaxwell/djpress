@@ -199,7 +199,7 @@ class Command(BaseCommand):
         return media_exported
 
     def _create_directory_structure(self, output_dir: Path, *, include_media: bool = False) -> None:
-        """Create the Hugo directory structure."""
+        """Create the export directory structure."""
         try:
             # Create main directories
             (output_dir / "content" / "posts").mkdir(parents=True, exist_ok=True)
@@ -214,7 +214,7 @@ class Command(BaseCommand):
             raise CommandError(msg) from e
 
     def _export_post(self, post: Post, output_dir: Path) -> None:
-        """Export a single post to Hugo format."""
+        """Export a single post to flat file format."""
         # Create filename based on date and slug
         date_str = post.published_at.strftime("%Y-%m-%d")
         filename = f"{date_str}-{post.slug}.md"
@@ -227,7 +227,7 @@ class Command(BaseCommand):
         self._write_content_file(filepath, frontmatter, post.content)
 
     def _export_page(self, page: Post, output_dir: Path) -> None:
-        """Export a single page to Hugo format."""
+        """Export a single page to flat file format."""
         # Create directory structure for nested pages
         if page.parent:
             # For nested pages, create parent directory structure
@@ -249,7 +249,7 @@ class Command(BaseCommand):
 
         Frontmatter fields:
         - Common:
-            - "title": content.post_title
+            - "title": content.title
             - "date": content.published_at.isoformat()
             - "lastmod": content.updated_at.isoformat()
             - "status": content.status
@@ -264,7 +264,7 @@ class Command(BaseCommand):
             - "parent": content.parent.slug
         """
         frontmatter = {
-            "title": content.post_title,
+            "title": content.title,
             "date": content.published_at.isoformat(),
             "lastmod": content.updated_at.isoformat(),
             "status": content.status,
