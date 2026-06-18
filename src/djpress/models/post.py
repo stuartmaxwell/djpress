@@ -308,7 +308,7 @@ class PostsManager(models.Manager.from_queryset(PostQuerySet)):
         - The status must be "published".
         - The date must be less than or equal to the current date/time.
         """
-        return self.get_queryset().prefetch_related("categories", "author")
+        return self.get_queryset().prefetch_related("categories", "tags", "author")
 
     def get_recent_published_posts(self) -> models.QuerySet:
         """Return recent published posts.
@@ -341,6 +341,7 @@ class PostsManager(models.Manager.from_queryset(PostQuerySet)):
                 self.model.admin_objects.filter(post_type="post", status="published")
                 .prefetch_related(
                     "categories",
+                    "tags",
                     "author",
                 )
                 .order_by("-published_at")
