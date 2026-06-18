@@ -92,26 +92,24 @@ python manage.py djpress_export --posts-only --no-media
 
 ### Output Structure
 
-By default, the command creates a ZIP file containing the directory structure. When exported as a directory (using `--no-zip`), the layout matches Hugo's content and static assets organization:
+By default, the command creates a ZIP file, and the directories match the following directory structure, making it easy to convert to other formats like Jekyll or Hugo.
 
 ```text
 output_directory/
 ├── content/
 │   ├── posts/
-│   │   ├── 2024-01-15-my-first-post.md
-│   │   └── 2024-02-20-another-post.md
+│   │   ├── 2026-06-15-hello-world.md
+│   │   └── 2026-06-20-new-cat.md
 │   └── pages/
 │       ├── about.md
-│       └── contact/
-│           └── _index.md
+│       └── contact.md
 └── static/
-    └── media/
-        ├── metadata.json
-        └── djpress/
-            └── 2026/
-                └── 06/
-                    └── 16/
-                        └── mg4-urban-black.png
+    ├── metadata.json
+    └── djpress/
+        └── 2026/
+            └── 06/
+                └── 20/
+                    └── my-beautiful-cat.jpg
 ```
 
 #### Media Metadata (`metadata.json`)
@@ -120,14 +118,15 @@ When media items are exported, a `metadata.json` file is created in the media di
 
 ```json
 {
-  "djpress/2026/06/16/mg4-urban-black.png": {
-    "title": "MG4 Urban",
-    "alt_text": "The new MG4 Urban EV",
-    "description": "A sleek black MG4 Urban EV parked outside.",
+  "djpress/2026/06/20/my-beautiful-cat.jpg": {
+    "title": "Our new cat",
+    "alt_text": "Photo of our beautiful cat.",
+    "description": "A photo of our new, beautiful cat, chasing a ball.",
     "media_type": "image",
     "uploaded_by": "stuart",
-    "uploaded_at": "2026-06-16T15:25:47+12:00",
-    "updated_at": "2026-06-16T15:25:47+12:00"
+    "uploaded_at": "2026-06-20T15:25:47+12:00",
+    "updated_at": "2026-06-20T15:25:47+12:00",
+    "url": "/media/djpress/2026/06/20/my-beautiful-cat.jpg"
   }
 }
 ```
@@ -156,8 +155,8 @@ Each exported file includes YAML frontmatter with the following fields:
 
 #### Post-Specific Fields
 
-- `categories`: Array of category names (if any)
-- `tags`: Array of tag names (if any)
+- `categories`: Array of category slugs (if any)
+- `tags`: Array of tag slugs (if any)
 
 #### Page-Specific Fields
 
@@ -167,29 +166,24 @@ Each exported file includes YAML frontmatter with the following fields:
 
 ### Example Output
 
-**Post Example** (`2024-01-15-hello-world.md`):
+**Post Example** (`2026-06-15-hello-world.md`):
 
 ```markdown
 ---
 title: Hello World
-date: 2024-01-15T10:30:00+00:00
-lastmod: 2024-01-15T10:30:00+00:00
-draft: false
+date: 2026-06-15T20T15:25:00+12:00
+lastmod: 2026-06-15T20T15:25:00+12:00
+status: published
 slug: hello-world
-author: John Doe
+author: Stuart Maxwell
 categories:
-  - Technology
-  - Django
+  - General
 tags:
   - blogging
-  - web development
+  - welcome
 ---
 
 Welcome to my new blog! This is my first post using DJ Press.
-
-## Getting Started
-
-Here's how to get started with DJ Press...
 ```
 
 **Page Example** (`about.md`):
@@ -197,15 +191,15 @@ Here's how to get started with DJ Press...
 ```markdown
 ---
 title: About Us
-date: 2024-01-10T09:00:00+00:00
-lastmod: 2024-01-10T09:00:00+00:00
-draft: false
+date: 2026-06-15T15:05:00+12:00
+lastmod: 2026-06-15T15:05:00+12:00
+status: published
 slug: about
-author: Jane Smith
+author: Stuart Maxwell
 type: page
 ---
 
-Learn more about our company and mission.
+Here are some interesting facts about me...
 ```
 
 ### Use Cases
@@ -236,24 +230,12 @@ python manage.py djpress_export -o review_content --no-zip
 
 ### Static Site Generator Compatibility
 
-The exported format is designed to work with popular static site generators:
-
-#### Hugo
-
-The default output structure matches Hugo's content organization. Files can be used directly in a Hugo site.
-
-#### Jekyll
-
-Files are compatible with Jekyll with minimal configuration changes. You may need to adjust the frontmatter format if using Jekyll-specific features.
-
-#### Other Generators
-
-Most static site generators that support Markdown with YAML frontmatter should work with the exported files.
+The exported format is designed to work with popular static site generators, including Hugo or Jekyll, although
+compatibility isn't guaranteed and content may need some tweaking.
 
 ### Notes
 
 - The command preserves your original content structure and metadata
-- Draft posts are exported with `draft: true` in the frontmatter
 - Categories and tags are preserved as arrays in the frontmatter
 - Parent/child page relationships are maintained through directory structure and frontmatter
 - All dates are exported in ISO format for maximum compatibility
