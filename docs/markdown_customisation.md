@@ -1,7 +1,7 @@
 # Customising Markdown Rendering
 
-DJ Press uses Markdown for content rendering, providing a familiar and flexible syntax for blog authors. This document
-explains how to customise the Markdown rendering in your blog.
+By default, DJ Press uses Markdown for content rendering, providing a familiar and flexible syntax for blog authors.
+This document explains how to customise the Markdown rendering in your blog.
 
 ## Basic Configuration
 
@@ -30,7 +30,7 @@ DJPRESS_SETTINGS = {
 |------------------------------|------|------------------------------------------------|------------------------------------------------|
 | `MARKDOWN_EXTENSIONS`        | list | `[]`                                           | List of Python-Markdown extensions to enable.  |
 | `MARKDOWN_EXTENSION_CONFIGS` | dict | `{}`                                           | Configuration options for markdown extensions. |
-| `MARKDOWN_RENDERER`          | str  | `"djpress.markdown_renderer.default_renderer"` | Path to markdown renderer function.            |
+| `CONTENT_RENDERER`          | str  | `"djpress.markdown_renderer.default_renderer"` | Path to markdown renderer function.            |
 
 ## Recommended Extensions
 
@@ -113,7 +113,7 @@ Then configure DJ Press to use your custom renderer in `settings.py`:
 
 ```python
 DJPRESS_SETTINGS = {
-    "MARKDOWN_RENDERER": "myapp.markdown_renderer.mistune_renderer",
+    "CONTENT_RENDERER": "myapp.markdown_renderer.mistune_renderer",
 }
 ```
 

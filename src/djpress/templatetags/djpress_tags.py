@@ -898,11 +898,11 @@ def post_content(
     if posts:
         content = format_html(
             "{}{}",
-            mark_safe(post.truncated_content_markdown),
+            mark_safe(post.truncated_rendered_content),
             helpers.post_read_more_link(post, read_more_link_class, read_more_text),
         )
     else:
-        content = format_html("{}", mark_safe(post.content_markdown))
+        content = format_html("{}", mark_safe(post.rendered_content))
 
     # If the outer tag is one of the allowed tags, then wrap the output in the outer tag.
     if outer_tag not in ["section", "div", "article", "p", "span"]:

@@ -693,7 +693,7 @@ def test_post_content_with_post(test_post1):
     """If there's a post in the context, return the post content."""
     context = Context({"post": test_post1})
 
-    expected_output = f"{test_post1.content_markdown}"
+    expected_output = f"{test_post1.rendered_content}"
 
     assert djpress_tags.post_content(context) == expected_output
 
@@ -704,12 +704,12 @@ def test_post_content_with_post_with_outer(settings, test_post1):
     context = Context({"post": test_post1})
 
     # Microformats are enabled by default
-    expected_output = f'<section class="e-content">{test_post1.content_markdown}</section>'
+    expected_output = f'<section class="e-content">{test_post1.rendered_content}</section>'
     assert djpress_tags.post_content(context, outer_tag="section") == expected_output
 
     # Disable microformats
     settings.DJPRESS_SETTINGS["MICROFORMATS_ENABLED"] = False
-    expected_output = f"<section>{test_post1.content_markdown}</section>"
+    expected_output = f"<section>{test_post1.rendered_content}</section>"
     assert djpress_tags.post_content(context, outer_tag="section") == expected_output
 
 
@@ -721,7 +721,7 @@ def test_post_content_with_posts_long_post(test_long_post1):
 
     assert test_long_post1.is_truncated is True
 
-    expected_output = f"{test_long_post1.truncated_content_markdown}{post_read_more_link(test_long_post1)}"
+    expected_output = f"{test_long_post1.truncated_rendered_content}{post_read_more_link(test_long_post1)}"
 
     assert djpress_tags.post_content(context) == expected_output
 
@@ -736,7 +736,7 @@ def test_post_content_with_posts_short_post(test_post1):
 
     assert post_read_more_link(test_post1) == ""
 
-    assert djpress_tags.post_content(context) == test_post1.truncated_content_markdown
+    assert djpress_tags.post_content(context) == test_post1.truncated_rendered_content
 
 
 @pytest.mark.django_db

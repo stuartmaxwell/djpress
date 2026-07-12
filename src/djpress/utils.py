@@ -11,15 +11,15 @@ from django.utils.module_loading import import_string
 from djpress.conf import settings as djpress_settings
 
 
-def get_markdown_renderer() -> Callable:
-    """Get the configured markdown renderer function.
+def get_content_renderer() -> Callable:
+    """Get the configured content renderer function.
 
     Returns:
-        callable: The markdown renderer function.
+        callable: The content renderer function.
     """
-    renderer_path = djpress_settings.MARKDOWN_RENDERER
+    renderer_path = djpress_settings.CONTENT_RENDERER
     if not isinstance(renderer_path, str):  # pragma: no cover
-        msg = f"Expected MARKDOWN_RENDERER to be a string, got {type(renderer_path).__name__}"
+        msg = f"Expected CONTENT_RENDERER to be a string, got {type(renderer_path).__name__}"
         raise TypeError(msg)
 
     try:

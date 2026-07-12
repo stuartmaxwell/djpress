@@ -3,7 +3,7 @@ import pytest
 
 from djpress.utils import (
     get_author_display_name,
-    get_markdown_renderer,
+    get_content_renderer,
     get_template_name,
     get_templates,
     validate_date_parts,
@@ -12,7 +12,7 @@ from django.contrib.auth.models import User
 from django.template.loader import TemplateDoesNotExist
 
 
-render_markdown = get_markdown_renderer()
+render_content = get_content_renderer()
 
 
 # create a parameterized fixture for a test user with first name, last name, and username
@@ -111,17 +111,17 @@ def test_validate_date_parts():
         validate_date_parts("2025", "1", "32")
 
 
-def test_render_markdown_does_not_exist(settings):
-    settings.DJPRESS_SETTINGS["MARKDOWN_RENDERER"] = "djpress.not_exists"
+def test_render_content_does_not_exist(settings):
+    settings.DJPRESS_SETTINGS["CONTENT_RENDERER"] = "djpress.not_exists"
     from django.core.exceptions import ImproperlyConfigured
 
     with pytest.raises(ImproperlyConfigured):
-        get_markdown_renderer()
+        get_content_renderer()
 
 
 def test_render_markdown_basic():
     markdown_text = "# Heading\n\nThis is some **bold** text. And this is *italic*.\n\nAnd a paragraph."
-    html = render_markdown(markdown_text)
+    html = render_content(markdown_text)
 
     assert "<h1>Heading</h1>" in html
     assert "<strong>bold</strong>" in html
@@ -131,28 +131,28 @@ def test_render_markdown_basic():
 
 def test_render_markdown_link():
     markdown_text = "[DJ Press](https://github.com/stuartmaxwell/djpress/)"
-    html = render_markdown(markdown_text)
+    html = render_content(markdown_text)
 
     assert '<a href="https://github.com/stuartmaxwell/djpress/">DJ Press</a>' in html
 
 
 def test_render_markdown_link_with_title():
     markdown_text = '[DJ Press](https://github.com/stuartmaxwell/djpress/ "DJ Press GitHub")'
-    html = render_markdown(markdown_text)
+    html = render_content(markdown_text)
 
     assert '<a href="https://github.com/stuartmaxwell/djpress/" title="DJ Press GitHub">DJ Press</a>' in html
 
 
 def test_render_markdown_image():
     markdown_text = "![DJ Press Logo](https://github.com/stuartmaxwell/djpress/logo.png)"
-    html = render_markdown(markdown_text)
+    html = render_content(markdown_text)
 
     assert '<img alt="DJ Press Logo" src="https://github.com/stuartmaxwell/djpress/logo.png">' in html
 
 
 def test_render_markdown_image_with_title():
     markdown_text = '![DJ Press Logo](https://github.com/stuartmaxwell/djpress/logo.png "DJ Press Logo")'
-    html = render_markdown(markdown_text)
+    html = render_content(markdown_text)
 
     assert (
         '<img alt="DJ Press Logo" src="https://github.com/stuartmaxwell/djpress/logo.png" title="DJ Press Logo">'

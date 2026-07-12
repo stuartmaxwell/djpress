@@ -2,6 +2,7 @@
 
 import datetime
 import logging
+import warnings
 from collections.abc import Iterable
 from typing import TYPE_CHECKING, TypedDict
 
@@ -21,14 +22,12 @@ from djpress.models.category import Category
 from djpress.models.tag import Tag
 from djpress.plugins import registry
 from djpress.plugins.hook_registry import POST_RENDER_CONTENT, POST_SAVE_POST, PRE_RENDER_CONTENT, SEARCH_CONTENT
-from djpress.utils import get_markdown_renderer
+from djpress.utils import get_content_renderer
 
 if TYPE_CHECKING:
     from django.contrib.auth.models import AbstractBaseUser
 
 logger = logging.getLogger(__name__)
-
-render_markdown = get_markdown_renderer()
 
 
 PUBLISHED_POSTS_CACHE_KEY = "published_posts"
@@ -852,23 +851,30 @@ class Post(models.Model):
         ).order_by("menu_order", "title")
 
     @property
-    def content_markdown(self) -> str:
-        """Return the content as HTML converted from Markdown."""
-        # Get the raw markdown content
+    def rendered_content(self) -> str:
+        """Return the rendered content."""
+        # Get the raw content
         content = self.content
 
-        # Let plugins modify the markdown before rendering
+        # Let plugins modify the content before rendering
         content = registry.run_hook(PRE_RENDER_CONTENT, content)
 
-        # Render the markdown
-        html_content = render_markdown(content)
+        # Render the content
+        render_content = get_content_renderer()
+        rendered_content = render_content(content)
 
-        # Let the plugins modify the markdown after rendering and return the results
-        return str(registry.run_hook(POST_RENDER_CONTENT, html_content) or "")
+        # Let the plugins modify the content after rendering and return the results
+        return str(registry.run_hook(POST_RENDER_CONTENT, rendered_content) or "")
 
     @property
-    def truncated_content_markdown(self) -> str:
-        """Return the truncated content as HTML converted from Markdown.
+    def content_markdown(self) -> str:
+        """Deprecated: use rendered_content instead."""
+        warnings.warn("content_markdown is deprecated; use rendered_content.", DeprecationWarning, stacklevel=2)
+        return self.rendered_content
+
+    @property
+    def truncated_rendered_content(self) -> str:
+        """Return the truncated rendered content.
 
         If the post isn't truncated, return the full content.
         """
@@ -878,10 +884,20 @@ class Post(models.Model):
             msg = "TRUNCATE_TAG must be a non-empty string."
             raise ValueError(msg)
 
+        # Get the truncated content
         post_content = str(self.content)
         read_more_index = post_content.find(truncate_tag)
         truncated_content = post_content[:read_more_index] if read_more_index != -1 else post_content
-        return render_markdown(truncated_content)
+
+        render_content = get_content_renderer()
+
+        return render_content(truncated_content)
+
+    @property
+    def truncated_content_markdown(self) -> str:
+        """Deprecated: use rendered_content instead."""
+        warnings.warn("content_markdown is deprecated; use rendered_content.", DeprecationWarning, stacklevel=2)
+        return self.truncated_rendered_content
 
     @property
     def is_truncated(self) -> bool:

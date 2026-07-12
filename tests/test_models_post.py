@@ -196,11 +196,11 @@ def test_post_markdown_rendering(user, settings):
         author=user,
     )
     expected_html = "<h1>Heading</h1>\n<p>This is a paragraph with <strong>bold</strong> and <em>italic</em> text.</p>"
-    assert post1.content_markdown == expected_html
+    assert post1.rendered_content == expected_html
 
 
 @pytest.mark.django_db
-def test_post_truncated_content_markdown(user, settings):
+def test_post_truncated_rendered_content(user, settings):
     # Confirm the truncate tag is set according to settings_testing.py
     truncate_tag = "<!--test-more-->"
     assert settings.DJPRESS_SETTINGS["TRUNCATE_TAG"] == truncate_tag
@@ -212,7 +212,7 @@ def test_post_truncated_content_markdown(user, settings):
         author=user,
     )
     expected_truncated_content = "<p>This is the intro.</p>"
-    assert post1.truncated_content_markdown == expected_truncated_content
+    assert post1.truncated_rendered_content == expected_truncated_content
 
     # Test case 2: Content without "read more" tag
     post2 = Post.post_objects.create(
@@ -221,7 +221,7 @@ def test_post_truncated_content_markdown(user, settings):
         author=user,
     )
     expected_truncated_content = "<p>This is the entire content.</p>"
-    assert post2.truncated_content_markdown == expected_truncated_content
+    assert post2.truncated_rendered_content == expected_truncated_content
 
 
 @pytest.mark.django_db
