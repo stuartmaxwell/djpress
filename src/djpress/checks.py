@@ -33,7 +33,7 @@ def check_deprecated_settings(**_) -> list[Warning]:  # noqa: ANN003
                 Warning(
                     f"The DJPress setting {old} is deprecated and will be removed in a future release.",
                     hint=f"Rename {old} to {new} in DJPRESS_SETTINGS.",
-                    id="djpress.W001",
+                    id="djpress.W002",
                 ),
             )
     return found
