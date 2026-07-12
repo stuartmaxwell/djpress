@@ -895,8 +895,12 @@ class Post(models.Model):
 
     @property
     def truncated_content_markdown(self) -> str:
-        """Deprecated: use rendered_content instead."""
-        warnings.warn("content_markdown is deprecated; use rendered_content.", DeprecationWarning, stacklevel=2)
+        """Deprecated: use truncated_rendered_content instead."""
+        warnings.warn(
+            "truncated_content_markdown is deprecated; use truncated_rendered_content.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.truncated_rendered_content
 
     @property

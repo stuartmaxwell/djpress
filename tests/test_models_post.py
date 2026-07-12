@@ -225,6 +225,40 @@ def test_post_truncated_rendered_content(user, settings):
 
 
 @pytest.mark.django_db
+def test_post_content_markdown_deprecated(user):
+    """content_markdown should emit a DeprecationWarning and match rendered_content."""
+    post = Post.post_objects.create(
+        title="Deprecated Property Post",
+        content="This is a paragraph with **bold** text.",
+        author=user,
+    )
+
+    with pytest.warns(DeprecationWarning, match="content_markdown is deprecated; use rendered_content."):
+        content = post.content_markdown
+
+    assert content == post.rendered_content
+
+
+@pytest.mark.django_db
+def test_post_truncated_content_markdown_deprecated(user, settings):
+    """truncated_content_markdown should emit a DeprecationWarning and match truncated_rendered_content."""
+    truncate_tag = settings.DJPRESS_SETTINGS["TRUNCATE_TAG"]
+    post = Post.post_objects.create(
+        title="Deprecated Truncated Property Post",
+        content=f"This is the intro.\n\n{truncate_tag}\n\nThis is the rest of the content.",
+        author=user,
+    )
+
+    with pytest.warns(
+        DeprecationWarning,
+        match="truncated_content_markdown is deprecated; use truncated_rendered_content.",
+    ):
+        content = post.truncated_content_markdown
+
+    assert content == post.truncated_rendered_content
+
+
+@pytest.mark.django_db
 def test_post_is_truncated_property(user, settings):
     # Confirm the truncate tag is set according to settings_testing.py
     truncate_tag = "<!--test-more-->"
