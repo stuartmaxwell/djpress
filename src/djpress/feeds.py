@@ -33,7 +33,7 @@ class PostFeed(Feed):
         This is taken from the truncated content of the post converted to HTML from
         Markdown.
         """
-        description = item.truncated_content_markdown
+        description = item.truncated_rendered_content
         if item.is_truncated:
             description += f'<p><a href="{self.item_link(item)}">Read more</a></p>'
         return description

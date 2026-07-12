@@ -60,7 +60,7 @@ Settings are grouped by functionality:
 |-----------------------------|------|------------------------------------------------|------------------------------------------------|
 | `MARKDOWN_EXTENSIONS`       | list | `[]`                                           | List of Python-Markdown extensions to enable.  |
 | `MARKDOWN_EXTENSION_CONFIGS`| dict | `{}`                                           | Configuration options for markdown extensions. |
-| `MARKDOWN_RENDERER`         | str  | `"djpress.markdown_renderer.default_renderer"` | Path to markdown renderer function.            |
+| `CONTENT_RENDERER`         | str  | `"djpress.markdown_renderer.default_renderer"` | Path to markdown renderer function.            |
 
 #### Caching
 

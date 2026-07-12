@@ -1,3 +1,5 @@
+import warnings
+
 import pytest
 from unittest.mock import patch
 
@@ -507,3 +509,81 @@ def test_dynamic_settings_cache_hit_without_local_cache(settings):
 
     # Query setting: local cache is empty, so it retrieves from global cache and returns
     assert djpress_settings.SITE_TITLE == "Global Cache Title"
+
+
+# Deprecated settings (e.g. MARKDOWN_RENDERER -> CONTENT_RENDERER)
+
+
+def test_deprecated_setting_read_warns_and_resolves_to_new_setting(settings):
+    """Reading a deprecated setting name warns and resolves through the new name."""
+    # Nothing configured: the old name warns and returns the new setting's default
+    with pytest.warns(DeprecationWarning, match="MARKDOWN_RENDERER is deprecated; use CONTENT_RENDERER instead."):
+        value = djpress_settings.MARKDOWN_RENDERER
+    assert value == "djpress.markdown_renderer.default_renderer"
+
+    # New name configured: the old name warns and returns the configured value
+    settings.DJPRESS_SETTINGS = {
+        "CONTENT_RENDERER": "myapp.custom_renderer",
+    }
+    with pytest.warns(DeprecationWarning):
+        assert djpress_settings.MARKDOWN_RENDERER == "myapp.custom_renderer"
+
+
+def test_new_setting_read_does_not_warn():
+    """Reading the new setting name does not emit a deprecation warning."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        assert djpress_settings.CONTENT_RENDERER == "djpress.markdown_renderer.default_renderer"
+
+
+def test_legacy_setting_in_django_settings(settings):
+    """A legacy name configured in Django settings is found when resolving the new name."""
+    settings.DJPRESS_SETTINGS = {
+        "MARKDOWN_RENDERER": "myapp.custom_renderer",
+    }
+    assert djpress_settings.CONTENT_RENDERER == "myapp.custom_renderer"
+
+
+def test_new_setting_wins_over_legacy_in_django_settings(settings):
+    """If both the new and legacy names are configured, the new name takes precedence."""
+    settings.DJPRESS_SETTINGS = {
+        "MARKDOWN_RENDERER": "myapp.old_renderer",
+        "CONTENT_RENDERER": "myapp.new_renderer",
+    }
+    assert djpress_settings.CONTENT_RENDERER == "myapp.new_renderer"
+
+
+def test_legacy_setting_type_validation(settings):
+    """A legacy name configured with the wrong type raises a TypeError."""
+    settings.DJPRESS_SETTINGS = {
+        "MARKDOWN_RENDERER": 123,
+    }
+    with pytest.raises(TypeError) as exc_info:
+        _ = djpress_settings.CONTENT_RENDERER
+    assert "Expected str for CONTENT_RENDERER, got int" in str(exc_info.value)
+
+
+@pytest.mark.django_db
+def test_legacy_setting_in_db_settings(settings):
+    """A legacy name stored in database settings is found when resolving the new name."""
+    settings.DJPRESS_SETTINGS = {
+        "DATABASE_SETTINGS_ENABLED": True,
+    }
+
+    with patch.object(djpress_settings, "_get_db_settings", return_value={"MARKDOWN_RENDERER": "myapp.db_renderer"}):
+        assert djpress_settings.CONTENT_RENDERER == "myapp.db_renderer"
+
+
+@pytest.mark.django_db
+def test_new_setting_wins_over_legacy_in_db_settings(settings):
+    """If both the new and legacy names are stored in database settings, the new name takes precedence."""
+    settings.DJPRESS_SETTINGS = {
+        "DATABASE_SETTINGS_ENABLED": True,
+    }
+
+    with patch.object(
+        djpress_settings,
+        "_get_db_settings",
+        return_value={"MARKDOWN_RENDERER": "myapp.old_renderer", "CONTENT_RENDERER": "myapp.new_renderer"},
+    ):
+        assert djpress_settings.CONTENT_RENDERER == "myapp.new_renderer"

@@ -14,7 +14,7 @@ DJPRESS_SETTINGS = {
     "CATEGORY_PREFIX": ("category", str),
     "MARKDOWN_EXTENSION_CONFIGS": ({}, dict),
     "MARKDOWN_EXTENSIONS": ([], list),
-    "MARKDOWN_RENDERER": ("djpress.markdown_renderer.default_renderer", str),
+    "CONTENT_RENDERER": ("djpress.markdown_renderer.default_renderer", str),
     "MAX_TAGS_PER_QUERY": (5, int),
     "MEDIA_UPLOAD_PATH": ("djpress/{{ year }}/{{ month }}/{{ day }}", str),
     "MICROFORMATS_ENABLED": (True, bool),
@@ -38,4 +38,9 @@ DJPRESS_SETTINGS = {
     "THEME": ("default", str),
     "THEME_SETTINGS": ({}, dict),
     "TRUNCATE_TAG": ("<!--more-->", str),
+}
+
+# Old setting name -> new setting name
+DEPRECATED_SETTINGS: dict[str, str] = {
+    "MARKDOWN_RENDERER": "CONTENT_RENDERER",
 }

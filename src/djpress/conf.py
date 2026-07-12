@@ -2,12 +2,13 @@
 
 import contextvars
 import logging
+import warnings
 
 from django.conf import settings as django_settings
 from django.core.cache import cache
 from django.core.checks import Error, register
 
-from djpress.app_settings import DJPRESS_SETTINGS
+from djpress.app_settings import DEPRECATED_SETTINGS, DJPRESS_SETTINGS
 from djpress.models.setting import SETTING_CACHE_KEY
 
 logger = logging.getLogger(__name__)
@@ -16,6 +17,8 @@ SettingValueType = str | int | bool | list | dict | None
 
 
 _db_settings_ctx = contextvars.ContextVar("djpress_db_settings", default=None)
+
+_LEGACY_ALIASES = {new: old for old, new in DEPRECATED_SETTINGS.items()}
 
 
 class DJPressSettings:
@@ -42,14 +45,24 @@ class DJPressSettings:
             TypeError: If the setting is defined but has the wrong type
             ValueError: If an integer setting is negative
         """
+        if key in DEPRECATED_SETTINGS:
+            new_key = DEPRECATED_SETTINGS[key]
+            warnings.warn(
+                f"DJPress setting {key} is deprecated; use {new_key} instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            key = new_key
+
         if key in DJPRESS_SETTINGS:
             expected_type = DJPRESS_SETTINGS[key][1]
 
             # 1. Check from database settings (if enabled)
             if self.database_settings_enabled():
                 db_settings = self._get_db_settings()
-                if key in db_settings:
-                    value = db_settings[key]
+                lookup_key = key if key in db_settings else _LEGACY_ALIASES.get(key)
+                if lookup_key in db_settings:
+                    value = db_settings[lookup_key]
                     if not isinstance(value, expected_type):
                         msg = f"Expected {expected_type.__name__} for {key}, got {type(value).__name__}"
                         raise TypeError(msg)
@@ -59,8 +72,10 @@ class DJPressSettings:
                     return value
 
             # 2. Check if the setting is overridden in Django settings.py
-            if hasattr(django_settings, "DJPRESS_SETTINGS") and key in django_settings.DJPRESS_SETTINGS:
-                value = django_settings.DJPRESS_SETTINGS[key]
+            user_settings = getattr(django_settings, "DJPRESS_SETTINGS", {})
+            lookup_key = key if key in user_settings else _LEGACY_ALIASES.get(key)
+            if lookup_key and lookup_key in user_settings:
+                value = user_settings[lookup_key]
                 if not isinstance(value, expected_type):
                     msg = f"Expected {expected_type.__name__} for {key}, got {type(value).__name__}"
                     raise TypeError(msg)

@@ -310,7 +310,7 @@ For more maintainable themes, use Django's template inheritance:
 {% block title %}{{ post.title }} | {% site_title %}{% endblock %}
 
 {% block content %}
-    <article>{{ post.content_markdown }}</article>
+    <article>{{ post.rendered_content }}</article>
 {% endblock %}
 ```
 
