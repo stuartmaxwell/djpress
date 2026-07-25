@@ -8,6 +8,7 @@ from typing import Any
 
 from django.core.management.base import BaseCommand, CommandError, CommandParser
 from django.db.models import QuerySet
+from django.utils import timezone
 
 from djpress.models import Media, Post
 
@@ -250,8 +251,8 @@ class Command(BaseCommand):
         Frontmatter fields:
         - Common:
             - "title": content.title
-            - "date": content.published_at.isoformat()
-            - "lastmod": content.updated_at.isoformat()
+            - "date": content.published_at, converted to the local `TIME_ZONE`, isoformat()
+            - "lastmod": content.updated_at, converted to the local `TIME_ZONE`, isoformat()
             - "status": content.status
             - "slug": content.slug
             - "author": content.author.get_full_name() or content.author.username
@@ -265,8 +266,8 @@ class Command(BaseCommand):
         """
         frontmatter = {
             "title": content.title,
-            "date": content.published_at.isoformat(),
-            "lastmod": content.updated_at.isoformat(),
+            "date": timezone.localtime(content.published_at).isoformat(),
+            "lastmod": timezone.localtime(content.updated_at).isoformat(),
             "status": content.status,
             "slug": content.slug,
             "author": content.author.get_full_name() or content.author.username,

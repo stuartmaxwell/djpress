@@ -1,5 +1,6 @@
 """Tests for management commands."""
 
+import datetime
 import os
 import pytest
 import tempfile
@@ -204,6 +205,32 @@ class TestExportToHugoCommand:
         assert frontmatter["author"] == "Test User"
         assert len(frontmatter["categories"]) == 1
         assert len(frontmatter["tags"]) == 2
+
+    def test_frontmatter_dates_use_local_timezone_not_utc(self, user):
+        """`date`/`lastmod` in frontmatter must reflect `TIME_ZONE`, not the UTC
+        value Django stores internally and returns on fetch from the DB.
+        """
+        with override_settings(TIME_ZONE="Pacific/Auckland"):  # UTC+12/+13
+            published_at = datetime.datetime(2026, 4, 20, 23, 0, tzinfo=datetime.timezone.utc)
+            post = Post.admin_objects.create(
+                title="Timezone Export Post",
+                slug="timezone-export-post",
+                content="Test content.",
+                author=user,
+                status="published",
+                post_type="post",
+                published_at=published_at,
+            )
+            # Re-fetch, since the export command works off a queryset, not the
+            # in-memory instance that was just created.
+            post = Post.admin_objects.get(pk=post.pk)
+
+            command = Command()
+            frontmatter = command._generate_frontmatter(post)
+
+            assert frontmatter["date"] == timezone.localtime(post.published_at).isoformat()
+            assert frontmatter["date"].startswith("2026-04-21T11:00:00")
+            assert frontmatter["lastmod"] == timezone.localtime(post.updated_at).isoformat()
 
     def test_frontmatter_generation_page_with_parent(self, child_page):
         """Test frontmatter generation for page with parent and menu order."""
