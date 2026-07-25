@@ -6,6 +6,8 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db.models import QuerySet
 
+from django.forms.utils import from_current_timezone
+
 from djpress.models import Category, Post
 from djpress.models.post import PUBLISHED_POSTS_CACHE_KEY
 from djpress.exceptions import PostNotFoundError, PageNotFoundError
@@ -21,6 +23,74 @@ def test_post_model(test_post1, user, category1):
     assert test_post1.post_type == "post"
     assert test_post1.categories.count() == 1
     assert str(test_post1) == "Test Post1"
+
+
+@pytest.mark.django_db
+def test_new_post_date_field_matches_local_date_via_admin_style_input(user, settings):
+    """Simulate how the admin actually populates `published_at`.
+
+    The admin field for `published_at` is `forms.SplitDateTimeField` (Django's
+    `FORMFIELD_FOR_DBFIELD_DEFAULTS` swaps this in for every `DateTimeField`),
+    and both it and plain `DateTimeField` run parsed input through
+    `django.forms.utils.from_current_timezone()`. That attaches the *current*
+    timezone to the naive value via `timezone.make_aware()` - it does not
+    convert to UTC. So `published_at` on a freshly-bound, not-yet-saved
+    instance carries local tzinfo, not UTC, and `.date()` on it already
+    reflects the local calendar date.
+    """
+    settings.TIME_ZONE = "Pacific/Auckland"  # UTC+12/+13
+
+    # What the user actually typed into the split date/time widget: 21 April, 11am local.
+    typed_naive_datetime = datetime.datetime(2026, 4, 21, 11, 0)
+    published_at = from_current_timezone(typed_naive_datetime)
+    assert published_at.tzinfo is not None
+    assert str(published_at.tzinfo) == "Pacific/Auckland"
+
+    post = Post.objects.create(
+        title="Timezone Test Post",
+        slug="timezone-test-post",
+        content="Test content.",
+        author=user,
+        status="published",
+        post_type="post",
+        published_at=published_at,
+    )
+
+    # No UTC/local mismatch: on the real (admin) creation path, `_date` is
+    # already the correct local date, because `published_at` was never UTC
+    # in the first place at the point `Post.save()` calls `.date()` on it.
+    assert post._date == datetime.date(2026, 4, 21)
+    assert post._date == post.local_datetime.date()
+
+
+@pytest.mark.django_db
+def test_new_post_date_field_matches_local_date_when_published_at_is_utc_aware(user, settings):
+    """`_date` must reflect the local calendar date even when `published_at` is
+    handed to `Post.save()` already UTC-aware, not just when it arrives via the
+    admin's `from_current_timezone()` conversion.
+
+    This covers creation paths other than the admin form - e.g. the field's
+    own `default=timezone.now` firing when `published_at` is omitted, a bulk
+    import script, or a future API - where the aware datetime is UTC from the
+    start rather than carrying local tzinfo.
+    """
+    settings.TIME_ZONE = "Pacific/Auckland"  # UTC+12/+13
+
+    # 23:00 UTC on 20 April is already 21 April in Auckland.
+    published_at = datetime.datetime(2026, 4, 20, 23, 0, tzinfo=datetime.timezone.utc)
+
+    post = Post.objects.create(
+        title="Imported Post",
+        slug="imported-post",
+        content="Test content.",
+        author=user,
+        status="published",
+        post_type="post",
+        published_at=published_at,
+    )
+
+    assert post.local_datetime.date() == datetime.date(2026, 4, 21)
+    assert post._date == datetime.date(2026, 4, 21)
 
 
 @pytest.mark.django_db
@@ -1144,12 +1214,14 @@ def test_post_parent_is_none(test_post1, test_page1):
 
 @pytest.mark.django_db
 def test_post_get_years(test_post1, test_post2, test_post3):
+    # `get_years` groups by `_date`, the frozen local publish date - not `published_at`, which is
+    # stored in UTC - so the expected values must come from `_date` too.
     # type should be a queryset
     assert isinstance(Post.post_objects.get_years(), QuerySet)
     # Queryset should have 1 item
     assert len(list(Post.post_objects.get_years())) == 1
     # The item should be the year of the post
-    assert list(Post.post_objects.get_years())[0].year == test_post1.published_at.year
+    assert list(Post.post_objects.get_years())[0].year == test_post1._date.year
 
     test_post2.published_at = timezone.make_aware(timezone.datetime(2023, 1, 1, 12, 0, 0))
     test_post2.save()
@@ -1157,8 +1229,8 @@ def test_post_get_years(test_post1, test_post2, test_post3):
     # Queryset should have 2 items
     assert len(list(Post.post_objects.get_years())) == 2
     # The items should be the years of the posts
-    assert list(Post.post_objects.get_years())[0].year == test_post2.published_at.year
-    assert list(Post.post_objects.get_years())[1].year == test_post1.published_at.year
+    assert list(Post.post_objects.get_years())[0].year == test_post2._date.year
+    assert list(Post.post_objects.get_years())[1].year == test_post1._date.year
 
     test_post3.published_at = timezone.make_aware(timezone.datetime(2022, 1, 1, 12, 0, 0))
     test_post3.save()
@@ -1166,9 +1238,9 @@ def test_post_get_years(test_post1, test_post2, test_post3):
     # Queryset should have 3 items
     assert len(list(Post.post_objects.get_years())) == 3
     # The items should be the years of the posts
-    assert list(Post.post_objects.get_years())[0].year == test_post3.published_at.year
-    assert list(Post.post_objects.get_years())[1].year == test_post2.published_at.year
-    assert list(Post.post_objects.get_years())[2].year == test_post1.published_at.year
+    assert list(Post.post_objects.get_years())[0].year == test_post3._date.year
+    assert list(Post.post_objects.get_years())[1].year == test_post2._date.year
+    assert list(Post.post_objects.get_years())[2].year == test_post1._date.year
 
     # Change a post to draft status
     test_post1.status = "draft"
@@ -1177,20 +1249,22 @@ def test_post_get_years(test_post1, test_post2, test_post3):
     # Queryset should have 2 items
     assert len(list(Post.post_objects.get_years())) == 2
     # The items should be the years of the posts
-    assert list(Post.post_objects.get_years())[0].year == test_post3.published_at.year
-    assert list(Post.post_objects.get_years())[1].year == test_post2.published_at.year
+    assert list(Post.post_objects.get_years())[0].year == test_post3._date.year
+    assert list(Post.post_objects.get_years())[1].year == test_post2._date.year
 
 
 @pytest.mark.django_db
 def test_post_get_months(test_post1, test_post2, test_post3):
-    months = Post.post_objects.get_months(test_post1.published_at.year)
+    # `get_months` groups by `_date`, the frozen local publish date - not `published_at`, which is
+    # stored in UTC - so the expected values must come from `_date` too.
+    months = Post.post_objects.get_months(test_post1._date.year)
 
     # type should be a queryset
     assert isinstance(months, QuerySet)
     # Queryset should have 1 item - all three posts are in the same year and month
     assert len(months) == 1
     # The item should be the month of the post
-    assert months[0].month == test_post1.published_at.month
+    assert months[0].month == test_post1._date.month
 
     # Set specific dates for each of the posts
     test_post1.published_at = timezone.make_aware(timezone.datetime(2022, 1, 1, 12, 0, 0))
@@ -1200,31 +1274,33 @@ def test_post_get_months(test_post1, test_post2, test_post3):
     test_post3.published_at = timezone.make_aware(timezone.datetime(2022, 3, 1, 12, 0, 0))
     test_post3.save()
 
-    months = list(Post.post_objects.get_months(test_post1.published_at.year))
+    months = list(Post.post_objects.get_months(test_post1._date.year))
 
     # Queryset should have 3 items
     assert len(months) == 3
     # The items should be the months of the posts
-    assert months[0].month == test_post1.published_at.month
-    assert months[1].month == test_post2.published_at.month
-    assert months[2].month == test_post3.published_at.month
+    assert months[0].month == test_post1._date.month
+    assert months[1].month == test_post2._date.month
+    assert months[2].month == test_post3._date.month
 
     # Change a post to draft status
     test_post1.status = "draft"
     test_post1.save()
 
-    months = list(Post.post_objects.get_months(test_post1.published_at.year))
+    months = list(Post.post_objects.get_months(test_post1._date.year))
 
     # Queryset should have 2 items
     assert len(months) == 2
     # The items should be the months of the posts
-    assert months[0].month == test_post2.published_at.month
-    assert months[1].month == test_post3.published_at.month
+    assert months[0].month == test_post2._date.month
+    assert months[1].month == test_post3._date.month
 
 
 @pytest.mark.django_db
 def test_post_get_days(test_post1, test_post2, test_post3):
-    days = Post.post_objects.get_days(test_post1.published_at.year, test_post1.published_at.month)
+    # `get_days` groups by `_date`, the frozen local publish date - not `published_at`, which is
+    # stored in UTC - so the expected values must come from `_date` too.
+    days = Post.post_objects.get_days(test_post1._date.year, test_post1._date.month)
 
     # type should be a queryset
     assert isinstance(days, QuerySet)
@@ -1239,49 +1315,53 @@ def test_post_get_days(test_post1, test_post2, test_post3):
     test_post3.published_at = timezone.make_aware(timezone.datetime(2022, 1, 3, 12, 0, 0))
     test_post3.save()
 
-    days = list(Post.post_objects.get_days(test_post1.published_at.year, test_post1.published_at.month))
+    days = list(Post.post_objects.get_days(test_post1._date.year, test_post1._date.month))
 
     # Queryset should have 3 items
     assert len(days) == 3
     # The items should be the days of the posts
-    assert days[0].day == test_post1.published_at.day
-    assert days[1].day == test_post2.published_at.day
-    assert days[2].day == test_post3.published_at.day
+    assert days[0].day == test_post1._date.day
+    assert days[1].day == test_post2._date.day
+    assert days[2].day == test_post3._date.day
 
     # Change a post to draft status
     test_post1.status = "draft"
     test_post1.save()
 
-    days = list(Post.post_objects.get_days(test_post1.published_at.year, test_post1.published_at.month))
+    days = list(Post.post_objects.get_days(test_post1._date.year, test_post1._date.month))
 
     # Queryset should have 2 items
     assert len(days) == 2
     # The items should be the days of the posts
-    assert days[0].day == test_post2.published_at.day
-    assert days[1].day == test_post3.published_at.day
+    assert days[0].day == test_post2._date.day
+    assert days[1].day == test_post3._date.day
 
 
 @pytest.mark.django_db
 def test_get_year_last_modified(test_post1, test_post2, test_post3):
+    # `get_year_last_modified` filters on `_date`, the frozen local publish date - not `published_at`,
+    # which is stored in UTC - so the expected values must come from `_date` too.
     # Should match the modified date of the last post in the list - i.e. most recent post
-    assert Post.post_objects.get_year_last_modified(test_post1.published_at.year) == test_post3.updated_at
+    assert Post.post_objects.get_year_last_modified(test_post1._date.year) == test_post3.updated_at
 
     # Change test_post3 to draft and it should now match test_post2
     test_post3.status = "draft"
     test_post3.save()
-    assert Post.post_objects.get_year_last_modified(test_post1.published_at.year) == test_post2.updated_at
+    assert Post.post_objects.get_year_last_modified(test_post1._date.year) == test_post2.updated_at
 
     # Changetest_post2 to future date and it should now match test_post1
     test_post2.published_at = timezone.now() + timezone.timedelta(days=1)
     test_post2.save()
-    assert Post.post_objects.get_year_last_modified(test_post1.published_at.year) == test_post1.updated_at
+    assert Post.post_objects.get_year_last_modified(test_post1._date.year) == test_post1.updated_at
 
 
 @pytest.mark.django_db
 def test_get_month_last_modified(test_post1, test_post2, test_post3):
+    # `get_month_last_modified` filters on `_date`, the frozen local publish date - not `published_at`,
+    # which is stored in UTC - so the expected values must come from `_date` too.
     # Should match the modified date of the last post in the list - i.e. most recent post
     assert (
-        Post.post_objects.get_month_last_modified(test_post1.published_at.year, test_post1.published_at.month)
+        Post.post_objects.get_month_last_modified(test_post1._date.year, test_post1._date.month)
         == test_post3.updated_at
     )
 
@@ -1289,7 +1369,7 @@ def test_get_month_last_modified(test_post1, test_post2, test_post3):
     test_post3.status = "draft"
     test_post3.save()
     assert (
-        Post.post_objects.get_month_last_modified(test_post1.published_at.year, test_post1.published_at.month)
+        Post.post_objects.get_month_last_modified(test_post1._date.year, test_post1._date.month)
         == test_post2.updated_at
     )
 
@@ -1297,7 +1377,7 @@ def test_get_month_last_modified(test_post1, test_post2, test_post3):
     test_post2.published_at = timezone.now() + timezone.timedelta(days=1)
     test_post2.save()
     assert (
-        Post.post_objects.get_month_last_modified(test_post1.published_at.year, test_post1.published_at.month)
+        Post.post_objects.get_month_last_modified(test_post1._date.year, test_post1._date.month)
         == test_post1.updated_at
     )
 
@@ -1305,41 +1385,23 @@ def test_get_month_last_modified(test_post1, test_post2, test_post3):
 @pytest.mark.django_db
 def test_get_day_last_modified(test_post1, test_post2, test_post3):
     # Should match the modified date of the last post in the list - i.e. most recent post
-    post_year = test_post1.published_at.year
-    post_month = test_post1.published_at.month
-    post_day = test_post1.published_at.day
+    # `get_day_last_modified` filters on `_date`, the frozen local publish date - not `published_at`,
+    # which is stored in UTC - so the expected values must come from `_date` too.
+    post_year = test_post1._date.year
+    post_month = test_post1._date.month
+    post_day = test_post1._date.day
 
-    print(f"{post_year=}")
-    print(f"{post_month=}")
-    print(f"{post_day=}")
-    print(f"{test_post1._date=}")
-    print(f"{Post.post_objects.get_day_last_modified(post_year, post_month, post_day)=}")
-    assert (
-        Post.post_objects.get_day_last_modified(
-            test_post1.published_at.year, test_post1.published_at.month, test_post1.published_at.day
-        )
-        == test_post3.updated_at
-    )
+    assert Post.post_objects.get_day_last_modified(post_year, post_month, post_day) == test_post3.updated_at
 
     # Change test_post3 to draft and it should now match test_post2
     test_post3.status = "draft"
     test_post3.save()
-    assert (
-        Post.post_objects.get_day_last_modified(
-            test_post1.published_at.year, test_post1.published_at.month, test_post1.published_at.day
-        )
-        == test_post2.updated_at
-    )
+    assert Post.post_objects.get_day_last_modified(post_year, post_month, post_day) == test_post2.updated_at
 
     # Changetest_post2 to future date and it should now match test_post1
     test_post2.published_at = timezone.now() + timezone.timedelta(days=1)
     test_post2.save()
-    assert (
-        Post.post_objects.get_day_last_modified(
-            test_post1.published_at.year, test_post1.published_at.month, test_post1.published_at.day
-        )
-        == test_post1.updated_at
-    )
+    assert Post.post_objects.get_day_last_modified(post_year, post_month, post_day) == test_post1.updated_at
 
 
 @pytest.mark.django_db

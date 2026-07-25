@@ -1,5 +1,6 @@
 """Tests for management commands."""
 
+import datetime
 import os
 import pytest
 import tempfile
@@ -158,7 +159,9 @@ class TestExportToHugoCommand:
             # Check file naming
             post_file = post_files[0]
             assert test_post1.slug in post_file.name
-            assert str(test_post1.published_at.year) in post_file.name
+            # The exported filename's date comes from `_date` (frozen local publish date), not
+            # `published_at` (stored in UTC).
+            assert str(test_post1._date.year) in post_file.name
 
     def test_export_posts_only(self, test_post1, test_page):
         """Test export with posts-only option."""
@@ -204,6 +207,32 @@ class TestExportToHugoCommand:
         assert frontmatter["author"] == "Test User"
         assert len(frontmatter["categories"]) == 1
         assert len(frontmatter["tags"]) == 2
+
+    def test_frontmatter_dates_use_local_timezone_not_utc(self, user):
+        """`date`/`lastmod` in frontmatter must reflect `TIME_ZONE`, not the UTC
+        value Django stores internally and returns on fetch from the DB.
+        """
+        with override_settings(TIME_ZONE="Pacific/Auckland"):  # UTC+12/+13
+            published_at = datetime.datetime(2026, 4, 20, 23, 0, tzinfo=datetime.timezone.utc)
+            post = Post.admin_objects.create(
+                title="Timezone Export Post",
+                slug="timezone-export-post",
+                content="Test content.",
+                author=user,
+                status="published",
+                post_type="post",
+                published_at=published_at,
+            )
+            # Re-fetch, since the export command works off a queryset, not the
+            # in-memory instance that was just created.
+            post = Post.admin_objects.get(pk=post.pk)
+
+            command = Command()
+            frontmatter = command._generate_frontmatter(post)
+
+            assert frontmatter["date"] == timezone.localtime(post.published_at).isoformat()
+            assert frontmatter["date"].startswith("2026-04-21T11:00:00")
+            assert frontmatter["lastmod"] == timezone.localtime(post.updated_at).isoformat()
 
     def test_frontmatter_generation_page_with_parent(self, child_page):
         """Test frontmatter generation for page with parent and menu order."""
@@ -255,8 +284,9 @@ class TestExportToHugoCommand:
             assert len(post_files) == 1
             filename = post_files[0].name
 
-            # Should be in format YYYY-MM-DD-slug.md
-            date_str = test_post1.published_at.strftime("%Y-%m-%d")
+            # Should be in format YYYY-MM-DD-slug.md. The filename is built from `_date`, the frozen
+            # local publish date - not `published_at`, which is stored in UTC.
+            date_str = test_post1._date.strftime("%Y-%m-%d")
             expected_filename = f"{date_str}-{test_post1.slug}.md"
             assert filename == expected_filename
 
@@ -714,6 +744,31 @@ class TestExportToHugoCommand:
             assert item["url"] == test_media_file_1.file.url
             assert "uploaded_at" in item
             assert "updated_at" in item
+
+    def test_export_media_metadata_dates_use_local_timezone_not_utc(self, test_media_file_1):
+        """`uploaded_at`/`updated_at` in the media metadata must reflect `TIME_ZONE`, not the UTC
+        value Django stores internally and returns on fetch from the DB.
+        """
+        import json
+
+        with override_settings(TIME_ZONE="Pacific/Auckland"):  # UTC+12/+13
+            uploaded_at = datetime.datetime(2026, 4, 20, 23, 0, tzinfo=datetime.timezone.utc)
+            test_media_file_1.uploaded_at = uploaded_at
+            test_media_file_1.save()
+            # Re-fetch, since the export command works off a queryset, not the in-memory instance.
+            media = Media.objects.get(pk=test_media_file_1.pk)
+
+            with tempfile.TemporaryDirectory() as temp_dir:
+                call_command("djpress_export", output=temp_dir, no_zip=True)
+
+                metadata_file = Path(temp_dir) / "static" / "metadata.json"
+                with metadata_file.open("r", encoding="utf-8") as f:
+                    metadata = json.load(f)
+
+                item = metadata[media.file.name]
+                assert item["uploaded_at"] == timezone.localtime(media.uploaded_at).isoformat()
+                assert item["uploaded_at"].startswith("2026-04-21T11:00:00")
+                assert item["updated_at"] == timezone.localtime(media.updated_at).isoformat()
 
     def test_export_media_metadata_no_uploaded_by(self, test_media_file_1):
         """Test that media metadata handles null uploaded_by correctly."""

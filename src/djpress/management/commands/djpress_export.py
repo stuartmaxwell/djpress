@@ -8,6 +8,7 @@ from typing import Any
 
 from django.core.management.base import BaseCommand, CommandError, CommandParser
 from django.db.models import QuerySet
+from django.utils import timezone
 
 from djpress.models import Media, Post
 
@@ -180,8 +181,8 @@ class Command(BaseCommand):
                     "description": media.description,
                     "media_type": media.media_type,
                     "uploaded_by": media.uploaded_by.username if media.uploaded_by else None,
-                    "uploaded_at": media.uploaded_at.isoformat() if media.uploaded_at else None,
-                    "updated_at": media.updated_at.isoformat() if media.updated_at else None,
+                    "uploaded_at": timezone.localtime(media.uploaded_at).isoformat() if media.uploaded_at else None,
+                    "updated_at": timezone.localtime(media.updated_at).isoformat() if media.updated_at else None,
                     "url": media.file.url,
                 }
 
@@ -215,8 +216,10 @@ class Command(BaseCommand):
 
     def _export_post(self, post: Post, output_dir: Path) -> None:
         """Export a single post to flat file format."""
-        # Create filename based on date and slug
-        date_str = post.published_at.strftime("%Y-%m-%d")
+        # Create filename based on date and slug. Use `_date` (the frozen local publish date used
+        # for the post's canonical URL) rather than `published_at` (stored in UTC), so the exported
+        # filename's date matches the site's actual date-based routing.
+        date_str = post._date.strftime("%Y-%m-%d")  # noqa: SLF001
         filename = f"{date_str}-{post.slug}.md"
         filepath = output_dir / "content" / "posts" / filename
 
@@ -250,8 +253,8 @@ class Command(BaseCommand):
         Frontmatter fields:
         - Common:
             - "title": content.title
-            - "date": content.published_at.isoformat()
-            - "lastmod": content.updated_at.isoformat()
+            - "date": content.published_at, converted to the local `TIME_ZONE`, isoformat()
+            - "lastmod": content.updated_at, converted to the local `TIME_ZONE`, isoformat()
             - "status": content.status
             - "slug": content.slug
             - "author": content.author.get_full_name() or content.author.username
@@ -265,8 +268,8 @@ class Command(BaseCommand):
         """
         frontmatter = {
             "title": content.title,
-            "date": content.published_at.isoformat(),
-            "lastmod": content.updated_at.isoformat(),
+            "date": timezone.localtime(content.published_at).isoformat(),
+            "lastmod": timezone.localtime(content.updated_at).isoformat(),
             "status": content.status,
             "slug": content.slug,
             "author": content.author.get_full_name() or content.author.username,

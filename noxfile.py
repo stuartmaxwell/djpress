@@ -72,6 +72,7 @@ TIME_ZONES = [
     "Australia/LHI",
     "Asia/Magadan",
     "Antarctica/McMurdo",
+    "Pacific/Auckland",
     "NZ-CHAT",
     "Etc/GMT-13",
     "Etc/GMT-14",
