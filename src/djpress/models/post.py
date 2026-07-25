@@ -671,7 +671,7 @@ class Post(models.Model):
         # We only do this if the post is new or if the date has changed. This ensures the _date field doesn't change
         # unless the date field has been specifically changed.
         if self.pk is None:
-            self._date = self.published_at.date()
+            self._date = self.local_datetime.date()
         else:
             old = self.__class__.admin_objects.filter(pk=self.pk).only("published_at").first()
             if old is None or old.published_at != self.published_at:

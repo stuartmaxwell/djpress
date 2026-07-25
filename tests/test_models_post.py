@@ -6,6 +6,8 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db.models import QuerySet
 
+from django.forms.utils import from_current_timezone
+
 from djpress.models import Category, Post
 from djpress.models.post import PUBLISHED_POSTS_CACHE_KEY
 from djpress.exceptions import PostNotFoundError, PageNotFoundError
@@ -21,6 +23,74 @@ def test_post_model(test_post1, user, category1):
     assert test_post1.post_type == "post"
     assert test_post1.categories.count() == 1
     assert str(test_post1) == "Test Post1"
+
+
+@pytest.mark.django_db
+def test_new_post_date_field_matches_local_date_via_admin_style_input(user, settings):
+    """Simulate how the admin actually populates `published_at`.
+
+    The admin field for `published_at` is `forms.SplitDateTimeField` (Django's
+    `FORMFIELD_FOR_DBFIELD_DEFAULTS` swaps this in for every `DateTimeField`),
+    and both it and plain `DateTimeField` run parsed input through
+    `django.forms.utils.from_current_timezone()`. That attaches the *current*
+    timezone to the naive value via `timezone.make_aware()` - it does not
+    convert to UTC. So `published_at` on a freshly-bound, not-yet-saved
+    instance carries local tzinfo, not UTC, and `.date()` on it already
+    reflects the local calendar date.
+    """
+    settings.TIME_ZONE = "Pacific/Auckland"  # UTC+12/+13
+
+    # What the user actually typed into the split date/time widget: 21 April, 11am local.
+    typed_naive_datetime = datetime.datetime(2026, 4, 21, 11, 0)
+    published_at = from_current_timezone(typed_naive_datetime)
+    assert published_at.tzinfo is not None
+    assert str(published_at.tzinfo) == "Pacific/Auckland"
+
+    post = Post.objects.create(
+        title="Timezone Test Post",
+        slug="timezone-test-post",
+        content="Test content.",
+        author=user,
+        status="published",
+        post_type="post",
+        published_at=published_at,
+    )
+
+    # No UTC/local mismatch: on the real (admin) creation path, `_date` is
+    # already the correct local date, because `published_at` was never UTC
+    # in the first place at the point `Post.save()` calls `.date()` on it.
+    assert post._date == datetime.date(2026, 4, 21)
+    assert post._date == post.local_datetime.date()
+
+
+@pytest.mark.django_db
+def test_new_post_date_field_matches_local_date_when_published_at_is_utc_aware(user, settings):
+    """`_date` must reflect the local calendar date even when `published_at` is
+    handed to `Post.save()` already UTC-aware, not just when it arrives via the
+    admin's `from_current_timezone()` conversion.
+
+    This covers creation paths other than the admin form - e.g. the field's
+    own `default=timezone.now` firing when `published_at` is omitted, a bulk
+    import script, or a future API - where the aware datetime is UTC from the
+    start rather than carrying local tzinfo.
+    """
+    settings.TIME_ZONE = "Pacific/Auckland"  # UTC+12/+13
+
+    # 23:00 UTC on 20 April is already 21 April in Auckland.
+    published_at = datetime.datetime(2026, 4, 20, 23, 0, tzinfo=datetime.timezone.utc)
+
+    post = Post.objects.create(
+        title="Imported Post",
+        slug="imported-post",
+        content="Test content.",
+        author=user,
+        status="published",
+        post_type="post",
+        published_at=published_at,
+    )
+
+    assert post.local_datetime.date() == datetime.date(2026, 4, 21)
+    assert post._date == datetime.date(2026, 4, 21)
 
 
 @pytest.mark.django_db
