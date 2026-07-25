@@ -63,17 +63,19 @@ def test_category_sitemap(category1, category2, test_post1, test_post2):
 def test_date_based_sitemap(test_post1, test_post2, test_post3):
     """Test the DateBasedSitemap class."""
 
+    # DateBasedSitemap groups by `_date`, the frozen local publish date - not `published_at`,
+    # which is stored in UTC - so the expected values must come from `_date` too.
     expected_items = [
-        {"year": test_post3.published_at.year, "latest_modified": test_post3.updated_at},
+        {"year": test_post3._date.year, "latest_modified": test_post3.updated_at},
         {
-            "year": test_post3.published_at.year,
-            "month": test_post3.published_at.month,
+            "year": test_post3._date.year,
+            "month": test_post3._date.month,
             "latest_modified": test_post3.updated_at,
         },
         {
-            "year": test_post3.published_at.year,
-            "month": test_post3.published_at.month,
-            "day": test_post3.published_at.day,
+            "year": test_post3._date.year,
+            "month": test_post3._date.month,
+            "day": test_post3._date.day,
             "latest_modified": test_post3.updated_at,
         },
     ]
@@ -84,12 +86,10 @@ def test_date_based_sitemap(test_post1, test_post2, test_post3):
     assert sitemap.protocol == "https"
     assert sitemap.items() == expected_items
     assert sitemap.lastmod(expected_items[0]) == test_post3.updated_at
-    assert sitemap.location(expected_items[0]) == get_archives_url(test_post3.published_at.year)
-    assert sitemap.location(expected_items[1]) == get_archives_url(
-        test_post3.published_at.year, test_post3.published_at.month
-    )
+    assert sitemap.location(expected_items[0]) == get_archives_url(test_post3._date.year)
+    assert sitemap.location(expected_items[1]) == get_archives_url(test_post3._date.year, test_post3._date.month)
     assert sitemap.location(expected_items[2]) == get_archives_url(
-        test_post3.published_at.year, test_post3.published_at.month, test_post3.published_at.day
+        test_post3._date.year, test_post3._date.month, test_post3._date.day
     )
 
 
