@@ -5,11 +5,8 @@ description = "Example plugin for DJ Press"
 readme = "README.md"
 authors = [{ name = "Stuart Maxwell", email = "stuart@amanzi.nz" }]
 requires-python = ">=3.10"
-dependencies = ["django>=4.2.0", "djpress"]
+dependencies = ["django>=5.2.0,<6.2", "djpress"]
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.uv.sources]
-djpress = { workspace = true }
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"

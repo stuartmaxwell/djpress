@@ -1,15 +1,15 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
 
 [project]
 name = "djpress"
-version = "0.30.1"
+version = "0.31.0"
 description = "A blog application for Django sites, inspired by classic WordPress."
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [{ name = "Stuart Maxwell", email = "stuart@amanzi.nz" }]
-dependencies = ["django>=4.2.0,<6.1", "markdown>=3.7"]
+dependencies = ["django>=5.2.0,<6.2", "markdown>=3.7"]
 license = { file = "LICENSE" }
 classifiers = [
   "Development Status :: 3 - Alpha",
@@ -17,11 +17,9 @@ classifiers = [
   "Operating System :: OS Independent",
   "Environment :: Web Environment",
   "Framework :: Django",
-  "Framework :: Django :: 4.2",
-  "Framework :: Django :: 5.0",
-  "Framework :: Django :: 5.1",
   "Framework :: Django :: 5.2",
   "Framework :: Django :: 6.0",
+  "Framework :: Django :: 6.1",
   "Intended Audience :: Developers",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3",
@@ -44,56 +42,29 @@ Issues = "https://github.com/stuartmaxwell/djpress/issues"
 
 [dependency-groups]
 dev = [
-    "bumpver>=2024.1130",
-    "rich>=14.2.0",
+  "bumpver~=2026.1132",
+  "pre-commit~=4.3",
+  "rich~=15.0",
+  "ruff~=0.16.5",
 ]
-
-[project.optional-dependencies]
 test = [
-  "pytest>=8.3.3",
-  "pytest-django>=4.9.0",
-  "pytest-coverage>=0.0",
-  "django-debug-toolbar>=4.4.0",
-  "nox>=2024.4.15",
+  "django-debug-toolbar~=7.1",
   "djpress-example-plugin",
-  "pytest-cov>=6.0.0",
-  "rich>=14.2.0",
+  "nox[pbs]~=2026.8",
+  "pytest~=9.1",
+  "pytest-cov~=7.1",
+  "pytest-django~=4.14",
+  "rich~=15.0",
 ]
 docs = [
-  "cogapp>=3.4.1",
-  "furo>=2024.8.6",
-  "myst-parser>=4.0.0",
-  "sphinx>=8.1.3",
-  "sphinx-autobuild>=2024.10.3",
-  "sphinx-copybutton>=0.5.2",
-  "sphinx-rtd-theme>=3.0.1",
+  "cogapp~=3.6",
+  "furo~=2025.12",
+  "myst-parser~=4.0",
+  "sphinx~=8.1",
+  "sphinx-autobuild~=2024.10",
+  "sphinx-copybutton~=0.5",
+  "sphinx-rtd-theme~=3.1",
 ]
-
-[tool.ruff]
-line-length = 120
-
-[tool.ruff.lint]
-select = ["ALL"]
-ignore = [
-  "G004",   # Logging statement uses f-string
-  "D203",   # 1 blank line required before class docstring
-  "D213",   # multi-line-summary-second-line
-  "TD003",  # Missing issue link on the line following this TODO
-  "FIX002", # Line contains TODO, consider resolving the issue
-  "TD002",  # Missing author in TODO
-  "S308",   # suspicious-mark-safe-usage
-  "RUF012", # Checks for mutable default values in class attributes. https://github.com/astral-sh/ruff/issues/5243
-  "COM812", # The following rule may cause conflicts when used with the formatter: `COM812`
-  "PLR0913", # Too many arguments in function definition
-]
-
-[tool.ruff.lint.per-file-ignores]
-"test*" = ["ALL"]
-"**/migrations/*" = ["ALL"]
-"manage.py" = ["ALL"]
-
-[tool.ruff.lint.pydocstyle]
-convention = "google"
 
 [tool.pytest.ini_options]
 pythonpath = ". example"
@@ -112,7 +83,7 @@ omit = ["*/tests/*", "*/migrations/*"]
 exclude_lines = ["if TYPE_CHECKING:", "# pragma: no cover"]
 
 [tool.bumpver]
-current_version = "0.30.1"
+current_version = "0.31.0"
 version_pattern = "MAJOR.MINOR.PATCH[PYTAGNUM]"
 commit_message = "👍 bump version {old_version} -> {new_version}"
 commit = true
@@ -123,8 +94,8 @@ tag = true
 "pyproject.toml" = ['version = "{version}"']
 "src/djpress/__init__.py" = ['^__version__ = "{version}"$']
 
-[tool.uv.workspace]
-members = ["djpress-example-plugin"]
+[tool.pdm]
+distribution = true
 
-[tool.uv.sources]
-djpress-example-plugin = { workspace = true }
+[tool.pdm.workspace]
+members = ["djpress-example-plugin"]
