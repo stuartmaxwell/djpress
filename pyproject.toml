@@ -50,7 +50,7 @@ dev = [
 test = [
   "django-debug-toolbar~=7.1",
   "djpress-example-plugin",
-  "nox~=2026.8",
+  "nox[pbs]~=2026.8",
   "pytest~=9.1",
   "pytest-cov~=7.1",
   "pytest-django~=4.14",
