@@ -167,7 +167,7 @@ class Tag(models.Model):
         return self.posts.exists()
 
     @property
-    def last_modified(self) -> None | timezone.datetime:
+    def last_modified(self) -> timezone.datetime | None:
         """Return the most recent last modified date of posts in the tag.
 
         This property is used in the sitemap to determine the last modified date of the tag.

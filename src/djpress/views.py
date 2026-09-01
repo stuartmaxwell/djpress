@@ -328,7 +328,7 @@ def get_post(
     year: str | None = None,
     month: str | None = None,
     day: str | None = None,
-) -> None | Post:
+) -> Post | None:
     """Try to get a post by slug and date parts.
 
     Args:

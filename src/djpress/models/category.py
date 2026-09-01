@@ -128,7 +128,7 @@ class Category(models.Model):
         return self.posts.exists()
 
     @property
-    def last_modified(self) -> None | timezone.datetime:
+    def last_modified(self) -> timezone.datetime | None:
         """Return the most recent last modified date of posts in the category.
 
         This property is used in the sitemap to determine the last modified date of the category.
