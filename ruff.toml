@@ -1,0 +1,27 @@
+line-length = 120
+extend-exclude = ["*.md"]
+
+[lint]
+select = ["ALL"]
+ignore = [
+  "G004",    # Logging statement uses f-string
+  "D203",    # 1 blank line required before class docstring
+  "D213",    # multi-line-summary-second-line
+  "TD003",   # Missing issue link on the line following this TODO
+  "FIX002",  # Line contains TODO, consider resolving the issue
+  "TD002",   # Missing author in TODO
+  "S308",    # suspicious-mark-safe-usage
+  "RUF012",  # Checks for mutable default values in class attributes. https://github.com/astral-sh/ruff/issues/5243
+  "COM812",  # The following rule may cause conflicts when used with the formatter: `COM812`
+  "PLR0913", # Too many arguments in function definition
+  "PLR0917", # Too many positional arguments in function definition
+  "CPY001",  # Missing copyright notice at top of file
+]
+
+[lint.per-file-ignores]
+"test*" = ["ALL"]
+"**/migrations/*" = ["ALL"]
+"manage.py" = ["ALL"]
+
+[lint.pydocstyle]
+convention = "google"

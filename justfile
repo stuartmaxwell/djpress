@@ -2,11 +2,8 @@
 @default:
     @just --list
 
-# Set the uv run command
-uv := "uv run --extra test"
-
-#Set the uv command to run a tool
-uv-tool := "uv tool run"
+# Run a command in the PDM-managed environment
+pdm-run := "pdm run"
 
 # Sphinx settings
 SPHINXOPTS    := ""
@@ -18,132 +15,125 @@ BUILDDIR      := "docs/_build"
 # Run the Django development server
 @run:
     @just sync
-    {{uv}} example/manage.py runserver
+    {{pdm-run}} example/manage.py runserver
 
 # Make migrations
 @makemigrations:
-    {{uv}} example/manage.py makemigrations
+    {{pdm-run}} example/manage.py makemigrations
 
 # Apply migrations
 @migrate:
-    {{uv}} example/manage.py migrate
+    {{pdm-run}} example/manage.py migrate
 
 # Create a superuser
 @createsuperuser:
-    {{uv}} example/manage.py createsuperuser
+    {{pdm-run}} example/manage.py createsuperuser
 
 # Collect static files
 @collectstatic:
-    {{uv}} example/manage.py collectstatic
+    {{pdm-run}} example/manage.py collectstatic
 
 # Run Django shell
 @shell:
-    {{uv}} example/manage.py shell
+    {{pdm-run}} example/manage.py shell
 
 # Check for any problems in your project
 @check:
-    {{uv}} example/manage.py check
+    {{pdm-run}} example/manage.py check
 
 # Generic manage command
 @manage *ARGS:
-    {{uv}} example/manage.py {{ ARGS }}
+    {{pdm-run}} example/manage.py {{ ARGS }}
 
 # Run pytest
 @test *ARGS:
-    {{uv}} pytest {{ ARGS }}
+    {{pdm-run}} pytest {{ ARGS }}
 
 @test-tz tz:
-    TEST_TIME_ZONE={{tz}} {{uv}} pytest
+    TEST_TIME_ZONE={{tz}} {{pdm-run}} pytest
 
-# Run Ruff linktng
+# Run Ruff linting
 @lint:
-    {{uv-tool}} ruff check
+    {{pdm-run}} ruff check .
 
 # Run Ruff formatting
 @format:
-    {{uv-tool}} ruff format
+    {{pdm-run}} ruff format .
 
 # Run nox
 @nox:
-    {{uv-tool}} nox --session test
+    {{pdm-run}} nox --session test
 
 # Run nox timezone test
 @nox-tz:
-    {{uv-tool}} nox --session test_timezones
+    {{pdm-run}} nox --session test_timezones
 
 # Run coverage
 @cov:
-    {{uv}} -m pytest --cov
+    {{pdm-run}} pytest --cov
 
 # Run coverage
 @cov-html:
-    {{uv}} -m pytest --cov --cov-report=html --cov-context=test
+    {{pdm-run}} pytest --cov --cov-report=html --cov-context=test
     echo Coverage report: file://`pwd`/htmlcov/index.html
 
 # Sync the package
 @sync:
-    uv sync --all-extras
+    pdm sync -G :all
 
 # Sync the package
 @sync-up:
-    uv sync --all-extras --upgrade
+    pdm update -G :all
 
 # Lock the package version
 @lock:
-    uv lock
+    pdm lock
 
 # Build the package
 @build:
-    uv build
-
-# Publish the package - this requires a $HOME/.pypirc file with your credentials
-@publish:
-      rm -rf ./dist/*
-      uv build
-      {{uv-tool}} twine check dist/*
-      {{uv-tool}} twine upload dist/*
+    pdm build
 
 # Upgrade pre-commit hooks
 @pc-up:
-    {{uv-tool}} pre-commit autoupdate
+    {{pdm-run}} pre-commit autoupdate
 
 # Run pre-commit hooks
 @pc-run:
-    {{uv-tool}} pre-commit run --all-files
+    {{pdm-run}} pre-commit run --all-files
 
 # Use Sphinx to build and view the documentation
 @docs:
-    uv run sphinx-autobuild -b html "{{SOURCEDIR}}" "{{BUILDDIR}}" {{SPHINXOPTS}}
+    {{pdm-run}} sphinx-autobuild -b html "{{SOURCEDIR}}" "{{BUILDDIR}}" {{SPHINXOPTS}}
 
 # Use BumpVer to increase the patch version number. Use just bump -d to view a dry-run.
 @bump *ARGS:
-    uv run bumpver update --patch {{ ARGS }}
-    uv sync
+    {{pdm-run}} bumpver update --patch {{ ARGS }}
+    pdm lock
 
 # Use Bumpver to create a minor beta version. Use just bump-minor-beta -d to view a dry-run.
 @bump-beta *ARGS:
-    uv run bumpver update --patch --tag beta {{ ARGS }}
-    uv sync
+    {{pdm-run}} bumpver update --patch --tag beta {{ ARGS }}
+    pdm lock
 
 # Use BumpVer to increase the minor version number. Use just bump-minor -d to view a dry-run.
 @bump-minor *ARGS:
-    uv run bumpver update --minor {{ ARGS }}
-    uv sync
+    {{pdm-run}} bumpver update --minor {{ ARGS }}
+    pdm lock
 
 # Use Bumpver to create a minor beta version. Use just bump-minor-beta -d to view a dry-run.
 @bump-minor-beta *ARGS:
-    uv run bumpver update --minor --tag beta {{ ARGS }}
-    uv sync
+    {{pdm-run}} bumpver update --minor --tag beta {{ ARGS }}
+    pdm lock
 
 # Use Bumpver to create a minor beta version increment. Use just bump-minor-beta-inc -d to view a dry-run.
 @bump-minor-beta-inc *ARGS:
-    uv run bumpver update --tag-num {{ ARGS }}
-    uv sync
+    {{pdm-run}} bumpver update --tag-num {{ ARGS }}
+    pdm lock
 
 
 
 # Create a new GitHub release - this requires Python 3.11 or newer, and the GitHub CLI must be installed and configured
-version := `echo "from tomllib import load; print(load(open('pyproject.toml', 'rb'))['project']['version'])" | uv run - `
+version := `python -c "from tomllib import load; print(load(open('pyproject.toml', 'rb'))['project']['version'])"`
 
 [confirm("Are you sure you want to create a new release?\nThis will create a new GitHub release and will build and deploy a new version to PyPi.\nYou should have already updated the version number using one of the bump recipes.\nTo check the version number, run just version.\n\nCreate release?")]
 @release:
@@ -152,5 +142,4 @@ version := `echo "from tomllib import load; print(load(open('pyproject.toml', 'r
     gh release create "v{{version}}" --generate-notes
 
 @version:
-    git pull
     echo {{version}}

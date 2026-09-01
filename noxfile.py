@@ -4,19 +4,30 @@ import nox
 
 # The dictionary of supported Django and Python versions.
 SUPPORTED_VERSIONS = {
-    "4.2": ["3.10", "3.11", "3.12"],
-    "5.0": ["3.10", "3.11", "3.12"],
-    "5.1": ["3.10", "3.11", "3.12", "3.13"],
     "5.2": ["3.10", "3.11", "3.12", "3.13", "3.14"],
     "6.0": ["3.12", "3.13", "3.14"],
+    "6.1": ["3.12", "3.13", "3.14"],
 }
 
 # The list of all supported Python versions across all Django versions.
 # This list is used by the @nox.session decorator to create virtual environments.
 python_versions = sorted({py_ver for python_list in SUPPORTED_VERSIONS.values() for py_ver in python_list})
 
+TEST_DEPENDENCIES = (
+    "django-debug-toolbar~=7.1",
+    "pytest~=9.1",
+    "pytest-cov~=7.1",
+    "pytest-django~=4.14",
+    "rich~=15.0",
+)
 
-@nox.session(venv_backend="uv", python=python_versions)
+
+def install_test_dependencies(session: nox.Session) -> None:
+    """Install DJ Press, its example plugin, and the test dependencies."""
+    session.install("-e", ".", "-e", "./djpress-example-plugin", *TEST_DEPENDENCIES)
+
+
+@nox.session(python=python_versions)
 @nox.parametrize("django_ver", sorted(SUPPORTED_VERSIONS.keys()))
 def test(session: nox.Session, django_ver: str) -> None:
     """Run the test suite for supported Python/Django combinations."""
@@ -27,8 +38,7 @@ def test(session: nox.Session, django_ver: str) -> None:
             f"Python {session.python} is not a supported version for Django {django_ver}",
         )
 
-    # Install dependencies from your project and pyproject.toml.
-    session.install("-e", ".", "--extra", "test", "-r", "pyproject.toml")
+    install_test_dependencies(session)
 
     # Install the correct Django version for the current session.
     session.install(f"django~={django_ver}.0")
@@ -79,9 +89,9 @@ TIME_ZONES = [
 ]
 
 
-@nox.session(venv_backend="uv", python=["3.13"])
+@nox.session(python=["3.14"])
 @nox.parametrize("time_zone", TIME_ZONES)
 def test_timezones(session: nox.Session, time_zone: str) -> None:
     """Run the test suite."""
-    session.install("-e", ".", "--extra", "test", "-r", "pyproject.toml")
+    install_test_dependencies(session)
     session.run("pytest", env={"TEST_TIME_ZONE": time_zone})

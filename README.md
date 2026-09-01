@@ -23,11 +23,11 @@ This package uses semantic versioning, but until we reach version 1.x.x, the fol
 - MINOR version indicates that an incompatible or breaking change has been introduced.
 - PATCH version indicates a bug fix or a backward compatible change.
 
-If you choose to use this package prior to version 1.x being release, please pin your requirements to a specific minor version, e.g. `djpress~=0.16.0`
+If you choose to use this package prior to version 1.x being released, please pin your requirements to a specific minor version, e.g. `djpress~=0.31.0`
 
 ## Installation
 
-- Install `djpress` by adding it to your requirements file, e.g. `djpress~=0.16.0` (see versioning note, above).
+- Install `djpress` by adding it to your requirements file, e.g. `djpress~=0.31.0` (see versioning note, above).
 - Add it to your `INSTALLED_APPS` in Django:
 
 ```python
@@ -82,6 +82,22 @@ DJPRESS_SETTINGS = {
 
 There are lots more settings available. Please check [the docs](https://stuartmaxwell.github.io/djpress) or look at the source code:
 [src/djpress/app_settings.py](https://github.com/stuartmaxwell/djpress/blob/main/src/djpress/app_settings.py)
+
+## Development
+
+Development requires PDM 2.28 or newer because the example plugin is a PDM workspace member. From the repository root:
+
+```bash
+pdm install -G :all
+pdm run python example/manage.py runserver
+```
+
+The root library and `djpress-example-plugin` are installed editable into the shared environment. The Django project in
+`example/` is an unpackaged consumer of both, so it is run directly rather than installed as another workspace package.
+
+Use `pdm run pytest` for the current environment, or `pdm run nox --session test` for the complete supported
+Python/Django matrix. The `justfile` provides shortcuts for the common development, test, documentation, build, and
+release commands.
 
 ## Documentation
 
