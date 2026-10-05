@@ -2081,3 +2081,9 @@ def test_post_permission_helper_methods(test_post1):
     assert test_post1.can_publish(other_author) is False
     assert test_post1.can_publish(contributor_user) is False
     assert test_post1.can_publish(regular_user) is False
+
+
+@pytest.mark.django_db
+def test_is_page(test_page1, test_post1):
+    assert test_page1.is_page is True
+    assert test_post1.is_page is False

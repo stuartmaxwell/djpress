@@ -941,6 +941,11 @@ class Post(models.Model):
         return self.slug
 
     @property
+    def is_page(self) -> bool:
+        """Return whether the post is a page."""
+        return self.post_type == "page"
+
+    @property
     def is_published(self) -> bool:
         """Return whether the post or page is published.
 
