@@ -269,6 +269,7 @@ All other arguments **must** be provided as keyword arguments.
 - `order` (str): Sort order for the periods. Accepted values are `"ASC"` and `"DESC"`. Default is `"DESC"`.
 
 **Returns:** list of dicts. Each dictionary contains:
+
 - `date` (datetime.date): The date representing the start of the period.
 - `url` (str): The URL of the archive page.
 - `count` (int): The number of posts published in that period.
@@ -306,7 +307,7 @@ creating/updating post titles. Use Django's `escape` filter as per the example b
 #### get_post_title Parameters
 
 - `include_empty` (boolean): Whether to include the title if it is empty, using the post_title property fallback.
-Default is false.
+  Default is false.
 
 **Returns:** string - the title of the post. If there's no `post` in the context and empty string is returned.
 
@@ -663,15 +664,15 @@ Get a list of all categories wrapped in HTML that can be configured with optiona
 #### site_categories Parameters
 
 - `outer_tag` (str): the outer tag that this should be wrapped in. Accepted options are "ul", "div", "span". If "ul" is used, then the inner items will be wrapped with "li" tags.
-Default is: "ul".
+  Default is: "ul".
 - `outer_class` (str): the CSS classes to apply to the outer tag. Default: "".
 - `link_class` (str): the CSS classes to apply to the link tag. Default: "".
 - `separator` (str): the separator to use between categories. Only relevant when not using "ul" as the outer tag.
-Default: ", ".
+  Default: ", ".
 - `pre_text` (str): the text to prepend to the list of categories. Only relevant when not using "ul" as the outer tag.
-Default: "".
+  Default: "".
 - `post_text` (str): the text to append to the list of categories. Only relevant when not using "ul" as the outer tag.
-Default: "".
+  Default: "".
 
 **Note:** `outer_tag` can be passed as a positional argument, but the other parameters must be passed as keyword arguments.
 
@@ -805,7 +806,6 @@ Wrapped in a `span` tag with all optional parameters:
 </span>
 ```
 
-
 ### site_pages
 
 Get all site pages as a single-level list, wrapped in HTML that can be configured with optional arguments.
@@ -815,7 +815,7 @@ Get all site pages as a single-level list, wrapped in HTML that can be configure
 #### site_pages Parameters
 
 - `outer_tag` (str): the outer tags that this should be wrapped in. Accepted options are "div", "span".
-Optional, default is: "div".
+  Optional, default is: "div".
 - `outer_class` (str): the CSS classes to apply to the outer tag. Optional, default: "".
 - `link_class` (str): the CSS classes to apply to the link tag. Optional, default: "".
 - `separator` (str): the separator to use between the pages. Optional, default: ", ".
@@ -1005,6 +1005,101 @@ Outputs:
 
 These tags help you display the content of posts. They only work if there is a `post` object in the context.
 
+### post_breadcrumb
+
+Displays a breadcrumb trail for either a post or a page.
+
+- A page's breadcrumb consists of its parent and ancestor pages.
+- A post's breadcrumb consists of its date parts. The date parts will only be linked if `ARCHIVES_ENABLED` is set to `True` (default).
+
+**Returns:** HTML with the breadcrumb, marked as safe.
+
+#### post_breadcrumb Parameters
+
+- `outer_tag` (str): The outer HTML tag to wrap the HTML in. Default is "div". Accepted options are "div", "p", "span", "section", "nav", "ul", "ol".
+- `outer_class` (str): The css class(es) to apply to the outer tag.
+- `li_class` (str): The css class(es) to apply to the list item tags. Only valid when the `outer_tag` is set to "ul" or "ol".
+- `link_class` (str): The css class(es) to apply to links.
+- `separator` (str): The separator to use between breadcrumb items. Default is " / ". Only valid when not using a list.
+- `include_home` (bool): Whether to include a link to the home page as the first item. Default is False.
+
+**Note:** `outer_tag` can be passed as a positional argument, but the other parameters must be passed as keyword arguments.
+
+#### post_breadcrumb Examples
+
+Basic usage in a template:
+
+```django
+{% post_breadcrumb %}
+```
+
+In a single post view, with archives enabled, this will output:
+
+```html
+<div>
+  <a href="/2025/" title="View all posts in 2025">2025</a> /
+  <a href="/2025/05/" title="View all posts in May 2025">5</a> /
+  <a href="/2025/05/20/" title="View all posts on 20 May 2025">20</a> /
+  <a href="/2025/05/blog-post/" title="My Blog Post Title">My Blog Post Title</a>
+</div>
+```
+
+In a posts list view, this will output:
+
+```html
+<div>
+  2025 / 5 / 20 / <a href="/2025/05/blog-post/" title="My Blog Post Title">My Blog Post Title</a>
+</div>
+```
+
+For a page with no parents this will output:
+
+```html
+<div>
+  <a href="/about/" title="About Me">About Me</a>
+</div>
+```
+
+For a page with a parent, this will output:
+
+```html
+<div>
+  <a href="/news/" title="News">News</a> / <a href="/news/general" title="General News">General News</a>
+</div>
+```
+
+A more complex set of options:
+
+```django
+{% post_breadcrumb "ol" outer_class="outer" li_class="inner" link_class="link" include_home=True %}
+```
+
+In a single post view, with archives enabled, this will output:
+
+```html
+<ol class="outer">
+  <li class="inner"><a href="/" title="Home" class="link">Home</a></li>
+  <li class="inner"><a href="/2025/" title="View all posts in 2025" class="link">2025</a></li>
+  <li class="inner"><a href="/2025/05/" title="View all posts in May 2025" class="link">5</a></li>
+  <li class="inner"><a href="/2025/05/20/" title="View all posts on 20 May 2025" class="link">20</a></li>
+  <li class="inner"><a href="/2025/05/blog-post/" title="My Blog Post Title" class="link">My Blog Post Title</a></li>
+</ol>
+```
+
+Or as a div with a custom separator:
+
+```django
+{% post_breadcrumb "div" separator=" > " include_home=True %}
+```
+
+For a page with a parent, this will output:
+
+```html
+<div>
+  <a href="/news/" title="News">News</a> > <a href="/news/general" title="General News">General News</a>
+</div>
+```
+
 ### post_title
 
 Display the title of a post, with intelligent handling of linking depending on the context.
@@ -1160,14 +1255,18 @@ May 20, 2025
 If archive functionality is enabled, this will output links to the date archives:
 
 ```html
-<a href="/2025/05/" title="View all posts in May 2025">May</a> <a href="/2025/05/20/" title="View all posts on 20 May 2025">20</a>, <a href="/2025/" title="View all posts in 2025">2025</a>, 10:30 AM.
+<a href="/2025/05/" title="View all posts in May 2025">May</a>
+<a href="/2025/05/20/" title="View all posts on 20 May 2025">20</a>,
+<a href="/2025/" title="View all posts in 2025">2025</a>, 10:30 AM.
 ```
 
 With microformats enabled, the output will include time tag:
 
 ```html
 <time class="dt-published" datetime="2025-05-20T10:30:00+00:00">
-  <a href="/2025/05/" title="View all posts in May 2025">May</a> <a href="/2025/05/20/" title="View all posts on 20 May 2025">20</a>, <a href="/2025/" title="View all posts in 2025">2025</a>, 10:30 AM.
+  <a href="/2025/05/" title="View all posts in May 2025">May</a>
+  <a href="/2025/05/20/" title="View all posts on 20 May 2025">20</a>,
+  <a href="/2025/" title="View all posts in 2025">2025</a>, 10:30 AM.
 </time>
 ```
 
@@ -1224,15 +1323,15 @@ Returns a list of categories for a post.
 #### post_categories Parameters
 
 - `outer_tag` (str): the outer tag that this should be wrapped in. Accepted options are "ul", "div", "span". If "ul" is used, then the inner items will be wrapped with "li" tags.
-Default is: "ul".
+  Default is: "ul".
 - `outer_class` (str): the CSS classes to apply to the outer tag. Default: "".
 - `link_class` (str): the CSS classes to apply to the link tag. Default: "".
 - `separator` (str): the separator to use between categories. Only relevant when not using "ul" as the outer tag.
-Default: ", ".
+  Default: ", ".
 - `pre_text` (str): the text to prepend to the list of categories. Only relevant when not using "ul" as the outer tag.
-Default: "".
+  Default: "".
 - `post_text` (str): the text to append to the list of categories. Only relevant when not using "ul" as the outer tag.
-Default: "".
+  Default: "".
 
 **Note:** `outer_tag` can be passed as a positional argument, but the other parameters must be passed as keyword arguments.
 
@@ -1287,15 +1386,15 @@ Returns a list of tags for a post.
 #### post_tags Parameters
 
 - `outer_tag` (str): the outer tag that this should be wrapped in. Accepted options are "ul", "div", "span". If "ul" is used, then the inner items will be wrapped with "li" tags.
-Default is: "ul".
+  Default is: "ul".
 - `outer_class` (str): the CSS classes to apply to the outer tag. Default: "".
 - `link_class` (str): the CSS classes to apply to the link tag. Default: "".
 - `separator` (str): the separator to use between categories. Only relevant when not using "ul" as the outer tag.
-Default: ", ".
+  Default: ", ".
 - `pre_text` (str): the text to prepend to the list of categories. Only relevant when not using "ul" as the outer tag.
-Default: "".
+  Default: "".
 - `post_text` (str): the text to append to the list of categories. Only relevant when not using "ul" as the outer tag.
-Default: "".
+  Default: "".
 
 **Note:** `outer_tag` can be passed as a positional argument, but the other parameters must be passed as keyword arguments.
 
@@ -1363,7 +1462,7 @@ Render a complete search form with customizable styling.
 - `form_class` (str): CSS class(es) for the form element. Optional.
 - `input_class` (str): CSS class(es) for the input element. Optional.
 - `button_class` (str): CSS class(es) for the button element. Optional.
-- `show_button` (bool): Whether to show the submit button.  Optional, default: True
+- `show_button` (bool): Whether to show the submit button. Optional, default: True
 
 **Note:** all parameters must be passed as keyword arguments.
 

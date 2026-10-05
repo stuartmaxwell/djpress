@@ -460,3 +460,22 @@ def parse_post_wrapper_params(params: list) -> tuple[str, str]:
                 css_class = value
 
     return tag, css_class
+
+
+def get_page_parents(page: Post) -> list[Post]:
+    """Recursively get a list of parents for a page.
+
+    If the `Post` provided is not a page, then just the post in a list will be returned.
+    If the `Post` provided is a page but has no parents, then just the page in a list will be returned.
+    The recursive parents for a page is returned as a list with the page being queried as the first item.
+
+    Args:
+        page: The page to get parents for.
+
+    Returns:
+        list[Post] | None: A list of parent pages, or None if the page is not a page or is not a child.
+    """
+    if not page.is_page or not page.parent:
+        return [page]
+
+    return [page, *get_page_parents(page.parent)]

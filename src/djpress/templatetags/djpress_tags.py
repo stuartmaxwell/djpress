@@ -769,6 +769,136 @@ These tags help you display the content of posts. They only work if there is a `
 
 
 @register.simple_tag(takes_context=True)
+def post_breadcrumb(
+    context: Context,
+    outer_tag: str = "div",
+    *,
+    outer_class: str = "",
+    li_class: str = "",
+    link_class: str = "",
+    separator: str = " / ",
+    include_home: bool = False,
+) -> str:
+    """Return a breadcrumb-style link for a post or page.
+
+    A page's breadcrumb consists of its parent/grandparent/ancestor pages.
+    A post's bredcrumb consists of its date components: %Y / %m / %d
+
+    Args:
+        context: The context (included automatically).
+        outer_tag: The outer HTML tag for the archives. Valid options: "div", "p", "span", "section", "nav", "ul", "ol"
+        outer_class: CSS class(es) for the outer tag.
+        li_class: CSS class(es) for the list items (only if outer_tag is "ul" or "ol").
+        link_class: CSS class(es) for the anchor tags.
+        separator: Separator between items (only if outer_tag is "div" or "span").
+        include_home: Whether to include the site's home page as the first item in the breadcrumb.
+
+    Returns:
+        str: The breadcrumb HTML.
+    """
+    post: Post | None = context.get("post")
+
+    # If there's no post in the context, return an empty string.
+    if not post:
+        return ""
+
+    allowed_tags = {"div", "p", "span", "section", "nav", "ul", "ol"}
+    if outer_tag not in allowed_tags:
+        return ""
+
+    items = []
+    output = ""
+
+    li_class_html = format_html(' class="{}"', li_class) if li_class else ""
+
+    if post.is_page:
+        items = [
+            helpers.build_html_link(
+                url=page.url,
+                title=page.title,
+                text=page.title,
+                css_class=link_class,
+            )
+            for page in reversed(helpers.get_page_parents(post))
+        ]
+    else:
+        output_date = post.local_datetime
+
+        # Date items as integers
+        post_year = output_date.year
+        post_month = output_date.month
+        post_day = output_date.day
+
+        # Date items as strings
+        post_year_name = str(post_year)
+        post_month_name = output_date.strftime("%B")
+        post_day_name = str(post_day)
+
+        # Date item URLs
+        year_url = url_utils.get_archives_url(year=post_year)
+        month_url = url_utils.get_archives_url(year=post_year, month=post_month)
+        day_url = url_utils.get_archives_url(year=post_year, month=post_month, day=post_day)
+
+        if not djpress_settings.ARCHIVE_ENABLED:
+            items = [
+                post_year_name,
+                str(post_month),  # Note: use the month number here instead.
+                post_day_name,
+                helpers.build_html_link(
+                    url=post.url,
+                    text=post.title,
+                    title=post.title,
+                    css_class=link_class,
+                ),
+            ]
+        else:
+            items = [
+                helpers.build_html_link(
+                    url=year_url,
+                    text=post_year_name,
+                    title=f"View all posts in {post_year_name}",
+                    css_class=link_class,
+                ),
+                helpers.build_html_link(
+                    url=month_url,
+                    text=str(post_month),  # Note: use the month number here instead.
+                    title=f"View all posts in {post_month_name} {post_year_name}",
+                    css_class=link_class,
+                ),
+                helpers.build_html_link(
+                    url=day_url,
+                    text=post_day_name,
+                    title=f"View all posts on {post_day_name} {post_month_name} {post_year_name}",
+                    css_class=link_class,
+                ),
+                helpers.build_html_link(
+                    url=post.url,
+                    text=post.title,
+                    title=post.title,
+                    css_class=link_class,
+                ),
+            ]
+
+    is_list = outer_tag in {"ul", "ol"}
+
+    if include_home:
+        items.insert(
+            0, helpers.build_html_link(url=reverse("djpress:index"), text="Home", title="Home", css_class=link_class)
+        )
+
+    if is_list:
+        items = [format_html("<li{}>{}</li>", li_class_html, item) for item in items]
+
+    output = format_html_join(
+        "" if is_list else separator,
+        "{}",
+        [(item,) for item in items],
+    )
+
+    return helpers.wrap_in_tag(output, outer_tag, outer_class)
+
+
+@register.simple_tag(takes_context=True)
 def post_title(
     context: Context,
     outer_tag: str = "",

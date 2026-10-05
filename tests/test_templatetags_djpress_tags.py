@@ -2891,3 +2891,122 @@ def test_archives_disabled(user, settings):
 
     assert djpress_tags.get_archives() == []
     assert djpress_tags.site_archives() == ""
+
+
+@pytest.mark.django_db
+def test_post_breadcrumb_page(test_page1, test_page2, test_page3):
+    # Test case - single page
+    context = Context({"post": test_page1})
+    assert (
+        djpress_tags.post_breadcrumb(context) == '<div><a href="/test-page1/" title="Test Page1">Test Page1</a></div>'
+    )
+
+    # Test case - single page with home
+    context = Context({"post": test_page1})
+    assert (
+        djpress_tags.post_breadcrumb(context, include_home=True)
+        == '<div><a href="/" title="Home">Home</a> / <a href="/test-page1/" title="Test Page1">Test Page1</a></div>'
+    )
+
+    # Test case - invalid tag
+    context = Context({"post": test_page1})
+    assert djpress_tags.post_breadcrumb(context, "li") == ""
+
+    # Test case - two pages
+    test_page1.parent = test_page2
+    context = Context({"post": test_page1})
+    assert (
+        djpress_tags.post_breadcrumb(context)
+        == '<div><a href="/test-page2/" title="Test Page2">Test Page2</a> / <a href="/test-page2/test-page1/" title="Test Page1">Test Page1</a></div>'
+    )
+
+    # Test case - two pages wrapped in a list
+    test_page1.parent = test_page2
+    context = Context({"post": test_page1})
+    assert (
+        djpress_tags.post_breadcrumb(context, "ol")
+        == '<ol><li><a href="/test-page2/" title="Test Page2">Test Page2</a></li><li><a href="/test-page2/test-page1/" title="Test Page1">Test Page1</a></li></ol>'
+    )
+
+    # Test case - two pages wrapped in a list with home
+    test_page1.parent = test_page2
+    context = Context({"post": test_page1})
+    assert (
+        djpress_tags.post_breadcrumb(context, "ol", include_home=True)
+        == '<ol><li><a href="/" title="Home">Home</a></li><li><a href="/test-page2/" title="Test Page2">Test Page2</a></li><li><a href="/test-page2/test-page1/" title="Test Page1">Test Page1</a></li></ol>'
+    )
+
+
+@pytest.mark.django_db
+def test_post_breadcrumb_post(settings, test_post1, test_post2):
+    test_datetime = datetime.datetime(
+        year=2026, month=10, day=5, hour=22, minute=0, second=0, tzinfo=datetime.timezone.utc
+    )
+    test_post1.published_at = test_datetime
+    assert test_post1.local_datetime == test_datetime
+
+    # Test case - No single post...
+    context = Context({"posts": [test_post1, test_post2]})
+    assert djpress_tags.post_breadcrumb(context) == ""
+
+    prefix = settings.DJPRESS_SETTINGS["POST_PREFIX"]
+
+    settings.DJPRESS_SETTINGS["ARCHIVE_ENABLED"] = False
+
+    # Test case - single post with archives disabled
+    context = Context({"post": test_post1})
+    assert (
+        djpress_tags.post_breadcrumb(context)
+        == f'<div>2026 / 10 / 5 / <a href="/{prefix}/test-post1/" title="Test Post1">Test Post1</a></div>'
+    )
+
+    # Test case - single post with archives disabled and include home
+    context = Context({"post": test_post1})
+    assert (
+        djpress_tags.post_breadcrumb(context, include_home=True)
+        == f'<div><a href="/" title="Home">Home</a> / 2026 / 10 / 5 / <a href="/{prefix}/test-post1/" title="Test Post1">Test Post1</a></div>'
+    )
+
+    # Test case - single post with archives disabled and outer class
+    context = Context({"post": test_post1})
+    assert (
+        djpress_tags.post_breadcrumb(context, outer_class="outer-class")
+        == f'<div class="outer-class">2026 / 10 / 5 / <a href="/{prefix}/test-post1/" title="Test Post1">Test Post1</a></div>'
+    )
+
+    # Test case - single post with archives disabled and link class
+    context = Context({"post": test_post1})
+    assert (
+        djpress_tags.post_breadcrumb(context, link_class="link-class")
+        == f'<div>2026 / 10 / 5 / <a href="/{prefix}/test-post1/" title="Test Post1" class="link-class">Test Post1</a></div>'
+    )
+
+    # Test case - single post with archives disabled and using a list
+    context = Context({"post": test_post1})
+    assert (
+        djpress_tags.post_breadcrumb(context, "ol")
+        == f'<ol><li>2026</li><li>10</li><li>5</li><li><a href="/{prefix}/test-post1/" title="Test Post1">Test Post1</a></li></ol>'
+    )
+
+    # Test case - single post with archives disabled and using a list and outer class
+    context = Context({"post": test_post1})
+    assert (
+        djpress_tags.post_breadcrumb(context, "ol", outer_class="outer-class")
+        == f'<ol class="outer-class"><li>2026</li><li>10</li><li>5</li><li><a href="/{prefix}/test-post1/" title="Test Post1">Test Post1</a></li></ol>'
+    )
+
+    # Test case - single post with archives disabled and using a list and list class
+    context = Context({"post": test_post1})
+    assert (
+        djpress_tags.post_breadcrumb(context, "ol", li_class="list-class")
+        == f'<ol><li class="list-class">2026</li><li class="list-class">10</li><li class="list-class">5</li><li class="list-class"><a href="/{prefix}/test-post1/" title="Test Post1">Test Post1</a></li></ol>'
+    )
+
+    settings.DJPRESS_SETTINGS["ARCHIVE_ENABLED"] = True
+
+    # Test case - single post with archives enabled
+    context = Context({"post": test_post1})
+    assert (
+        djpress_tags.post_breadcrumb(context)
+        == f'<div><a href="/test-url-archives/2026/" title="View all posts in 2026">2026</a> / <a href="/test-url-archives/2026/10/" title="View all posts in October 2026">10</a> / <a href="/test-url-archives/2026/10/05/" title="View all posts on 5 October 2026">5</a> / <a href="/{prefix}/test-post1/" title="Test Post1">Test Post1</a></div>'
+    )
