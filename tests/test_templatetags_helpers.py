@@ -13,6 +13,7 @@ from djpress.templatetags.helpers import (
     get_page_link,
     wrap_in_tag,
     archives_html,
+    get_page_parents,
 )
 
 
@@ -700,3 +701,25 @@ def test_archives_html():
         "</ul>"
     )
     assert archives_html(archives, outer_tag="invalid") == expected_invalid
+
+
+@pytest.mark.django_db
+def test_get_page_parents(test_post1, test_page1, test_page2, test_page3, test_page4, test_page5):
+    # Test case - no parents
+    assert get_page_parents(test_page1) == [test_page1]
+
+    # Test case - not a page
+    assert get_page_parents(test_post1) == [test_post1]
+
+    # Test case - one parent
+    test_page1.parent = test_page2
+    assert get_page_parents(test_page1) == [test_page1, test_page2]
+
+    # Test case - multiple parents
+    test_page2.parent = test_page3
+    test_page3.parent = test_page4
+    test_page4.parent = test_page5
+    assert get_page_parents(test_page1) == [test_page1, test_page2, test_page3, test_page4, test_page5]
+
+    # Reverse the order
+    assert get_page_parents(test_page1)[::-1] == [test_page5, test_page4, test_page3, test_page2, test_page1]
