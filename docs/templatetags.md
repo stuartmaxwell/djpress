@@ -1186,6 +1186,7 @@ Display the content of a post with intelligent handling of both single posts and
 
 - `outer_tag` (str): The outer HTML tag to wrap the content in. Accepted options are "section", "div", "article",
   "p", "span". Optional, if not provided, no outer tag is used.
+- `outer_class` (str): the CSS classes to apply to the outer tag. Default: "".
 - `read_more_link_class` (str): The CSS class(es) to apply to the "read more" link. Optional.
 - `read_more_text` (str): The text to use for the "read more" link. If not provided, defaults to "Read more". Optional.
 
@@ -1205,19 +1206,19 @@ a posts list view.
 With custom read more text and an outer tag:
 
 ```django
-{% post_content outer_tag="div" read_more_link_class="btn btn-primary" read_more_text="Continue reading..." %}
+{% post_content outer_tag="div" outer_class="prose" read_more_link_class="btn btn-primary" read_more_text="Continue reading..." %}
 ```
 
 This will output:
 
 ```html
 <!-- In a single post view -->
-<div class="e-content">
+<div class="e-content prose">
   <p>This is the full content of the post...</p>
 </div>
 
 <!-- In a posts list view -->
-<div class="e-content">
+<div class="e-content prose">
   <p>This is the truncated content of the post...</p>
   <a href="/2023/05/sample-post/" class="btn btn-primary">Continue reading...</a>
 </div>
