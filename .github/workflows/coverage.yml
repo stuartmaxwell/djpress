@@ -22,7 +22,7 @@ jobs:
       - name: Set up PDM
         uses: pdm-project/setup-pdm@v4
         with:
-          python-version: "3.14"
+          python-version: "3.15"
           cache: true
       - name: Install the project
         run: pdm sync --clean -G test

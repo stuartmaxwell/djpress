@@ -4,10 +4,10 @@ build-backend = "pdm.backend"
 
 [project]
 name = "djpress"
-version = "0.32.0"
+version = "0.33.0"
 description = "A blog application for Django sites, inspired by classic WordPress."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [{ name = "Stuart Maxwell", email = "stuart@amanzi.nz" }]
 dependencies = ["django>=5.2.0,<6.2", "markdown>=3.7"]
 license = { file = "LICENSE" }
@@ -24,11 +24,11 @@ classifiers = [
   "Programming Language :: Python",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3.15",
   "Topic :: Internet :: WWW/HTTP",
   "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
 ]
@@ -83,7 +83,7 @@ omit = ["*/tests/*", "*/migrations/*"]
 exclude_lines = ["if TYPE_CHECKING:", "# pragma: no cover"]
 
 [tool.bumpver]
-current_version = "0.32.0"
+current_version = "0.33.0"
 version_pattern = "MAJOR.MINOR.PATCH[PYTAGNUM]"
 commit_message = "👍 bump version {old_version} -> {new_version}"
 commit = true

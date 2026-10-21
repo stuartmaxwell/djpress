@@ -4,9 +4,9 @@ import nox
 
 # The dictionary of supported Django and Python versions.
 SUPPORTED_VERSIONS = {
-    "5.2": ["3.10", "3.11", "3.12", "3.13", "3.14"],
+    "5.2": ["3.11", "3.12", "3.13", "3.14"],
     "6.0": ["3.12", "3.13", "3.14"],
-    "6.1": ["3.12", "3.13", "3.14"],
+    "6.1": ["3.12", "3.13", "3.14", "3.15"],
 }
 
 # The list of all supported Python versions across all Django versions.
@@ -89,7 +89,7 @@ TIME_ZONES = [
 ]
 
 
-@nox.session(python=["3.14"])
+@nox.session(python=["3.15"])
 @nox.parametrize("time_zone", TIME_ZONES)
 def test_timezones(session: nox.Session, time_zone: str) -> None:
     """Run the test suite."""

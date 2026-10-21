@@ -1,6 +1,6 @@
 """Post model."""
 
-import datetime
+import datetime as dt
 import logging
 import warnings
 from collections.abc import Iterable
@@ -479,7 +479,7 @@ class PostsManager(models.Manager.from_queryset(PostQuerySet)):
         """
         return self.get_published_posts().filter(author=author)
 
-    def get_years(self) -> Iterable[datetime.date]:
+    def get_years(self) -> Iterable[dt.date]:
         """Return a list of years that have published posts.
 
         Returns:
@@ -487,7 +487,7 @@ class PostsManager(models.Manager.from_queryset(PostQuerySet)):
         """
         return self.dates("_date", "year")
 
-    def get_months(self, year: int) -> Iterable[datetime.date]:
+    def get_months(self, year: int) -> Iterable[dt.date]:
         """Return a list of months for a given year that have published posts.
 
         Args:
@@ -498,7 +498,7 @@ class PostsManager(models.Manager.from_queryset(PostQuerySet)):
         """
         return self.filter(_date__year=year).dates("_date", "month")
 
-    def get_days(self, year: int, month: int) -> Iterable[datetime.date]:
+    def get_days(self, year: int, month: int) -> Iterable[dt.date]:
         """Return a list of days for a given year and month that have published posts.
 
         Args:
