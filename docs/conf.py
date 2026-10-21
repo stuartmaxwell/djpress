@@ -1,8 +1,7 @@
 """Configuration file for the Sphinx documentation builder."""
 
-from pathlib import Path
-
 import tomllib
+from pathlib import Path
 
 # Define the path to pyproject.toml
 pyproject_path = Path(__file__).parent.parent / "pyproject.toml"
